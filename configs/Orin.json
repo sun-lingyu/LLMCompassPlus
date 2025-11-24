@@ -1,0 +1,71 @@
+{
+    "name": "NVIDIA AGX Orin",
+    "device_count": 1,
+    "device": {
+        "frequency_Hz": 1301e6,
+        "compute_chiplet_count": 1,
+        "compute_chiplet": {
+            "physical_core_count": 16,
+            "core_count": 16,
+            "process_node": "7nm",
+            "core": {
+                "sublane_count": 4,
+                "systolic_array": {
+                    "array_width": 16,
+                    "array_height": 8,
+                    "__comment": "scale-down input K dimension to fit fp16/int8 data types",
+                    "data_type": "fp32",
+                    "mac_per_cycle": 1
+                },
+                "vector_unit": {
+                    "width": {
+                        "__comment": "in FMA(MAD)/cycle, for performance simulation",
+                        "int32": 16,
+                        "fp16": 64,
+                        "fp32": 32,
+                        "fp64": 0.5
+                    },
+                    "units": {
+                        "__comment": "for area estimation",
+                        "int32": 16,
+                        "fp16": 64,
+                        "fp32": 32,
+                        "fp64": 0.5
+                    },
+                    "__comment": "below are legacy fields",
+                    "vector_width": -1,
+                    "flop_per_cycle": -1,
+                    "data_type": "",
+                    "int32_count": -1,
+                    "fp16_count": -1,
+                    "fp32_count": -1,
+                    "fp64_count": -1
+                },
+                "register_file": {
+                    "num_reg_files": 1,
+                    "num_registers": 16384,
+                    "register_bitwidth":32,
+                    "num_rdwr_ports":4
+                },
+                "SRAM_KB": 192
+            }
+        },
+        "__comment": "memory_protocal is used for PHY area estimation",
+        "memory_protocol": "LPDDR5x",
+        "io": {
+            "process_node": "7nm",
+            "global_buffer_MB": 4,
+            "physical_global_buffer_MB": 4,
+            "global_buffer_bandwidth_per_cycle_byte": 1024,
+            "global_buffer_latency_cycle": 146,
+            "memory_channel_physical_count": 16,
+            "memory_channel_active_count": 16,
+            "pin_count_per_channel": 16,
+            "bandwidth_per_pin_bit": 6.4e9,
+            "memory_latency_cycle": 300
+        },
+        "memory": {
+            "total_capacity_GB": 64
+        }
+    }
+}
