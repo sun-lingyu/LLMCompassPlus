@@ -1,6 +1,5 @@
 {
     "name": "NVIDIA AGX Orin",
-    "device_count": 1,
     "device": {
         "frequency_Hz": 1301e6,
         "compute_chiplet_count": 1,
@@ -13,33 +12,28 @@
                 "systolic_array": {
                     "array_width": 16,
                     "array_height": 8,
-                    "__comment": "scale-down input K dimension to fit fp16/int8 data types",
-                    "data_type": "fp32",
-                    "mac_per_cycle": 1
+                    "__comment": "In fp32, scale-down input K dimension to fit other (e.g., fp16/int8) data types"
                 },
                 "vector_unit": {
-                    "width": {
-                        "__comment": "in FMA(MAD)/cycle, for performance simulation",
+                    "throughput": {
+                        "__comment": "For performance simulation.",
                         "int32": 16,
                         "fp16": 64,
                         "fp32": 32,
-                        "fp64": 0.5
+                        "fp64": 0.5,
+                        "exp2": 4,
+                        "cvt_int32_fp32": 4,
+                        "cvt_fp32_fp16": 16
                     },
                     "units": {
-                        "__comment": "for area estimation",
+                        "__comment": "For area estimation.",
                         "int32": 16,
                         "fp16": 64,
                         "fp32": 32,
-                        "fp64": 0.5
-                    },
-                    "__comment": "below are legacy fields",
-                    "vector_width": -1,
-                    "flop_per_cycle": -1,
-                    "data_type": "",
-                    "int32_count": -1,
-                    "fp16_count": -1,
-                    "fp32_count": -1,
-                    "fp64_count": -1
+                        "fp64": 0.5,
+                        "exp2": 4,
+                        "cvt": 4
+                    }
                 },
                 "register_file": {
                     "num_reg_files": 1,
@@ -56,7 +50,7 @@
             "process_node": "7nm",
             "global_buffer_MB": 4,
             "physical_global_buffer_MB": 4,
-            "global_buffer_bandwidth_per_cycle_byte": 1024,
+            "global_buffer_bandwidth_per_cycle_byte": 512,
             "global_buffer_latency_cycle": 146,
             "memory_channel_physical_count": 16,
             "memory_channel_active_count": 16,

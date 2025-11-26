@@ -1,19 +1,5 @@
 {
-    "name": "NVIDIA A100(80GB)x4",
-    "device_count": 4,
-    "interconnect": {
-        "link": {
-            "name": "NVLink3",
-            "bandwidth_per_direction_byte": 25e9,
-            "bandwidth_both_directions_byte": 50e9,
-            "latency_second": 8.92e-6,
-            "flit_size_byte": 16,
-            "header_size_byte": 16,
-            "max_payload_size_byte": 256
-        },
-        "link_count_per_device": 12,
-        "topology": "FC"
-    },
+    "name": "NVIDIA A100(80GB)",
     "device": {
         "frequency_Hz": 1410e6,
         "compute_chiplet_count": 1,
@@ -25,33 +11,28 @@
                 "sublane_count": 4,
                 "systolic_array": {
                     "array_width": 16,
-                    "array_height": 16,
-                    "data_type": "fp16",
-                    "mac_per_cycle": 1
+                    "array_height": 8,
+                    "__comment": "In fp32, scale-down input K dimension to fit other (e.g., fp16/int8)  data types"
                 },
                 "vector_unit": {
-                    "width": {
-                        "__comment": "for performance simulation",
+                    "throughput": {
+                        "__comment": "For performance simulation.",
                         "int32": 16,
                         "fp16": 64,
                         "fp32": 16,
-                        "fp64": 8
+                        "fp64": 8,
+                        "exp2": 4,
+                        "cvt_int32_fp32": 4,
+                        "cvt_fp32_fp16": 16
                     },
                     "units": {
-                        "__comment": "for area estimation",
+                        "__comment": "For area estimation.",
                         "int32": 16,
                         "fp16": 64,
                         "fp32": 16,
-                        "fp64": 8
-                    },
-                    "__comment": "below are legacy fields",
-                    "vector_width": -1,
-                    "flop_per_cycle": -1,
-                    "data_type": "",
-                    "int32_count": -1,
-                    "fp16_count": -1,
-                    "fp32_count": -1,
-                    "fp64_count": -1
+                        "fp64": 8,
+                        "cvt": 4
+                    }
                 },
                 "register_file": {
                     "num_reg_files": 1,
@@ -62,25 +43,19 @@
                 "SRAM_KB": 192
             }
         },
+        "__comment": "memory_protocal is used for PHY area estimation",
         "memory_protocol": "HBM2e",
-        "_memory_protocol_list": [
-            "HBM2e",
-            "DDR4",
-            "DDR5",
-            "PCIe4",
-            "PCIe5"
-        ],
         "io": {
             "process_node": "7nm",
             "global_buffer_MB": 40,
             "physical_global_buffer_MB": 48,
             "global_buffer_bandwidth_per_cycle_byte": 5120,
-            "global_buffer_latency_cycle": 0,
+            "global_buffer_latency_cycle": 223,
             "memory_channel_physical_count": 6,
             "memory_channel_active_count": 5,
             "pin_count_per_channel": 1024,
             "bandwidth_per_pin_bit": 3.2e9,
-            "memory_latency_cycle": 0
+            "memory_latency_cycle": 209
         },
         "memory": {
             "total_capacity_GB": 80
