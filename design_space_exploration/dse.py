@@ -33,23 +33,12 @@ def template_to_device(arch_specs):
     sublane_count = core_specs["sublane_count"]
     # vector unit
     vector_unit_specs = core_specs["vector_unit"]
-    vector_unit = VectorUnit(
-        sublane_count
-        * vector_unit_specs["vector_width"]
-        * vector_unit_specs["flop_per_cycle"],
-        int(re.search(r"(\d+)", vector_unit_specs["data_type"]).group(1)) // 8,
-        35,
-        vector_unit_specs["vector_width"],
-        sublane_count,
-    )
+    vector_unit = VectorUnit(vector_unit_specs["throughput"])
     # systolic array
     systolic_array_specs = core_specs["systolic_array"]
     systolic_array = SystolicArray(
         systolic_array_specs["array_height"],
         systolic_array_specs["array_width"],
-        systolic_array_specs["mac_per_cycle"],
-        int(re.search(r"(\d+)", systolic_array_specs["data_type"]).group(1)) // 8,
-        int(re.search(r"(\d+)", systolic_array_specs["data_type"]).group(1)) // 8,
     )
     # core
     core = Core(
@@ -73,7 +62,7 @@ def template_to_device(arch_specs):
         * io_specs["pin_count_per_channel"]
         * io_specs["bandwidth_per_pin_bit"]
         // 8,
-        1e-6,
+        io_specs["memory_latency_cycle"],
     )
     # memory module
     memory_module = MemoryModule(

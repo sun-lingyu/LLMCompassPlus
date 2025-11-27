@@ -16,24 +16,14 @@ class Device:
 
 
 device_dict = {
-    "A100_80GB_fp16": Device(
-        compute_module_dict["A100_fp16"],
+    "Orin": Device(
+        compute_module_dict["Orin"],
+        IO_module_dict["Orin"],
+        memory_module_dict["Orin"],
+    ),
+    "A100": Device(
+        compute_module_dict["A100"],
         IO_module_dict["A100"],
-        memory_module_dict["A100_80GB"],
-    ),
-    "TPUv3": Device(
-        compute_module_dict["TPUv3_bf16"],
-        IO_module_dict["TPUv3"],
-        memory_module_dict["TPUv3"],
-    ),
-    "MI210": Device(
-        compute_module_dict["MI210_fp16"],
-        IO_module_dict["MI210"],
-        memory_module_dict["MI210"],
-    ),
-    "TPUv3_new": Device(
-        compute_module_dict["TPUv3_new"],
-        IO_module_dict["TPUv3"],
-        memory_module_dict["TPUv3"],
+        memory_module_dict["A100"],
     ),
 }

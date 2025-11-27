@@ -48,7 +48,6 @@ class SystolicArray:
         self,
         array_width,
         array_height,
-        data_type,
     ):
         self.array_width = array_width
         self.array_height = array_height
@@ -110,27 +109,13 @@ class ComputeModule:
         self.clock_freq = clock_freq
         self.l2_size = int(l2_size)  # Byte
         self.l2_bandwidth_per_cycle = l2_bandwidth_per_cycle  # Byte/clock
-        self.total_vector_flops_per_cycle = (
-            core.vector_unit.total_vector_flops_per_cycle * core.sublane_count * core_count
-        )
-        self.total_systolic_array_throughput = (
-            core_count
-            * core.sublane_count
-            * 2
-            * core.systolic_array.array_height
-            * core.systolic_array.array_width
-            * clock_freq
-        )
         self.overhead = overhead
     
     def get_total_vector_throughput_per_cycle(self, datatype: DataType, operation: str):
         return self.core.vector_unit.get_throughput_per_cycle(datatype, operation) * self.core.sublane_count * self.core_count
     
-    def get_total_vector_throughput(self, datatype: DataType, operation: str):
-        return self.get_total_vector_throughput_per_cycle(datatype, operation) * self.clock_freq
-
-    def get_total_systolic_array_throughput(self, datatype: DataType):
-        return self.core_count * self.core.sublane_count * self.core.systolic_array.array_height * self.core.systolic_array.array_width * self.clock_freq * (4 / data_type.word_size)
+    def get_total_systolic_array_throughput_per_cycle(self, datatype: DataType):
+        return self.core_count * self.core.sublane_count * self.core.systolic_array.array_height * self.core.systolic_array.array_width * (4 / data_type.word_size)
 
 
 compute_module_dict = {
