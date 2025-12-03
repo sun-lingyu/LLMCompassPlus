@@ -9,20 +9,20 @@ class VectorUnit:
     ):
         self.throughput = throughput
 
-    def get_throughput_per_cycle(self, datatype: DataType, operation: str):
-        datatype = datatype.name
-        assert datatype in ["int32", "fp16", "fp32", "fp64"], f"Datatype {datatype} not supported in VectorUnit"
+    def get_throughput_per_cycle(self, data_type: DataType, operation: str):
+        data_type = data_type.name
+        assert data_type in ["int32", "fp16", "fp32", "fp64"], f"Datatype {data_type} not supported in VectorUnit"
         assert operation in ["exp2", "cvt", "reduction", "fma"], f"Operation {operation} not supported in VectorUnit"
         if operation == "exp2":
             return self.throughput["exp2"]
-        if operation == "cvt" and (datatype == "int32" or data_type == "fp32"):
+        if operation == "cvt" and (data_type == "int32" or data_type == "fp32"):
             return self.throughput["cvt_int32_fp32"]
-        if operation == "cvt" and datatype == "fp16":
+        if operation == "cvt" and data_type == "fp16":
             return self.throughput["cvt_int32_fp32"]
-        if operation == "reduction" and datatype == "int32": # special case for int32 add/sub
+        if operation == "reduction" and data_type == "int32": # special case for int32 add/sub
             return self.throughput["int32"] * 2
         else:
-            return self.throughput[datatype]
+            return self.throughput[data_type]
 
 vector_unit_dict = {
     "Orin": VectorUnit({"int32": 16,
@@ -62,20 +62,22 @@ class Core:
         self,
         vector_unit: VectorUnit,
         systolic_array: SystolicArray,
+        total_registers: int,
         sublane_count,
         SRAM_size,
     ):
         self.vector_unit = vector_unit
         self.systolic_array = systolic_array
+        self.total_registers = total_registers
         self.sublane_count = sublane_count
         self.SRAM_size = SRAM_size  # Byte
 
 core_dict = {
     "SM_Orin": Core(
-        vector_unit_dict["Orin"], systolic_array_dict["Orin"], 4, 192 * 1024
+        vector_unit_dict["Orin"], systolic_array_dict["Orin"], 65536, 4, 192 * 1024
     ),
     "SM_A100": Core(
-        vector_unit_dict["A100"], systolic_array_dict["A100"], 4, 192 * 1024
+        vector_unit_dict["A100"], systolic_array_dict["A100"], 65536, 4, 192 * 1024
     ),
 }
 # compute_tile_dict={'SM_A100_int8':ComputeTile(512, 4096, 192*1024*8,3.41, 'TSMC N7', 128*8),'SM_A100_fp16':ComputeTile(512, 2048, 192*1024*8,3.41, 'TSMC N7', 128),}
@@ -102,6 +104,7 @@ class ComputeModule:
         clock_freq,
         l2_size,
         l2_bandwidth_per_cycle,
+        l2_latency_cycles,
         overhead: Overhead = overhead_dict["A100"],
     ):
         self.core = core
@@ -109,12 +112,13 @@ class ComputeModule:
         self.clock_freq = clock_freq
         self.l2_size = int(l2_size)  # Byte
         self.l2_bandwidth_per_cycle = l2_bandwidth_per_cycle  # Byte/clock
+        self.l2_latency_cycles = l2_latency_cycles
         self.overhead = overhead
     
-    def get_total_vector_throughput_per_cycle(self, datatype: DataType, operation: str):
-        return self.core.vector_unit.get_throughput_per_cycle(datatype, operation) * self.core.sublane_count * self.core_count
+    def get_total_vector_throughput_per_cycle(self, data_type: DataType, operation: str):
+        return self.core.vector_unit.get_throughput_per_cycle(data_type, operation) * self.core.sublane_count * self.core_count
     
-    def get_total_systolic_array_throughput_per_cycle(self, datatype: DataType):
+    def get_total_systolic_array_throughput_per_cycle(self, data_type: DataType):
         return self.core_count * self.core.sublane_count * self.core.systolic_array.array_height * self.core.systolic_array.array_width * (4 / data_type.word_size)
 
 
@@ -125,6 +129,7 @@ compute_module_dict = {
         1301e6,
         4 * 1024**2,
         512,
+        146,
         overhead_dict["Orin"],
     ),
     "A100": ComputeModule(
@@ -133,6 +138,7 @@ compute_module_dict = {
         1410e6,
         40 * 1024**2,
         5120,
+        223,
         overhead_dict["A100"],
     ),
 }
