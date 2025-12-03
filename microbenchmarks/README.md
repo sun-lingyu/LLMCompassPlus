@@ -1,5 +1,13 @@
 Code enhanced from Accel-sim.
 
+Before running the benchmark
+- fix GPU freq to max 
+`echo 1300500000 > /sys/devices/17000000.ga10b/devfreq/17000000.ga10b/min_freq`
+- fix mem freq to max
+`echo 1 > /sys/kernel/debug/bpmp/debug/clk/emc/mrq_rate_locked`
+`echo 1 > /sys/kernel/debug/bpmp/debug/clk/emc/state`
+`echo 3199000000 > /sys/kernel/debug/bpmp/debug/clk/emc/rate`
+
 Below are measured throughput statistics from microbenchmarks
 
 | FMA (MAD) / SM / clk | A100 SM80         | Orin SM87          | 3090 SM86 |

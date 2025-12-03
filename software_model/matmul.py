@@ -294,13 +294,13 @@ class Matmul(Operator):
         N = self.computational_graph.N
         K = self.computational_graph.K
         assert M >= 64, "at least 64 to fit GEMM workflow instead of GEMV"
-        assert K >= 512, "at least 512 to accurately model loop-K"
+        assert K >= 256, "at least 256 to accurately model loop-K"
         if compile_mode == "heuristic-GPU":
             i = 0
             for cta_m in [64, 128, 256]:
                 for cta_n in [64, 128, 256]:
                     for cta_k in [32, 64]:
-                        for stages in [2, 3, 4, 5]:
+                        for stages in [2, 3, 4, 5, 6]:
                             for (
                                     l0_M_tiling_factor,
                                     l0_N_tiling_factor,
@@ -335,8 +335,8 @@ class Matmul(Operator):
                                     for l2_tile_M_blocks, l2_tile_N_blocks in self.all_factor_pairs(active_blocks_per_core * pcb_module.compute_module.core_count):
                                         l2_tile_M = cta_m * l2_tile_M_blocks
                                         l2_tile_N = cta_n * l2_tile_N_blocks
-                                        # if l2_tile_M >= M * 2 or l2_tile_N >= N * 2:
-                                        #     continue  # unecessarily large tile
+                                        if l2_tile_M >= M * 2 or l2_tile_N >= N * 2:
+                                            continue  # unecessarily large tile
 
                                         l2_working_set_size = (
                                             l2_tile_N * l2_tile_K * self.weight_data_type.word_size
@@ -416,11 +416,6 @@ class Matmul(Operator):
                 ["M", "N", "K", "ArrayHeight", "ArrayWidth", "Dataflow"],
                 inplace=True,
             )
-        # print(self.look_up_table)
-        # print(self.look_up_table.loc[(32, 16, 256, 16, 16, 'os'), "cycle_count"
-        #                              ].item())
-        # print('sdfsdfsdfsd')
-        # exit()
         M = computational_graph.M
         N = computational_graph.N
         K = computational_graph.K
@@ -551,11 +546,10 @@ class Matmul(Operator):
             for m in range(ceil(M / l2_tile_M)):
 
                 # Prologue
-                if (m == 0 and n == 0): # only count prologue once even if active_blocks_per_core > 1
-                    assert (K > l2_tile_K * (stages - 1))
-                    total_cycle_count += pcb_module.io_module.latency_cycles + pcb_module.compute_module.l2_latency_cycles
-                    for k in range(stages - 1):
-                        total_cycle_count += l2_tiles[m, n, k].M_K_io_cycle_count + l2_tiles[m, n, k].K_N_io_cycle_count
+                assert (K > l2_tile_K * (stages - 1))
+                total_cycle_count += pcb_module.io_module.latency_cycles + pcb_module.compute_module.l2_latency_cycles
+                for k in range(stages - 1):
+                    total_cycle_count += l2_tiles[m, n, k].M_K_io_cycle_count + l2_tiles[m, n, k].K_N_io_cycle_count
 
                 flying_tile_cycles = [0] * (stages - 1)
                 for k in range(ceil(K / l2_tile_K)):
@@ -566,24 +560,17 @@ class Matmul(Operator):
                     # update flying tile
                     k_start_loading = k + stages - 1
                     if k_start_loading < ceil(K / l2_tile_K):
-                        flying_tile_cycles[k_start_loading % (stages - 1)] = pcb_module.io_module.latency_cycles + pcb_module.compute_module.l2_latency_cycles +\
+                        flying_tile_cycles[k_start_loading % (stages - 1)] = wait_ready_cycles +\
                                             (l2_tiles[m, n, k_start_loading].M_K_io_cycle_count + \
                                             l2_tiles[m, n, k_start_loading].K_N_io_cycle_count) * \
-                                            (1) # effective bandwidth is divided by (stages - 1) flying tiles
+                                            (stages - 1) # effective bandwidth is divided by (stages - 1) flying tiles
                     flying_tile_cycles = [max(0, lat - l2_tiles[m, n, k].compute_cycle_count \
                                         - wait_ready_cycles) for lat in flying_tile_cycles]
 
-                    # if m == 0 and n == 0 and k == 0:
-                    #     print("flying cycle is", pcb_module.io_module.latency_cycles + \
-                    #                             (l2_tiles[m, n, k_start_loading].M_K_io_cycle_count + \
-                    #                             l2_tiles[m, n, k_start_loading].K_N_io_cycle_count) * \
-                    #                             (stages - 1))
-                    #     print("compute cycle is", l2_tiles[m, n, k].compute_cycle_count)
-                    #     print("")
-
                 # Epilogue
-                # only count epilogue once even if active_blocks_per_core > 1
                 total_cycle_count += l2_tiles[m, n, 0].M * l2_tiles[m, n, 0].N / pcb_module.compute_module.get_total_vector_throughput_per_cycle(self.activation_data_type, "cvt")
+                offset_for_smem_reorganizing_etc = 0.017 # obtained by fitting real machine cycles
+                total_cycle_count += l2_tiles[m, n, 0].M * l2_tiles[m, n, 0].N * offset_for_smem_reorganizing_etc # offset, mainly models data reorganizing through smem before write to DRAM
                 total_cycle_count += pcb_module.io_module.latency_cycles + pcb_module.compute_module.l2_latency_cycles + l2_tiles[m, n, 0].M_N_io_cycle_count
 
         return total_cycle_count
@@ -720,21 +707,15 @@ class Matmul(Operator):
                     look_up_table,
                 )
 
-            self.M_K_io_cycle_count = self.simulate_l2_tile_io_cycle_count(
-                M, K, activation_data_type, pcb_module
-            ) + sum(l1_tile.M_K_io_cycle_count for l1_tile in self.l1_tiles.flat)
-            self.K_N_io_cycle_count = self.simulate_l2_tile_io_cycle_count(
-                K, N, weight_data_type, pcb_module
-            ) + sum(l1_tile.K_N_io_cycle_count for l1_tile in self.l1_tiles.flat)
-            self.M_N_io_cycle_count = ceil(
-                M
-                * N
-                * activation_data_type.word_size
-                / (
-                    pcb_module.io_module.bandwidth
-                    / pcb_module.compute_module.clock_freq
-                )
+            self.M_K_io_cycle_count = max(
+                self.simulate_l2_tile_io_cycle_count(M, K, activation_data_type, pcb_module),
+                sum(l1_tile.M_K_io_cycle_count for l1_tile in self.l1_tiles.flat)
             )
+            self.K_N_io_cycle_count = max(
+                self.simulate_l2_tile_io_cycle_count(K, N, weight_data_type, pcb_module),
+                sum(l1_tile.K_N_io_cycle_count for l1_tile in self.l1_tiles.flat)
+            )
+            self.M_N_io_cycle_count = self.simulate_l2_tile_io_cycle_count(M, N, activation_data_type, pcb_module)
             self.compute_cycle_count = self.simulate_l2_tile_compute_cycle_count(
                 M, N, K, activation_data_type, weight_data_type, intermediate_data_type, mapping, pcb_module, look_up_table
             )
@@ -748,6 +729,7 @@ class Matmul(Operator):
                 * data_type.word_size
                 / (
                     pcb_module.io_module.bandwidth
+                    * pcb_module.io_module.bandwidth_efficiency
                     / pcb_module.compute_module.clock_freq
                 )
             )

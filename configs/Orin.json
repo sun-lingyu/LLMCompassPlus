@@ -56,7 +56,9 @@
             "memory_channel_active_count": 16,
             "pin_count_per_channel": 16,
             "bandwidth_per_pin_bit": 6.4e9,
+            "memory_bandwidth_efficiency": 0.7,
             "memory_latency_cycle": 300
+
         },
         "memory": {
             "total_capacity_GB": 64
