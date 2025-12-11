@@ -2,268 +2,81 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import argparse
+import os
+import glob
+from pathlib import Path
 
+file_dir = os.path.dirname(os.path.abspath(__file__))
 
-matmul_TPUv3_sim = pd.read_csv(
-    "matmul_TPUv3_sim.csv", header=None, names=["M", "N", "K", "latency", "throughput"]
-)
-matmul_TPUv3_sim["throughput"] = (
-    matmul_TPUv3_sim["throughput"].str.extract(r"(\d+\.?\d*)").astype(float)
-)
-matmul_TPUv3_sim.set_index(["M", "N", "K"], inplace=True)
-matmul_TPUv3_roofline = pd.read_csv(
-    "matmul_TPUv3_roofline.csv",
-    header=None,
-    names=["M", "N", "K", "latency", "throughput"],
-)
-matmul_TPUv3_roofline["throughput"] = (
-    matmul_TPUv3_roofline["throughput"].str.extract(r"(\d+\.?\d*)").astype(float)
-)
-matmul_TPUv3_roofline.set_index(["M", "N", "K"], inplace=True)
-matmul_A100 = pd.read_csv(
-    "real_hardware/matmul_A100.csv", header=None, names=["M", "N", "K", "latency", "throughput"]
-)
-matmul_A100["throughput"] = (
-    matmul_A100["throughput"].str.extract(r"(\d+\.?\d*)").astype(float)
-)
-matmul_A100.set_index(["M", "N", "K"], inplace=True)
-matmul_A100_sim = pd.read_csv(
-    "matmul_A100_sim.csv", header=None, names=["M", "N", "K", "latency", "throughput"]
-)
-matmul_A100_sim["throughput"] = (
-    matmul_A100_sim["throughput"].str.extract(r"(\d+\.?\d*)").astype(float)
-)
-matmul_A100_sim.set_index(["M", "N", "K"], inplace=True)
-matmul_A100_roofline = pd.read_csv(
-    "matmul_A100_roofline.csv",
-    header=None,
-    names=["M", "N", "K", "latency", "throughput"],
-)
-matmul_A100_roofline["throughput"] = (
-    matmul_A100_roofline["throughput"].str.extract(r"(\d+\.?\d*)").astype(float)
-)
-matmul_A100_roofline.set_index(["M", "N", "K"], inplace=True)
-matmul_MI210 = pd.read_csv(
-    "real_hardware/matmul_MI210.csv", header=None, names=["M", "N", "K", "latency", "throughput"]
-)
-matmul_MI210["throughput"] = (
-    matmul_MI210["throughput"].str.extract(r"(\d+\.?\d*)").astype(float)
-)
-matmul_MI210.set_index(["M", "N", "K"], inplace=True)
-matmul_MI210_sim = pd.read_csv(
-    "matmul_MI210_sim.csv", header=None, names=["M", "N", "K", "latency", "throughput"]
-)
-matmul_MI210_sim["throughput"] = (
-    matmul_MI210_sim["throughput"].str.extract(r"(\d+\.?\d*)").astype(float)
-)
-matmul_MI210_sim.set_index(["M", "N", "K"], inplace=True)
-matmul_MI210_roofline = pd.read_csv(
-    "matmul_MI210_roofline.csv",
-    header=None,
-    names=["M", "N", "K", "latency", "throughput"],
-)
-matmul_MI210_roofline["throughput"] = (
-    matmul_MI210_roofline["throughput"].str.extract(r"(\d+\.?\d*)").astype(float)
-)
-matmul_MI210_roofline.set_index(["M", "N", "K"], inplace=True)
+color_machine = sns.color_palette("flare", 1)
+color_simulate = sns.color_palette("Blues_d", 4)[1:]
 
-color_NV = sns.color_palette("Greens_d", 4)[1:]
-color_Google = sns.color_palette("Blues_d", 4)[1:]
-color_AMD = sns.color_palette("flare", 3)
+def plot_latency(
+    latency_table,
+    ax,
+    title,
+    is_first = False,
+    is_last = False
+):
+    x = [_ for _ in range(latency_table.shape[0])]
 
-K = 12288
-N = K
-title = f"Performance of Matmul with K={K}, N={N}"
-M_list = []
-throughput_TPU_list = []
-throughput_TPU_sim_list = []
-throughput_TPU_roofline_list = []
-throughput_GPU_list = []
-throughput_GPU_sim_list = []
-throughput_GPU_roofline_list = []
-throughput_AMD_list = []
-throughput_AMD_sim_list = []
-throughput_AMD_roofline_list = []
-for M in range(6, 16):
-    M = 2**M
-    M_list.append(M)
-    throughput_TPU_sim_list.append(matmul_TPUv3_sim.loc[(M, N, K), "throughput"])
-    throughput_TPU_roofline_list.append(
-        matmul_TPUv3_roofline.loc[(M, N, K), "throughput"]
+    ax.plot(x, latency_table["Ours"], marker="x", markersize=4, color=color_simulate[2], label="Ours")
+    ax.plot(x, latency_table["Baseline"], marker="o", markersize=4, color=color_simulate[1], label="LLMCompass")
+    ax.plot(x, latency_table["Roofline"], marker="^", markersize=4, color=color_simulate[0], label="Roofline")
+    ax.plot(x, latency_table["CUTLASS"], marker=" ", linestyle="--", linewidth=1.5, color=color_machine[0], label="Measurement")
+    
+    ax.set_title(title)
+    ax.set_xticklabels([])
+    if is_first:
+        ax.set_ylabel("Latency (ms)")
+    if is_last:
+        ax.legend(loc="best")
+    ax.grid(True)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--mode", type=str, choices=["prefill", "decode"],)
+parser.add_argument("--model", type=str, choices=["Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"])
+parser.add_argument("--plot_one_figure", action='store_true')
+args = parser.parse_args()
+
+if args.plot_one_figure:
+    fig, axes = plt.subplots(1, 1, figsize=(3, 2.8), sharey=True)
+    csv_files = glob.glob(str(Path(f"{file_dir}/{args.model}/{args.mode}") / "*.csv"))
+    dfs = [pd.read_csv(f) for f in csv_files]
+    latency_table = pd.concat(dfs, ignore_index=True)
+    latency_table = latency_table.drop_duplicates(
+        subset=["Ours", "Baseline", "Roofline"],
+        keep="first",
     )
-    throughput_GPU_list.append(matmul_A100.loc[(M, N, K), "throughput"])
-    throughput_GPU_sim_list.append(matmul_A100_sim.loc[(M, N, K), "throughput"])
-    throughput_GPU_roofline_list.append(
-        matmul_A100_roofline.loc[(M, N, K), "throughput"]
+    latency_table = latency_table.sort_values(
+        by="CUTLASS",
+        ascending=False
     )
-    throughput_AMD_list.append(matmul_MI210.loc[(M, N, K), "throughput"])
-    throughput_AMD_sim_list.append(matmul_MI210_sim.loc[(M, N, K), "throughput"])
-    throughput_AMD_roofline_list.append(
-        matmul_MI210_roofline.loc[(M, N, K), "throughput"]
-    )
+    plot_latency(latency_table, axes, title=args.model, is_first=True, is_last=True)
 
+    mape_ours = np.mean(np.abs((latency_table['Ours'] - latency_table['CUTLASS']) / latency_table['CUTLASS'])) * 100
+    mape_baseline = np.mean(np.abs((latency_table['Baseline'] - latency_table['CUTLASS']) / latency_table['CUTLASS'])) * 100
+    mape_roofline = np.mean(np.abs((latency_table['Roofline'] - latency_table['CUTLASS']) / latency_table['CUTLASS'])) * 100
 
-# plt.figure(figsize=(6, 2.8))
-plt.figure(figsize=(3.64, 2.8))
-plt.xscale("log", base=2)
-plt.plot(
-    M_list,
-    throughput_GPU_roofline_list,
-    marker=" ",
-    linewidth=1.5,
-    linestyle="--",
-    label="Roofline of NVIDIA A100",
-    color=color_NV[0],
-)
-plt.plot(
-    M_list, throughput_GPU_list, marker="o", label="Real NVIDIA A100", color=color_NV[1]
-)
-plt.plot(
-    M_list,
-    throughput_GPU_sim_list,
-    marker="x",
-    label="Simulated NVIDIA A100",
-    color=color_NV[2],
-)
-plt.plot(
-    M_list,
-    throughput_AMD_roofline_list,
-    marker=" ",
-    linewidth=1.5,
-    linestyle="--",
-    label="Roofline of AMD MI210",
-    color=color_AMD[0],
-)
-plt.plot(
-    M_list, throughput_AMD_list, marker="o", label="Real AMD MI210", color=color_AMD[1]
-)
-plt.plot(
-    M_list,
-    throughput_AMD_sim_list,
-    marker="x",
-    label="Simulated AMD MI210",
-    color=color_AMD[2],
-)
-plt.plot(
-    M_list,
-    throughput_TPU_roofline_list,
-    marker=" ",
-    linewidth=1.5,
-    linestyle="--",
-    label="Roofline of Google TPUv3",
-    color=color_Google[0],
-)
-plt.plot(
-    M_list,
-    throughput_TPU_sim_list,
-    marker="x",
-    label="Simulated Google TPUv3",
-    color=color_Google[2],
-)
+    axes.text(0.5, -0.08, f"MAPE: Ours {mape_ours:.1f}%, LLMCompass {mape_baseline:.1f}%, Roofline {mape_roofline:.1f}%", ha='center', va='bottom', transform=axes.transAxes, fontsize=6)
+    fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.1)
+    fig.savefig(f"{file_dir}/{args.model}/{args.mode}/{args.mode}.png", dpi=300)
+else:
+    fig, axes = plt.subplots(1, 4, figsize=(2 * 4, 3), sharey=True)
+    if args.mode == "prefill":
+        fig_1, axes_1 = plt.subplots(1, 4, figsize=(2 * 4, 3), sharey=True)
 
+    for idx, test in enumerate(["qkv_proj", "o_proj", "up_proj", "down_proj"]):
+        if args.mode == "prefill":
+            latency_table = pd.read_csv(f"{file_dir}/{args.model}/{args.mode}/{test}_CP.csv")
+            plot_latency(latency_table, axes_1[idx], title=test, is_first=(idx==0), is_last=(idx==3))
+        
+        latency_table = pd.read_csv(f"{file_dir}/{args.model}/{args.mode}/{test}_TP.csv")
+        plot_latency(latency_table, axes[idx], title=test, is_first=(idx==0), is_last=(idx==3))
 
-# handles, labels = plt.gca().get_legend_handles_labels()
-# plt.legend(handles, labels, loc="upper left", bbox_to_anchor=(1, 1))
-# plt.title(title)
-plt.xlabel("M")
-plt.ylabel("TFLOPS")
-plt.grid(True, which="both", ls="--", c="0.7")  # Adding a grid for better readability
-plt.tight_layout()
-plt.savefig("figure5b.pdf", bbox_inches="tight", pad_inches=0.01, dpi=300)
-
-
-M = 8192
-title = f"Performance of Matmul with M={M}"
-K_list = []
-throughput_TPU_list = []
-throughput_TPU_sim_list = []
-throughput_TPU_roofline_list = []
-throughput_GPU_list = []
-throughput_GPU_sim_list = []
-throughput_GPU_roofline_list = []
-throughput_AMD_list = []
-throughput_AMD_sim_list = []
-throughput_AMD_roofline_list = []
-for K in range(6, 16):
-    K = 2**K
-    N = K
-    K_list.append(K)
-    throughput_TPU_sim_list.append(matmul_TPUv3_sim.loc[(M, N, K), "throughput"])
-    throughput_TPU_roofline_list.append(
-        matmul_TPUv3_roofline.loc[(M, N, K), "throughput"]
-    )
-    throughput_GPU_list.append(matmul_A100.loc[(M, N, K), "throughput"])
-    throughput_GPU_sim_list.append(matmul_A100_sim.loc[(M, N, K), "throughput"])
-    throughput_GPU_roofline_list.append(
-        matmul_A100_roofline.loc[(M, N, K), "throughput"]
-    )
-    throughput_AMD_list.append(matmul_MI210.loc[(M, N, K), "throughput"])
-    throughput_AMD_sim_list.append(matmul_MI210_sim.loc[(M, N, K), "throughput"])
-    throughput_AMD_roofline_list.append(
-        matmul_MI210_roofline.loc[(M, N, K), "throughput"]
-    )
-
-
-plt.figure(figsize=(3.64, 2.8))
-plt.xscale("log", base=2)
-plt.plot(
-    K_list,
-    throughput_GPU_roofline_list,
-    marker=" ",
-    linewidth=1.5,
-    linestyle="--",
-    label="Roofline of NVIDIA A100",
-    color=color_NV[0],
-)
-plt.plot(
-    K_list, throughput_GPU_list, marker="o", label="Real NVIDIA A100", color=color_NV[1]
-)
-plt.plot(
-    K_list,
-    throughput_GPU_sim_list,
-    marker="x",
-    label="Simulated NVIDIA A100",
-    color=color_NV[2],
-)
-plt.plot(
-    K_list,
-    throughput_AMD_roofline_list,
-    marker=" ",
-    linewidth=1.5,
-    linestyle="--",
-    label="Roofline of AMD MI210",
-    color=color_AMD[0],
-)
-plt.plot(
-    K_list, throughput_AMD_list, marker="o", label="Real AMD MI210", color=color_AMD[1]
-)
-plt.plot(
-    K_list,
-    throughput_AMD_sim_list,
-    marker="x",
-    label="Simulated AMD MI210",
-    color=color_AMD[2],
-)
-plt.plot(
-    K_list,
-    throughput_TPU_roofline_list,
-    marker=" ",
-    linewidth=1.5,
-    linestyle="--",
-    label="Roofline of Google TPUv3",
-    color=color_Google[0],
-)
-plt.plot(
-    K_list,
-    throughput_TPU_sim_list,
-    marker="x",
-    label="Simulated Google TPUv3",
-    color=color_Google[2],
-)
-# plt.legend()
-# plt.title(title)
-plt.xlabel("N=K")
-plt.ylabel("TFLOPS")
-plt.grid(True, which="both", ls="--", c="0.7")  # Adding a grid for better readability
-plt.tight_layout()
-plt.savefig("figure5a.pdf", bbox_inches="tight", pad_inches=0.01, dpi=300)
+    fig.tight_layout()
+    fig.savefig(f"{file_dir}/{args.model}/{args.mode}/TP.png", dpi=300)
+    if args.mode == "prefill":
+        fig_1.tight_layout()
+        fig_1.savefig(f"{file_dir}/{args.model}/{args.mode}/CP.png", dpi=300)

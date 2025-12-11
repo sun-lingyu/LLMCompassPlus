@@ -6,7 +6,7 @@ import argparse
 if __name__ == "__main__":
     pcb = device_dict["Orin"]
 
-    M = 64
+    M = 1024
     N = 1024
     K = 3072
     print(f"problem: M {M} N {N} K {K}")
