@@ -6,15 +6,30 @@ import argparse
 if __name__ == "__main__":
     pcb = device_dict["Orin"]
 
-    M = 1024
-    N = 1024
-    K = 3072
+    parser = argparse.ArgumentParser()
+    parser.add_argument("M", type=int)
+    parser.add_argument("N", type=int)
+    parser.add_argument("K", type=int)
+    parser.add_argument("precision", type=str, choices=["fp16", "int8"])
+    args = parser.parse_args()
+    M = args.M
+    N = args.N
+    K = args.K
     print(f"problem: M {M} N {N} K {K}")
 
-    model = Matmul(activation_data_type=data_type_dict["fp16"], weight_data_type=data_type_dict["fp16"], intermediate_data_type=data_type_dict["fp32"])
+    if args.precision == "fp16":
+        activation_data_type=data_type_dict["fp16"]
+        weight_data_type=data_type_dict["fp16"]
+        intermediate_data_type=data_type_dict["fp32"]
+    elif args.precision == "int8":
+        activation_data_type=data_type_dict["int8"]
+        weight_data_type=data_type_dict["int8"]
+        intermediate_data_type=data_type_dict["int32"]
+
+    model = Matmul(activation_data_type=activation_data_type, weight_data_type=weight_data_type, intermediate_data_type=intermediate_data_type)
     _ = model(
-        Tensor([M, K]),
-        Tensor([K, N]),
+        Tensor([M, K], data_type=activation_data_type),
+        Tensor([K, N], data_type=weight_data_type),
     )
 
     latency =  model.compile_and_simulate(pcb, compile_mode="heuristic-GPU") + 2773 / pcb.compute_module.clock_freq

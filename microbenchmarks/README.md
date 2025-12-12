@@ -8,6 +8,8 @@ Before running the benchmark
 `echo 1 > /sys/kernel/debug/bpmp/debug/clk/emc/state`
 `echo 3199000000 > /sys/kernel/debug/bpmp/debug/clk/emc/rate`
 
+To obtain memory bandwidth efficiency factor, seek to cuda_samples/Samples/1_Utilities/bandwidthTest. Compare its result with theoretic bandwidth.
+
 Below are measured throughput statistics from microbenchmarks
 
 | FMA (MAD) / SM / clk | A100 SM80         | Orin SM87          | 3090 SM86 |
