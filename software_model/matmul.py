@@ -320,9 +320,12 @@ class Matmul(Operator):
                                 l2_tile_K = cta_k
 
                                 register_usage_per_block = -1
-                                if self.activation_data_type == data_type_dict["fp16"]: # use HMMA.m16n8k16
+                                if self.activation_data_type == data_type_dict["fp16"]: # suppose HMMA.m16n8k16
                                     register_usage_per_block = cta_m * cta_n * self.intermediate_data_type.word_size // 4 + \
                                         (16 * 16 + 16 * 8) * self.activation_data_type.word_size // 4 * pcb_module.compute_module.core.sublane_count * 2 # double buffering
+                                elif self.activation_data_type == data_type_dict["int8"]: # suppose HMMA.m16n8k32
+                                    register_usage_per_block = cta_m * cta_n * self.intermediate_data_type.word_size // 4 + \
+                                        (16 * 32 + 32 * 8) * self.activation_data_type.word_size // 4 * pcb_module.compute_module.core.sublane_count * 2 # double buffering
                                 else:
                                     assert False, "not implemented yet"
 
@@ -569,7 +572,7 @@ class Matmul(Operator):
 
                 # Epilogue
                 total_cycle_count += l2_tiles[m, n, 0].M * l2_tiles[m, n, 0].N / pcb_module.compute_module.get_total_vector_throughput_per_cycle(self.activation_data_type, "cvt")
-                offset_for_smem_reorganizing_etc = 0.017 # obtained by fitting real machine cycles
+                offset_for_smem_reorganizing_etc = 0.01 # obtained by fitting real machine cycles
                 total_cycle_count += l2_tiles[m, n, 0].M * l2_tiles[m, n, 0].N * offset_for_smem_reorganizing_etc # offset, mainly models data reorganizing through smem before write to DRAM
                 total_cycle_count += pcb_module.io_module.latency_cycles + pcb_module.compute_module.l2_latency_cycles + l2_tiles[m, n, 0].M_N_io_cycle_count
 
@@ -830,7 +833,7 @@ class Matmul(Operator):
                     look_up_table,
                     ceil(M / M_tiling_factor),
                     ceil(N / N_tiling_factor),
-                    ceil(K / K_tiling_factor) / (4 / activation_data_type.word_size), # fp32 systolic array
+                    ceil(K / K_tiling_factor), # fp32 systolic array
                     pcb_module.compute_module.core.systolic_array.array_height,
                     pcb_module.compute_module.core.systolic_array.array_width,
                     mapping.dataflow,
@@ -841,7 +844,7 @@ class Matmul(Operator):
                 / pcb_module.compute_module.core.vector_unit.get_throughput_per_cycle(intermediate_data_type, "reduction")
             )
 
-            return compute_cycle_count
+            return compute_cycle_count // (4 // activation_data_type.word_size)
 
     @staticmethod
     def simulate_systolic_array_cycle_count(
