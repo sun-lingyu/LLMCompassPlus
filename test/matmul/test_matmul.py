@@ -137,6 +137,65 @@ def cutlass_gemm_min_latency_remote(
 
     return min(runtimes)
 
+def marlin_gemm_latency_remote(
+    M: int,
+    N: int,
+    K: int,
+    host: str = "202.120.39.3",
+    port: int = 9129,
+    user: Optional[str] = "sly",
+    work_dir: str = "/home/sly/marlin",
+    python_path: str = "/home/sly/anaconda3/envs/llmcompass/bin/python"
+) -> float:
+    python_cmd = [
+        python_path,
+        "test_simple.py",
+        str(M),
+        str(N),
+        str(K)
+    ]
+    
+    cmd_part = " ".join(shlex.quote(arg) for arg in python_cmd)
+    remote_cmd_str = f"cd {work_dir} && {cmd_part}"
+
+    target = f"{user}@{host}" if user is not None else host
+    ssh_cmd = [
+        "ssh",
+        "-p",
+        str(port),
+        target,
+        remote_cmd_str,
+    ]
+
+    proc = subprocess.run(
+        ssh_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+
+    output = proc.stdout
+
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"ssh/marlin exited with code {proc.returncode}\n"
+            f"SSH Command: {' '.join(ssh_cmd)}\n"
+            f"Output:\n{output}"
+        )
+
+    pattern = re.compile(r"average latency:\s*([0-9]+(?:\.[0-9]+)?)\s*ms")
+    match = pattern.search(output)
+    
+    if not match:
+        raise RuntimeError(
+            "No 'average latency: xxx ms' found in remote output.\n"
+            f"SSH Command: {' '.join(ssh_cmd)}\n"
+            f"Output:\n{output}"
+        )
+
+    return float(match.group(1))
+
 def test_and_save_latency(
     test_problems: list,
     file_name:str,
@@ -156,6 +215,10 @@ def test_and_save_latency(
         activation_data_type=data_type_dict["int8"]
         weight_data_type=data_type_dict["int8"]
         intermediate_data_type=data_type_dict["int32"]
+    elif precision == "int4":
+        activation_data_type=data_type_dict["fp16"]
+        weight_data_type=data_type_dict["int4"]
+        intermediate_data_type=data_type_dict["fp32"]
 
     latency_list = []
     for (idx, (M, N, K)) in enumerate(test_problems):
@@ -167,13 +230,13 @@ def test_and_save_latency(
         )
         latency =  1000 * (model.compile_and_simulate(pcb, compile_mode="heuristic-GPU") + 2773 / pcb.compute_module.clock_freq)
         if update_ours_only:
-            baseline_latency = float(df["Baseline"].iloc[idx])
+            baseline_latency = float(df["Baseline"].iloc[idx]) if precision != "int4" else -1
             roofline_latency = float(df["Roofline"].iloc[idx])
             cutlass_latency = float(df["CUTLASS"].iloc[idx])
         else:
-            baseline_latency =  get_baseline_latency(M, N, K, args.precision)
+            baseline_latency =  get_baseline_latency(M, N, K, args.precision) if precision != "int4" else -1
             roofline_latency = 1000 * (model.roofline_model(pcb) + 2773 / pcb.compute_module.clock_freq)
-            cutlass_latency = cutlass_gemm_min_latency_remote(M, N, K, precision)
+            cutlass_latency = cutlass_gemm_min_latency_remote(M, N, K, precision) if precision != "int4" else marlin_gemm_latency_remote(M, N, K)
         print(f"latency {latency:.3f}, baseline_latency {baseline_latency:.3f}, roofline_latency {roofline_latency:.3f}, cutlass_latency {cutlass_latency:.3f}")
         print()
         latency_list.append((latency, baseline_latency, roofline_latency, cutlass_latency))
@@ -222,7 +285,7 @@ if __name__ == "__main__":
     parser.add_argument("--mode", type=str, choices=["prefill", "decode"],)
     parser.add_argument("--test", type=str, choices=["qkv_proj", "o_proj", "up_proj", "down_proj", "all"])
     parser.add_argument("--model", type=str, choices=["Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"])
-    parser.add_argument("--precision", type=str, choices=["fp16", "int8"])
+    parser.add_argument("--precision", type=str, choices=["fp16", "int8", "int4"])
     parser.add_argument("--update_ours_only", action='store_true')
     args = parser.parse_args()
 

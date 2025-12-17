@@ -300,18 +300,19 @@ class Matmul(Operator):
             for cta_m in [64, 128, 256]:
                 for cta_n in [64, 128, 256]:
                     for cta_k in [32, 64]:
-                        for stages in [2, 3, 4, 5, 6]:
+                        for stages in [2]: # [2, 3, 4, 5, 6]: # 2 is always the best according to execution results
                             for (
                                     l0_M_tiling_factor,
                                     l0_N_tiling_factor,
                                     l0_K_tiling_factor, # l0_K_tiling_factor models sliced-K
-                                ) in self.find_permutations(
-                                    pcb_module.compute_module.core.sublane_count
-                                ):
+                                ) in [(4, 1, 1)]:
+                                # in self.find_permutations(
+                                #     pcb_module.compute_module.core.sublane_count
+                                # ): # 4,1,1 is always the best according to execution results
                                 if K <= cta_k * (stages - 1):
                                     continue  # not enough K for pipelining
 
-                                l1_working_set_size = (cta_m * cta_k * self.activation_data_type.word_size + \
+                                l1_working_set_size = int(cta_m * cta_k * self.activation_data_type.word_size + \
                                     cta_n * cta_k * self.weight_data_type.word_size) * stages
                                 if l0_K_tiling_factor > 1:
                                     l1_working_set_size += cta_m * cta_n * self.intermediate_data_type.word_size * l0_K_tiling_factor
@@ -320,10 +321,10 @@ class Matmul(Operator):
                                 l2_tile_K = cta_k
 
                                 register_usage_per_block = -1
-                                if self.activation_data_type == data_type_dict["fp16"]: # suppose HMMA.m16n8k16
+                                if self.activation_data_type.name == "fp16": # suppose HMMA.m16n8k16
                                     register_usage_per_block = cta_m * cta_n * self.intermediate_data_type.word_size // 4 + \
                                         (16 * 16 + 16 * 8) * self.activation_data_type.word_size // 4 * pcb_module.compute_module.core.sublane_count * 2 # double buffering
-                                elif self.activation_data_type == data_type_dict["int8"]: # suppose HMMA.m16n8k32
+                                elif self.activation_data_type.name == "int8": # suppose HMMA.m16n8k32
                                     register_usage_per_block = cta_m * cta_n * self.intermediate_data_type.word_size // 4 + \
                                         (16 * 32 + 32 * 8) * self.activation_data_type.word_size // 4 * pcb_module.compute_module.core.sublane_count * 2 # double buffering
                                 else:
@@ -341,7 +342,7 @@ class Matmul(Operator):
                                         if l2_tile_M >= M * 2 or l2_tile_N >= N * 2:
                                             continue  # unecessarily large tile
 
-                                        l2_working_set_size = (
+                                        l2_working_set_size = int(
                                             l2_tile_N * l2_tile_K * self.weight_data_type.word_size
                                             + l2_tile_M * l2_tile_K * self.activation_data_type.word_size
                                         ) * stages
@@ -428,7 +429,7 @@ class Matmul(Operator):
         l2_tile_K = mapping.l2_tile_K
         stages = mapping.stages
 
-        l2_working_set_size = (
+        l2_working_set_size = int(
                             l2_tile_N * l2_tile_K * self.weight_data_type.word_size
                             + l2_tile_M * l2_tile_K * self.activation_data_type.word_size
                         ) * stages
@@ -553,12 +554,16 @@ class Matmul(Operator):
                 total_cycle_count += pcb_module.io_module.latency_cycles + pcb_module.compute_module.l2_latency_cycles
                 for k in range(stages - 1):
                     total_cycle_count += l2_tiles[m, n, k].M_K_io_cycle_count + l2_tiles[m, n, k].K_N_io_cycle_count
+                if self.weight_data_type.name == "int4":
+                    offset_for_w4a16 = 0.03 # obtained by fitting real machine cycles
+                    total_cycle_count += l2_tiles[m, n, 0].K * l2_tiles[m, n, 0].N * offset_for_w4a16 # mainly models non-overlapped dequant overhead
 
                 flying_tile_cycles = [0] * (stages - 1)
                 for k in range(ceil(K / l2_tile_K)):
                     # current tile compute latency
                     wait_ready_cycles = flying_tile_cycles[k % (stages - 1)]
                     total_cycle_count += wait_ready_cycles + l2_tiles[m, n, k].compute_cycle_count
+                    # print(f"wait_ready_cycles {wait_ready_cycles}, l2_tiles[m, n, k].compute_cycle_count {l2_tiles[m, n, k].compute_cycle_count}")
 
                     # update flying tile
                     k_start_loading = k + stages - 1
@@ -573,7 +578,7 @@ class Matmul(Operator):
                 # Epilogue
                 total_cycle_count += l2_tiles[m, n, 0].M * l2_tiles[m, n, 0].N / pcb_module.compute_module.get_total_vector_throughput_per_cycle(self.activation_data_type, "cvt")
                 offset_for_smem_reorganizing_etc = 0.01 # obtained by fitting real machine cycles
-                total_cycle_count += l2_tiles[m, n, 0].M * l2_tiles[m, n, 0].N * offset_for_smem_reorganizing_etc # offset, mainly models data reorganizing through smem before write to DRAM
+                total_cycle_count += l2_tiles[m, n, 0].M * l2_tiles[m, n, 0].N * offset_for_smem_reorganizing_etc # offset, mainly models type conversion, data reorganizing through smem before write to DRAM
                 total_cycle_count += pcb_module.io_module.latency_cycles + pcb_module.compute_module.l2_latency_cycles + l2_tiles[m, n, 0].M_N_io_cycle_count
 
         return total_cycle_count

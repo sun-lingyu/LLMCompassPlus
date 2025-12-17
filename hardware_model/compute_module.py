@@ -122,7 +122,7 @@ class ComputeModule:
         return self.core.vector_unit.get_throughput_per_cycle(data_type, operation) * self.core.sublane_count * self.core_count
     
     def get_total_systolic_array_throughput_per_cycle(self, data_type: DataType):
-        return self.core_count * self.core.sublane_count * self.core.systolic_array.array_height * self.core.systolic_array.array_width * (4 / data_type.word_size)
+        return self.core_count * self.core.sublane_count * self.core.systolic_array.array_height * self.core.systolic_array.array_width * (4 // data_type.word_size)
 
 
 compute_module_dict = {

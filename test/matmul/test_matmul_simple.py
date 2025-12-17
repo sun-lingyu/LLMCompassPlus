@@ -10,7 +10,7 @@ if __name__ == "__main__":
     parser.add_argument("M", type=int)
     parser.add_argument("N", type=int)
     parser.add_argument("K", type=int)
-    parser.add_argument("precision", type=str, choices=["fp16", "int8"])
+    parser.add_argument("precision", type=str, choices=["fp16", "int8", "int4"])
     args = parser.parse_args()
     M = args.M
     N = args.N
@@ -25,6 +25,10 @@ if __name__ == "__main__":
         activation_data_type=data_type_dict["int8"]
         weight_data_type=data_type_dict["int8"]
         intermediate_data_type=data_type_dict["int32"]
+    elif args.precision == "int4":
+        activation_data_type=data_type_dict["fp16"]
+        weight_data_type=data_type_dict["int4"]
+        intermediate_data_type=data_type_dict["fp32"]
 
     model = Matmul(activation_data_type=activation_data_type, weight_data_type=weight_data_type, intermediate_data_type=intermediate_data_type)
     _ = model(
