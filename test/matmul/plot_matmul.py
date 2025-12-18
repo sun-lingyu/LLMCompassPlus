@@ -38,7 +38,7 @@ def plot_latency(
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", type=str, choices=["prefill", "decode"],)
-parser.add_argument("--model", type=str, choices=["Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"])
+parser.add_argument("--model", type=str, choices=["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"])
 parser.add_argument("--precision", type=str, choices=["fp16", "int8", "int4"])
 parser.add_argument("--plot_one_figure", action='store_true')
 args = parser.parse_args()

@@ -248,33 +248,45 @@ def test_and_save_latency(
     df.to_csv(file_name, index=False)  
 
 test_model_dict = {
+    "InternVision":{
+        "head_dim": 64,
+        "num_attention_heads": 16,
+        "num_key_value_heads": 16,
+        "hidden_size": 1024,
+        "intermediate_size": 4096,
+        "hidden_act": "gelu"
+    },
     "Qwen3_0_6B": {
         "head_dim": 128,
         "num_attention_heads": 16,
         "num_key_value_heads": 8 ,
         "hidden_size": 1024,
-        "intermediate_size": 3072
+        "intermediate_size": 3072,
+        "hidden_act": "silu"
     },
     "Qwen3_1_7B": {
         "head_dim": 128,
         "num_attention_heads": 16,
         "num_key_value_heads": 8 ,
         "hidden_size": 2048,
-        "intermediate_size": 6144
+        "intermediate_size": 6144,
+        "hidden_act": "silu"
     },
     "Qwen3_4B": {
         "head_dim": 128,
         "num_attention_heads": 32,
         "num_key_value_heads": 8 ,
         "hidden_size": 2560,
-        "intermediate_size": 9728
+        "intermediate_size": 9728,
+        "hidden_act": "silu"
     },
     "Qwen3_8B": {
         "head_dim": 128,
         "num_attention_heads": 32,
         "num_key_value_heads": 8 ,
         "hidden_size": 4096,
-        "intermediate_size": 12288
+        "intermediate_size": 12288,
+        "hidden_act": "silu"
     }
     }
 
@@ -284,7 +296,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str, choices=["prefill", "decode"],)
     parser.add_argument("--test", type=str, choices=["qkv_proj", "o_proj", "up_proj", "down_proj", "all"])
-    parser.add_argument("--model", type=str, choices=["Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"])
+    parser.add_argument("--model", type=str, choices=["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"])
     parser.add_argument("--precision", type=str, choices=["fp16", "int8", "int4"])
     parser.add_argument("--update_ours_only", action='store_true')
     args = parser.parse_args()
@@ -296,10 +308,11 @@ if __name__ == "__main__":
         "up_proj": model_shapes["hidden_size"],
         "down_proj": model_shapes["intermediate_size"]
         }
+    assert(model_shapes["hidden_act"] in ["silu", "gelu"])
     N_shapes = {
         "qkv_proj": model_shapes["head_dim"] * (model_shapes["num_key_value_heads"] * 2 + model_shapes["num_attention_heads"]), 
         "o_proj": model_shapes["hidden_size"],
-        "up_proj": model_shapes["intermediate_size"] * 2, # SiLU
+        "up_proj": model_shapes["intermediate_size"] * 2 if model_shapes["hidden_act"] == "silu" else model_shapes["intermediate_size"], # SiLU/GELU
         "down_proj": model_shapes["hidden_size"]
         }
     M = 1024 if args.mode == "prefill" else 64
