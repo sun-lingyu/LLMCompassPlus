@@ -8,8 +8,9 @@ import subprocess
 import re
 import shlex
 import argparse
+import json
 import pandas as pd
-from typing import Optional, Union
+from typing import Optional, Union, Tuple, List, Dict, Any
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -33,7 +34,7 @@ def get_baseline_latency(
 
     proc = subprocess.run(
         cmd,
-        cwd=repo_root,                  # 在 LLMCompass 目录下执行
+        cwd=repo_root,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -67,46 +68,51 @@ def cutlass_gemm_min_latency_remote(
     host: str = "202.120.39.3",
     port: int = 9129,
     user: Optional[str] = "sly",
-    profiler_path: str = "/home/sly/cutlass/build/tools/profiler/cutlass_profiler"
-) -> float:
+    profiler_path: str = "/home/sly/cutlass/build/tools/profiler/cutlass_profiler",
+    cutlass_perf_log: str = f"{file_dir}/cutlass_perf_log.json",
+) -> Tuple[float, str, Optional[int]]:
+    """
+    Returns:
+        (min_runtime, best_operation)
+    """
+    existing_data = []
+    if os.path.exists(cutlass_perf_log):
+        with open(cutlass_perf_log, 'r') as f:
+            content = f.read().strip()
+            if content:
+                data = json.loads(content)
+                if isinstance(data, list):
+                    existing_data = data
+                else:
+                    assert False, "cutlass_perf_log.json format error"
+    
+    for record in existing_data:
+        if (record.get("M") == M and 
+            record.get("N") == N and 
+            record.get("K") == K and 
+            record.get("precision") == precision):
+            return record['min_runtime'], record['best_operation']
+
     if precision == "fp16":
         cutlass_cmd = [
-            profiler_path,
-            "--operation=Gemm",
-            f"--m={M}",
-            f"--n={N}",
-            f"--k={K}",
-            "--A=f16:row",
-            "--B=f16:column",
-            "--D=f16",
-            "--accum=f32",
-            "--beta=0"
+            profiler_path, "--operation=Gemm",
+            f"--m={M}", f"--n={N}", f"--k={K}",
+            "--A=f16:row", "--B=f16:column", "--D=f16",
+            "--accum=f32", "--beta=0"
         ]
     elif precision == "int8":
         cutlass_cmd = [
-            profiler_path,
-            "--operation=Gemm",
-            f"--m={M}",
-            f"--n={N}",
-            f"--k={K}",
-            "--A=s8:row",
-            "--B=s8:column",
-            "--D=s8",
-            "--accum=s32",
-            "--beta=0"
+            profiler_path, "--operation=Gemm",
+            f"--m={M}", f"--n={N}", f"--k={K}",
+            "--A=s8:row", "--B=s8:column", "--D=s8",
+            "--accum=s32", "--beta=0"
         ]
     else:
         assert False, "Precision not supported"
+    
     remote_cmd_str = " ".join(shlex.quote(arg) for arg in cutlass_cmd)
-
     target = f"{user}@{host}" if user is not None else host
-    ssh_cmd = [
-        "ssh",
-        "-p",
-        str(port),
-        target,
-        remote_cmd_str,
-    ]
+    ssh_cmd = ["ssh", "-p", str(port), target, remote_cmd_str]
 
     proc = subprocess.run(
         ssh_cmd,
@@ -125,17 +131,41 @@ def cutlass_gemm_min_latency_remote(
             f"Output:\n{output}"
         )
 
-    pattern = re.compile(r"Runtime:\s*([0-9]+(?:\.[0-9]+)?)\s*ms")
-    runtimes = [float(m.group(1)) for m in pattern.finditer(output)]
+    results = []
+    current_op = None
     
-    if not runtimes:
+    for line in output.splitlines():
+        line = line.strip()
+        
+        if line.startswith("Operation:"):
+            current_op = line.split(":", 1)[1].strip()
+        
+        if "Runtime:" in line and current_op:
+            match = re.search(r"Runtime:\s*([0-9]+(?:\.[0-9]+)?)", line)
+            if match:
+                runtime_ms = float(match.group(1))
+                results.append((runtime_ms, current_op))
+
+    if not results:
         raise RuntimeError(
-            "No 'Runtime: xxx ms' found in remote cutlass_profiler output.\n"
-            f"SSH Command: {' '.join(ssh_cmd)}\n"
-            f"Output:\n{output}"
+            "No valid performance data found in profiler output.\n"
+            f"Output snippet:\n{output[:1000]}"
         )
 
-    return min(runtimes)
+    best_runtime, best_op_name = min(results, key=lambda x: x[0])
+
+    new_record = {
+        "M": M, "N": N, "K": K, "precision": precision,
+        "min_runtime": best_runtime, 
+        "best_operation": best_op_name
+    }
+
+    existing_data.append(new_record)
+
+    with open(cutlass_perf_log, 'w') as f:
+        json.dump(existing_data, f, indent=4, ensure_ascii=False)
+
+    return best_runtime, best_op_name
 
 def marlin_gemm_latency_remote(
     M: int,
@@ -236,7 +266,7 @@ def test_and_save_latency(
         else:
             baseline_latency =  get_baseline_latency(M, N, K, args.precision) if precision != "int4" else -1
             roofline_latency = 1000 * (model.roofline_model(pcb) + 2773 / pcb.compute_module.clock_freq)
-            cutlass_latency = cutlass_gemm_min_latency_remote(M, N, K, precision) if precision != "int4" else marlin_gemm_latency_remote(M, N, K)
+            cutlass_latency = cutlass_gemm_min_latency_remote(M, N, K, precision)[0] if precision != "int4" else marlin_gemm_latency_remote(M, N, K)
         print(f"latency {latency:.3f}, baseline_latency {baseline_latency:.3f}, roofline_latency {roofline_latency:.3f}, cutlass_latency {cutlass_latency:.3f}")
         print()
         latency_list.append((latency, baseline_latency, roofline_latency, cutlass_latency))
