@@ -257,6 +257,13 @@ class Matmul(Operator):
         mapping: Mapping,
         pcb_module: Device,
     ) -> int:
+        # initialize performance counters
+        self.systolic_array_fma_count = 0
+        self.reg_access_count = 0
+        self.l1_access_size = 0
+        self.l2_access_size = 0
+        self.mem_access_size = 0
+
         if self.look_up_table is None:
             self.look_up_table = pd.read_csv(
                 f"./systolic_array_model/look_up_table_{pcb_module.compute_module.core.systolic_array.array_width}_{pcb_module.compute_module.core.systolic_array.array_height}.csv",
@@ -446,13 +453,13 @@ class Matmul(Operator):
                 offset_for_smem_reorganizing_etc = 0.01 # obtained by fitting real machine cycles
                 total_cycle_count += l2_tiles[m, n, 0].M * l2_tiles[m, n, 0].N * offset_for_smem_reorganizing_etc # offset, mainly models type conversion, data reorganizing through smem before write to DRAM
                 total_cycle_count += pcb_module.io_module.latency_cycles + pcb_module.compute_module.l2_latency_cycles + l2_tiles[m, n, 0].M_N_io_cycle_count
+                self.mem_access_size += l2_tiles[m, n, 0].mem_write_size
         
         self.systolic_array_fma_count = sum(l2_tile.systolic_array_fma_count for l2_tile in l2_tiles.flat)
         self.reg_access_count = sum(l2_tile.reg_access_count for l2_tile in l2_tiles.flat)
         self.l1_access_size = sum(l2_tile.l1_access_size for l2_tile in l2_tiles.flat)
         self.l2_access_size = sum(l2_tile.l2_access_size for l2_tile in l2_tiles.flat)
-        self.mem_access_size = sum(l2_tile.mem_access_size for l2_tile in l2_tiles.flat)
-
+        self.mem_access_size += sum(l2_tile.mem_read_size for l2_tile in l2_tiles.flat)
         return total_cycle_count
 
     class L2TileSimulator:
@@ -473,7 +480,8 @@ class Matmul(Operator):
             self.reg_access_count = 0
             self.l1_access_size = 0
             self.l2_access_size = 0
-            self.mem_access_size = 0
+            self.mem_read_size = 0
+            self.mem_write_size = 0
 
             # print(f'L2 tile: {M} {N} {K}')
             self.M = M
@@ -602,7 +610,9 @@ class Matmul(Operator):
                 self.simulate_l2_tile_io_cycle_count(K, N, weight_data_type, pcb_module),
                 sum(l1_tile.K_N_io_cycle_count for l1_tile in self.l1_tiles.flat)
             )
+            self.mem_read_size = M * K * activation_data_type.word_size + K * N * weight_data_type.word_size
             self.M_N_io_cycle_count = self.simulate_l2_tile_io_cycle_count(M, N, activation_data_type, pcb_module)
+            self.mem_write_size = M * N * activation_data_type.word_size
             self.compute_cycle_count = self.simulate_l2_tile_compute_cycle_count(
                 M, N, mapping, pcb_module
             )
@@ -615,7 +625,6 @@ class Matmul(Operator):
         def simulate_l2_tile_io_cycle_count(
             self, M: int, N: int, data_type: DataType, pcb_module: Device
         ): # cycles to load the tile from DRAM
-            self.mem_access_size += M * N * data_type.word_size
             return ceil(
                 M
                 * N
