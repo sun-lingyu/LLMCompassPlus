@@ -20,6 +20,7 @@ def measure_cutlass_power_remote(
     user: Optional[str] = "sly",
     profiler_path: str = "/home/sly/cutlass/build/tools/profiler/cutlass_profiler",
     cutlass_power_log: str = f"{file_dir}/cutlass_power_log.json",
+    ignore_cache: bool = False
 ) -> float:
     existing_data = []
     if os.path.exists(cutlass_power_log):
@@ -32,12 +33,13 @@ def measure_cutlass_power_remote(
                 else:
                     assert False, "cutlass_power_log.json format error"
 
-    for record in existing_data:
-        if (record.get("M") == M and 
-            record.get("N") == N and 
-            record.get("K") == K and 
-            record.get("precision") == precision):
-            return record['power_VDD_GPU_SOC'], record['power_VDDQ_VDD2_1V8AO']
+    if not ignore_cache:
+        for record in existing_data:
+            if (record.get("M") == M and 
+                record.get("N") == N and 
+                record.get("K") == K and 
+                record.get("precision") == precision):
+                return record['power_VDD_GPU_SOC'], record['power_VDDQ_VDD2_1V8AO']
 
     _, best_op_name = cutlass_gemm_min_latency_remote(
         M, N, K, precision, host, port, user, profiler_path
@@ -142,15 +144,16 @@ else:
     except ValueError:
         raise RuntimeError(f"Could not parse power output. Received:\n{output}")
     
-    new_record = {
-        "M": M, "N": N, "K": K, "precision": precision,
-        "power_VDD_GPU_SOC": avg_power_VDD_GPU_SOC, "power_VDDQ_VDD2_1V8AO": avg_power_VDDQ_VDD2_1V8AO
-    }
+    if not ignore_cache:
+        new_record = {
+            "M": M, "N": N, "K": K, "precision": precision,
+            "power_VDD_GPU_SOC": avg_power_VDD_GPU_SOC, "power_VDDQ_VDD2_1V8AO": avg_power_VDDQ_VDD2_1V8AO
+        }
 
-    existing_data.append(new_record)
+        existing_data.append(new_record)
 
-    with open(cutlass_power_log, 'w') as f:
-        json.dump(existing_data, f, indent=4, ensure_ascii=False)
+        with open(cutlass_power_log, 'w') as f:
+            json.dump(existing_data, f, indent=4, ensure_ascii=False)
     
     return avg_power_VDD_GPU_SOC, avg_power_VDDQ_VDD2_1V8AO
 
