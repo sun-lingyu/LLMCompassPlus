@@ -14,7 +14,7 @@ from software_model.utils import data_type_dict, Tensor
 from hardware_model.device import device_dict
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
-CACHE_FILE_TEMPLATE = f"{file_dir}/power_features_cache"
+CACHE_FILE_TEMPLATE = f"{file_dir}/temp/power_features_cache"
 
 def plot_fitting_results(y_true, y_pred, feature_names, coefs, intercept, r2, mse, title_suffix=""):
     try:
@@ -52,7 +52,7 @@ def plot_fitting_results(y_true, y_pred, feature_names, coefs, intercept, r2, ms
 
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.15)
-    save_path = f"{file_dir}/power_nnls_fitting_{title_suffix}.png"
+    save_path = f"{file_dir}/results_power/power_nnls_fitting_{title_suffix}.png"
     plt.savefig(save_path, dpi=300)
     print(f"\n[Info] Plot saved to: {save_path}")
 
@@ -74,10 +74,10 @@ def load_or_generate_data(args):
             print(f"Error loading cache: {e}. Will re-calculate.")
 
     print("Generating features from simulation...")
-    pcb = device_dict["Orin"]
+    pcb = device_dict[args.device]
     existing_data = []
     
-    json_path = f"{file_dir}/cutlass_power_log.json"
+    json_path = f"{file_dir}/temp/cutlass_power_log.json"
     if os.path.exists(json_path):
         with open(json_path, 'r') as f:
             content = f.read().strip()
@@ -145,16 +145,6 @@ def load_or_generate_data(args):
     else:
         print("No valid data generated.")
         return None, None, None
-    prefill_X_raw = [X[idx][4] for idx in range(len(X)) if M_list[idx] >= 256]
-    prefill_y_mem = [y_mem[idx] for idx in range(len(X)) if M_list[idx] >= 256]
-    decode_X_raw = [X[idx][4] for idx in range(len(X)) if M_list[idx] < 256]
-    decode_y_mem = [y_mem[idx] for idx in range(len(X)) if M_list[idx] < 256]
-    plt.scatter(prefill_X_raw, prefill_y_mem, color='blue', alpha=0.6, s=60, label='prefill')
-    plt.scatter(decode_X_raw, decode_y_mem, color='yellow', alpha=0.6, s=60, label='decode')
-    plt.xlabel('DRAM access size (Bytes/s)')
-    plt.ylabel('Power VDDQ_VDD2_1V8AO (W)')
-    plt.legend()
-    plt.savefig(f"{file_dir}/soc_scatter.png", dpi=300)
 
     return X, y_soc, y_mem
 
@@ -255,6 +245,7 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("device", type=str, choices=["Orin", "Thor"])
     parser.add_argument("precision", type=str, choices=["fp16", "int8", "int4"])
     args = parser.parse_args()
 

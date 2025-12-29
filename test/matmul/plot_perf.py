@@ -45,7 +45,7 @@ args = parser.parse_args()
 
 if args.plot_one_figure:
     fig, axes = plt.subplots(1, 1, figsize=(3, 2.8), sharey=True)
-    csv_files = glob.glob(str(Path(f"{file_dir}/{args.model}/{args.precision}/{args.mode}") / "*.csv"))
+    csv_files = glob.glob(str(Path(f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}") / "*.csv"))
     dfs = [pd.read_csv(f) for f in csv_files]
     latency_table = pd.concat(dfs, ignore_index=True)
     latency_table = latency_table.drop_duplicates(
@@ -67,7 +67,7 @@ if args.plot_one_figure:
     else:
         axes.text(0.5, -0.08, f"MAPE: Ours {mape_ours:.1f}%, Roofline {mape_roofline:.1f}%", ha='center', va='bottom', transform=axes.transAxes, fontsize=6)
     fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.1)
-    fig.savefig(f"{file_dir}/{args.model}/{args.precision}/{args.mode}/{args.mode}.png", dpi=300)
+    fig.savefig(f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}/{args.mode}.png", dpi=300)
 else:
     fig, axes = plt.subplots(1, 4, figsize=(2 * 4, 3), sharey=True)
     if args.mode == "prefill":
@@ -75,14 +75,14 @@ else:
 
     for idx, test in enumerate(["qkv_proj", "o_proj", "up_proj", "down_proj"]):
         if args.mode == "prefill":
-            latency_table = pd.read_csv(f"{file_dir}/{args.model}/{args.precision}/{args.mode}/{test}_CP.csv")
+            latency_table = pd.read_csv(f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}/{test}_CP.csv")
             plot_latency(latency_table, axes_1[idx], title=test, precision=args.precision, is_first=(idx==0), is_last=(idx==3))
         
-        latency_table = pd.read_csv(f"{file_dir}/{args.model}/{args.precision}/{args.mode}/{test}_TP.csv")
+        latency_table = pd.read_csv(f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}/{test}_TP.csv")
         plot_latency(latency_table, axes[idx], title=test, precision=args.precision, is_first=(idx==0), is_last=(idx==3))
 
     fig.tight_layout()
-    fig.savefig(f"{file_dir}/{args.model}/{args.precision}/{args.mode}/TP.png", dpi=300)
+    fig.savefig(f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}/TP.png", dpi=300)
     if args.mode == "prefill":
         fig_1.tight_layout()
-        fig_1.savefig(f"{file_dir}/{args.model}/{args.precision}/{args.mode}/CP.png", dpi=300)
+        fig_1.savefig(f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}/CP.png", dpi=300)

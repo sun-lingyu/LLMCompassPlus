@@ -5,7 +5,8 @@ import time
 import argparse
 import json
 from typing import Optional
-from test.matmul.test_matmul import cutlass_gemm_min_latency_remote
+from test.matmul.test_perf import cutlass_gemm_min_latency_remote
+from test.matmul.utils import test_model_dict
 file_dir = os.path.dirname(os.path.abspath(__file__))
 
 def measure_cutlass_power_remote(
@@ -19,7 +20,7 @@ def measure_cutlass_power_remote(
     port: int = 9129,
     user: Optional[str] = "sly",
     profiler_path: str = "/home/sly/cutlass/build/tools/profiler/cutlass_profiler",
-    cutlass_power_log: str = f"{file_dir}/cutlass_power_log.json",
+    cutlass_power_log: str = f"{file_dir}/temp/cutlass_power_log.json",
     ignore_cache: bool = False
 ) -> float:
     existing_data = []
@@ -156,49 +157,6 @@ else:
             json.dump(existing_data, f, indent=4, ensure_ascii=False)
     
     return avg_power_VDD_GPU_SOC, avg_power_VDDQ_VDD2_1V8AO
-
-test_model_dict = {
-    "InternVision":{
-        "head_dim": 64,
-        "num_attention_heads": 16,
-        "num_key_value_heads": 16,
-        "hidden_size": 1024,
-        "intermediate_size": 4096,
-        "hidden_act": "gelu"
-    },
-    "Qwen3_0_6B": {
-        "head_dim": 128,
-        "num_attention_heads": 16,
-        "num_key_value_heads": 8 ,
-        "hidden_size": 1024,
-        "intermediate_size": 3072,
-        "hidden_act": "silu"
-    },
-    "Qwen3_1_7B": {
-        "head_dim": 128,
-        "num_attention_heads": 16,
-        "num_key_value_heads": 8 ,
-        "hidden_size": 2048,
-        "intermediate_size": 6144,
-        "hidden_act": "silu"
-    },
-    "Qwen3_4B": {
-        "head_dim": 128,
-        "num_attention_heads": 32,
-        "num_key_value_heads": 8 ,
-        "hidden_size": 2560,
-        "intermediate_size": 9728,
-        "hidden_act": "silu"
-    },
-    "Qwen3_8B": {
-        "head_dim": 128,
-        "num_attention_heads": 32,
-        "num_key_value_heads": 8 ,
-        "hidden_size": 4096,
-        "intermediate_size": 12288,
-        "hidden_act": "silu"
-    }
-    }
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

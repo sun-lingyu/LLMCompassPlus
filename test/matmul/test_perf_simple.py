@@ -4,9 +4,8 @@ from hardware_model.device import device_dict
 import argparse
 
 if __name__ == "__main__":
-    pcb = device_dict["Orin"]
-
     parser = argparse.ArgumentParser()
+    parser.add_argument("device", type=str, choices=["Orin", "Thor"],)
     parser.add_argument("M", type=int)
     parser.add_argument("N", type=int)
     parser.add_argument("K", type=int)
@@ -16,6 +15,8 @@ if __name__ == "__main__":
     N = args.N
     K = args.K
     print(f"problem: M {M} N {N} K {K}")
+
+    pcb = device_dict[args.device]
 
     if args.precision == "fp16":
         activation_data_type=data_type_dict["fp16"]

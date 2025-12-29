@@ -1,6 +1,7 @@
 from software_model.matmul import Matmul
 from software_model.utils import data_type_dict, Tensor
 from hardware_model.device import device_dict
+from test.matmul.utils import test_model_dict
 
 import os
 import sys
@@ -65,11 +66,11 @@ def cutlass_gemm_min_latency_remote(
     N: int,
     K: int,
     precision: str,
+    port: int,
     host: str = "202.120.39.3",
-    port: int = 9129,
     user: Optional[str] = "sly",
     profiler_path: str = "/home/sly/cutlass/build/tools/profiler/cutlass_profiler",
-    cutlass_perf_log: str = f"{file_dir}/cutlass_perf_log.json",
+    cutlass_perf_log: str = f"{file_dir}/temp/cutlass_perf_log.json",
 ) -> Tuple[float, str, Optional[int]]:
     """
     Returns:
@@ -230,7 +231,8 @@ def test_and_save_latency(
     test_problems: list,
     file_name:str,
     precision: str,
-    update_ours_only: bool
+    update_ours_only: bool,
+    port: int,
     ):
 
     if update_ours_only:
@@ -249,6 +251,7 @@ def test_and_save_latency(
         activation_data_type=data_type_dict["fp16"]
         weight_data_type=data_type_dict["int4"]
         intermediate_data_type=data_type_dict["fp32"]
+        assert port == 9129, "marlin int4 precision is for Orin only"
 
     latency_list = []
     for (idx, (M, N, K)) in enumerate(test_problems):
@@ -266,7 +269,7 @@ def test_and_save_latency(
         else:
             baseline_latency =  get_baseline_latency(M, N, K, args.precision) if precision != "int4" else -1
             roofline_latency = 1000 * (model.roofline_model(pcb) + 2773 / pcb.compute_module.clock_freq)
-            cutlass_latency = cutlass_gemm_min_latency_remote(M, N, K, precision)[0] if precision != "int4" else marlin_gemm_latency_remote(M, N, K)
+            cutlass_latency = cutlass_gemm_min_latency_remote(M, N, K, precision, port)[0] if precision != "int4" else marlin_gemm_latency_remote(M, N, K)
         print(f"latency {latency:.3f}, baseline_latency {baseline_latency:.3f}, roofline_latency {roofline_latency:.3f}, cutlass_latency {cutlass_latency:.3f}")
         print()
         latency_list.append((latency, baseline_latency, roofline_latency, cutlass_latency))
@@ -277,60 +280,18 @@ def test_and_save_latency(
     )
     df.to_csv(file_name, index=False)  
 
-test_model_dict = {
-    "InternVision":{
-        "head_dim": 64,
-        "num_attention_heads": 16,
-        "num_key_value_heads": 16,
-        "hidden_size": 1024,
-        "intermediate_size": 4096,
-        "hidden_act": "gelu"
-    },
-    "Qwen3_0_6B": {
-        "head_dim": 128,
-        "num_attention_heads": 16,
-        "num_key_value_heads": 8 ,
-        "hidden_size": 1024,
-        "intermediate_size": 3072,
-        "hidden_act": "silu"
-    },
-    "Qwen3_1_7B": {
-        "head_dim": 128,
-        "num_attention_heads": 16,
-        "num_key_value_heads": 8 ,
-        "hidden_size": 2048,
-        "intermediate_size": 6144,
-        "hidden_act": "silu"
-    },
-    "Qwen3_4B": {
-        "head_dim": 128,
-        "num_attention_heads": 32,
-        "num_key_value_heads": 8 ,
-        "hidden_size": 2560,
-        "intermediate_size": 9728,
-        "hidden_act": "silu"
-    },
-    "Qwen3_8B": {
-        "head_dim": 128,
-        "num_attention_heads": 32,
-        "num_key_value_heads": 8 ,
-        "hidden_size": 4096,
-        "intermediate_size": 12288,
-        "hidden_act": "silu"
-    }
-    }
-
 if __name__ == "__main__":
-    pcb = device_dict["Orin"]
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", type=str, choices=["prefill", "decode"],)
+    parser.add_argument("--device", type=str, choices=["Orin", "Thor"],)
+    parser.add_argument("--mode", type=str, choices=["prefill", "decode"])
     parser.add_argument("--test", type=str, choices=["qkv_proj", "o_proj", "up_proj", "down_proj", "all"])
     parser.add_argument("--model", type=str, choices=["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"])
     parser.add_argument("--precision", type=str, choices=["fp16", "int8", "int4"])
     parser.add_argument("--update_ours_only", action='store_true')
     args = parser.parse_args()
-
+    
+    pcb = device_dict[args.device]
+    port = 9129 if args.device == "Orin" else 9147 # 9147: Thor
     model_shapes = test_model_dict[args.model]
     K_shapes = {
         "qkv_proj": model_shapes["hidden_size"], 
@@ -348,7 +309,7 @@ if __name__ == "__main__":
     M = 1024 if args.mode == "prefill" else 64
     assert(M % 4 == 0)
 
-    os.makedirs(f"{file_dir}/{args.model}/{args.precision}/{args.mode}", exist_ok=True)
+    os.makedirs(f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}", exist_ok=True)
     for test in ["qkv_proj", "o_proj", "up_proj", "down_proj"]:
         if args.test != "all" and args.test != test:
             continue
@@ -359,13 +320,13 @@ if __name__ == "__main__":
         if args.mode == "prefill":
             # test Context Parallelism
             test_problems = [(M, N, K), (M // 2, N, K), (M // 4, N, K)]
-            test_and_save_latency(test_problems, f"{file_dir}/{args.model}/{args.precision}/{args.mode}/{test}_CP.csv", args.precision, args.update_ours_only)
+            test_and_save_latency(test_problems, f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}/{test}_CP.csv", args.precision, args.update_ours_only, port)
 
         # test Tensor Parallelism
         if test == "qkv_proj" or test == "up_proj":
             test_problems = [(M, N, K), (M, N // 2, K), (M, N // 4, K)]
         else: # o_proj or down_proj
             test_problems = [(M, N, K), (M, N, K // 2), (M, N, K // 4)]
-        test_and_save_latency(test_problems, f"{file_dir}/{args.model}/{args.precision}/{args.mode}/{test}_TP.csv", args.precision, args.update_ours_only)
+        test_and_save_latency(test_problems, f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}/{test}_TP.csv", args.precision, args.update_ours_only, port)
     
         
