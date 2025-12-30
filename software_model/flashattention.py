@@ -59,6 +59,15 @@ class FlashAttention(Operator):
         intermediate_data_type: DataType,
         is_causal: bool = True,
     ) -> None:
+        """
+        Initializes the FlashAttention operator.
+
+        Args:
+            activation_data_type (DataType): Data type for activations (Q, K, V).
+            weight_data_type (DataType): Data type for weights (not strictly used as weights here, but for consistency).
+            intermediate_data_type (DataType): Data type for intermediate calculations (e.g., accumulation).
+            is_causal (bool, optional): Whether to apply causal masking. Defaults to True.
+        """
         super().__init__(0, 0, 0, 0, activation_data_type)
         self.activation_data_type = activation_data_type
         self.weight_data_type = weight_data_type
@@ -77,7 +86,17 @@ class FlashAttention(Operator):
         k: Tensor,
         v: Tensor,
     ) -> Tensor:
-        """Configures the operator for a FlashAttention workload."""
+        """
+        Configures the operator for a FlashAttention workload.
+        
+        Args:
+            q (Tensor): Query tensor with shape [batch, heads, seq_len_q, head_dim].
+            k (Tensor): Key tensor with shape [batch, heads, seq_len_kv, head_dim].
+            v (Tensor): Value tensor with shape [batch, heads, seq_len_kv, head_dim].
+
+        Returns:
+            Tensor: Output tensor with shape [batch, heads, seq_len_q, head_dim].
+        """
         
         assert self.activation_data_type == q.data_type
         assert self.weight_data_type == k.data_type == v.data_type
@@ -143,6 +162,19 @@ class FlashAttention(Operator):
         return Tensor(self.output_shape, self.activation_data_type)
 
     def roofline_model(self, pcb_module: Device) -> float:
+        """
+        Estimates the latency using a roofline model.
+        
+        The latency is determined by the maximum of compute-bound latency and memory-bound latency.
+        Compute-bound latency considers matrix multiplication, exponentiation, and reduction operations.
+        Memory-bound latency considers I/O traffic and bandwidth.
+
+        Args:
+            pcb_module (Device): The hardware device configuration.
+
+        Returns:
+            float: Estimated latency in seconds.
+        """
         self.roofline_latency = max(
             self.matmul_flop_count / (pcb_module.compute_module.get_total_systolic_array_throughput_per_cycle(self.activation_data_type) * 2 * pcb_module.compute_module.clock_freq) + self.exp2_flops / (pcb_module.compute_module.get_total_vector_throughput_per_cycle(self.intermediate_data_type, "exp2") * 2 * pcb_module.compute_module.clock_freq) + self.reduction_flops / (pcb_module.compute_module.get_total_vector_throughput_per_cycle(self.intermediate_data_type, "reduction") * 2 * pcb_module.compute_module.clock_freq),
             self.io_count 
@@ -247,6 +279,19 @@ class FlashAttention(Operator):
         pcb_module: Device,
         compile_mode: str = "exhaustive",
     ):
+        """
+        Compiles the workload and simulates it to find the best mapping and latency.
+
+        This method iterates through possible tiling configurations (L2 and L1 tile sizes)
+        and mapping strategies to minimize the cycle count.
+
+        Args:
+            pcb_module (Device): The hardware device configuration.
+            compile_mode (str, optional): Compilation mode. Currently only "exhaustive" is supported. Defaults to "exhaustive".
+
+        Returns:
+            float: The best estimated latency in seconds.
+        """
         min_cycle_count = 2**63 - 1
         best_mapping = None
         
@@ -280,6 +325,7 @@ class FlashAttention(Operator):
                             if (3 * l1_tile_seq_len_q * self.computational_graph.head_dim * self.activation_data_type.word_size + 4 * l1_tile_seq_len_kv * self.computational_graph.head_dim * self.weight_data_type.word_size) > pcb_module.compute_module.core.SRAM_size:
                                 continue
                             
+                            # Two Matmuls in FlashAttention which requires two sets of L0 tiling factors
                             for (
                                 l0_M_tiling_factor_matmul1,
                                 l0_N_tiling_factor_matmul1,
@@ -335,6 +381,20 @@ class FlashAttention(Operator):
         mapping: Mapping,
         pcb_module: Device,
     ) -> int:
+        """
+        Simulates the execution of the FlashAttention workload for a specific mapping.
+
+        This method models the cycle-accurate behavior of the hardware, considering
+        L2 tiling, double buffering, and compute/IO overlap.
+
+        Args:
+            computational_graph (ComputationGraph): The computational graph of the workload.
+            mapping (Mapping): The specific tiling and mapping configuration to simulate.
+            pcb_module (Device): The hardware device configuration.
+
+        Returns:
+            int: The total cycle count for the simulation.
+        """
         if self.look_up_table is None:
             csv_path = f"./systolic_array_model/look_up_table_{pcb_module.compute_module.core.systolic_array.array_width}_{pcb_module.compute_module.core.systolic_array.array_height}.csv"
             if not os.path.exists(csv_path):
@@ -425,6 +485,8 @@ class FlashAttention(Operator):
         total_cycle_count = 0
         previous_compute_cycle_count = 0
         
+        
+        #L2 tiles scheduling
         for (l2_tile_i, b, h, l2_tile_j) in self.generate_tile_loops_with_BH(
             ceil(seq_len_q / l2_tile_seq_q),
             batch_size,
@@ -520,6 +582,12 @@ class FlashAttention(Operator):
         
         
     class L2TileSimulator:
+        """
+        Simulates the processing of a single L2 tile.
+        
+        Handles the simulation of I/O for Q, K, V, and Output, as well as the computation
+        within the tile (which involves iterating over L1 tiles).
+        """
         def __init__(
             self,
             seq_len_q: int,
@@ -692,6 +760,12 @@ class FlashAttention(Operator):
             return total_cycle_count
             
     class L1TileSimulator:
+        """
+        Simulates the processing of a single L1 tile.
+        
+        Handles the simulation of I/O between L2 and L1, and the computation on the systolic array
+        and vector units.
+        """
         def __init__(
             self,
             seq_len_q: int,
@@ -831,6 +905,25 @@ class FlashAttention(Operator):
         array_width,
         dataflow="os",
     ):
+        """
+        Estimates the cycle count for a matrix multiplication on a systolic array.
+
+        It first checks for high utilization cases where a simple analytical model is sufficient.
+        If not, it looks up the cycle count in a pre-computed table or runs a cycle-accurate simulation (ScaleSim)
+        to generate the data.
+
+        Args:
+            look_up_table (pd.DataFrame): Table containing pre-computed cycle counts.
+            M (int): M dimension of the matrix multiplication (MxK * KxN).
+            N (int): N dimension of the matrix multiplication.
+            K (int): K dimension of the matrix multiplication.
+            array_height (int): Height of the systolic array.
+            array_width (int): Width of the systolic array.
+            dataflow (str, optional): Dataflow architecture (e.g., "os" for output stationary). Defaults to "os".
+
+        Returns:
+            int: Estimated cycle count.
+        """
         # print(f'start: {M} {N} {K} {array_height} {array_width} {dataflow}')
         assert M * N * K * array_height * array_width != 0
         if M >= array_height and N >= array_width:
@@ -948,6 +1041,15 @@ class FlashAttention(Operator):
         return ceil(cycle_count)
 
     def run_on_gpu(self) -> float:
+        """
+        Runs the FlashAttention workload on a real GPU to measure latency.
+
+        This is useful for validation and comparison with the analytical model.
+        Requires a CUDA-enabled GPU and PyTorch with FlashAttention support.
+
+        Returns:
+            float: Measured latency in seconds.
+        """
         
         if not torch.cuda.is_available():
             raise RuntimeError("CUDA device is required to profile FlashAttention.")
