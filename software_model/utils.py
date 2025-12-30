@@ -7,7 +7,7 @@ class DataType:
         self.name = name
         self.word_size:int = word_size
 
-data_type_dict = {"int4": DataType("int4", 0.5), "int8": DataType("int8", 1), "int32": DataType("int32", 1), "fp8": DataType("fp8", 2), "fp16": DataType("fp16", 2), "fp32": DataType("fp32", 4)}
+data_type_dict = {"int4": DataType("int4", 0.5), "int8": DataType("int8", 1), "int32": DataType("int32", 4), "fp8": DataType("fp8", 1), "fp16": DataType("fp16", 2), "fp32": DataType("fp32", 4)}
 
 class Tensor:
     def __init__(
