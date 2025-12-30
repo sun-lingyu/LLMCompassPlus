@@ -58,8 +58,6 @@ class FlashAttention(Operator):
         weight_data_type: DataType,
         intermediate_data_type: DataType,
         is_causal: bool = True,
-        is_decoding: bool = False,
-        num_splits: int = 1,
     ) -> None:
         super().__init__(0, 0, 0, 0, activation_data_type)
         self.activation_data_type = activation_data_type
@@ -72,8 +70,6 @@ class FlashAttention(Operator):
         self.best_mapping = None
         self.look_up_table = None
         self.is_causal = is_causal
-        self.is_decoding = is_decoding
-        self.num_splits = num_splits
         
     def __call__(
         self,
@@ -96,10 +92,7 @@ class FlashAttention(Operator):
         self.num_heads_q = q.shape[1]
         self.num_heads_kv = k.shape[1]
         
-        if self.is_decoding:
-            assert k.shape[2] == v.shape[2], "kv sequence lengths must match in decoding mode."
-        else:
-            assert q.shape[2] == k.shape[2] == v.shape[2], "q, k, v sequence lengths must match in non-decoding mode."
+        assert q.shape[2] == k.shape[2] == v.shape[2], "q, k, v sequence lengths must match in non-decoding mode."
         
         self.seq_len_q = q.shape[2]
         self.seq_len_kv = k.shape[2]
@@ -257,8 +250,6 @@ class FlashAttention(Operator):
         min_cycle_count = 2**63 - 1
         best_mapping = None
         
-        # if (seq_len_q == 1 or seq_len_kv == 1) and (compile_mode == ):
-        
         if compile_mode == "exhaustive":
             for l2_tile_seq_len_q_log2 in range(5, ceil(log2(self.computational_graph.seq_len_q)) + 1):
                 l2_tile_seq_len_q = 2 ** l2_tile_seq_len_q_log2
@@ -328,28 +319,6 @@ class FlashAttention(Operator):
                                         best_mapping = mapping
         else:
             raise NotImplementedError("Only exhaustive compile mode is implemented.")
-
-        # block_m, block_n, onchip_bytes = self._resolve_blocking(pcb_module)
-        # self.blocking = FlashAttentionBlockingConfig(block_m, block_n, onchip_bytes)
-
-        # num_query_blocks = ceil(self.seq_len_q / block_m)
-        # blocks_per_head = self._blocks_per_head(num_query_blocks, block_m, block_n)
-        # total_block_pairs = self.total_heads * blocks_per_head
-
-        # qk_cycles = self._matmul_block_cycles(block_m, block_n, self.head_dim, pcb_module)
-        # pv_cycles = self._matmul_block_cycles(block_m, self.head_dim, block_n, pcb_module)
-        # softmax_cycles = self._softmax_block_cycles(block_m, block_n, pcb_module)
-
-        # per_block_cycles = qk_cycles + softmax_cycles + pv_cycles
-        # total_compute_cycles = per_block_cycles * total_block_pairs
-
-        # self.total_io_bytes = self._compute_io_bytes(block_m)
-        # io_cycles = self._io_cycles(self.total_io_bytes, pcb_module)
-
-        # overhead_cycles = int(
-        #     pcb_module.compute_module.overhead.matmul * pcb_module.compute_module.clock_freq
-        # )
-        # total_cycles = max(total_compute_cycles, io_cycles) + overhead_cycles
         
         self.best_mapping = best_mapping
         if self.best_mapping is not None:
@@ -357,7 +326,7 @@ class FlashAttention(Operator):
 
         self.best_cycle_count = min_cycle_count
         self.best_latency = min_cycle_count / pcb_module.compute_module.clock_freq
-        self.latency = self.best_latency# + 0.00009
+        self.latency = self.best_latency
         return self.latency
     
     def simulate(
@@ -407,8 +376,6 @@ class FlashAttention(Operator):
         
         seq_len_q_l2_t = seq_len_q // l2_tile_seq_q
         seq_len_kv_l2_t = seq_len_kv // l2_tile_seq_kv
-        seq_len_q_remaining = seq_len_q % l2_tile_seq_q
-        seq_len_kv_remaining = seq_len_kv % l2_tile_seq_kv
         
         l2_tiles = np.empty(
             [batch_size, num_heads_q, ceil(seq_len_q_l2_t), ceil(seq_len_kv_l2_t)],
@@ -441,58 +408,6 @@ class FlashAttention(Operator):
                 kv_tile_size[:, :, j] = mapping.l1_tile_seq_kv * head_dim
                 output_tile_size[:, :, i, j] = temp_l2_tile_q * head_dim
         
-        # if l2_tile_seq_q * l2_tile_seq_kv != 0:
-        #     l2_tiles[:, :, :seq_len_q_l2_t, :seq_len_kv_l2_t] = self.L2TileSimulator(
-        #         l2_tile_seq_q,
-        #         l2_tile_seq_kv,
-        #         head_dim,
-        #         data_type,
-        #         mapping,
-        #         pcb_module,
-        #         self.look_up_table,
-        #     )
-        #     q_tile_size[:, :, :seq_len_q_l2_t] = l2_tile_seq_q * head_dim
-        #     kv_tile_size[:, :, :seq_len_kv_l2_t] = l2_tile_seq_kv * head_dim
-        #     output_tile_size[:, :, :seq_len_q_l2_t, :seq_len_kv_l2_t] = l2_tile_seq_q * head_dim
-        
-        # if seq_len_q_remaining != 0:
-        #     l2_tiles[:, :, -1, :seq_len_kv_l2_t] = self.L2TileSimulator(
-        #         seq_len_q_remaining,
-        #         l2_tile_seq_kv,
-        #         head_dim,
-        #         data_type,
-        #         mapping,
-        #         pcb_module,
-        #         self.look_up_table,
-        #     )
-        #     q_tile_size[:, :, -1] = seq_len_q_remaining * head_dim
-        #     output_tile_size[:, :, -1, :seq_len_kv_l2_t] = seq_len_q_remaining * head_dim
-            
-        # if seq_len_kv_remaining != 0:
-        #     l2_tiles[:, :, :seq_len_q_l2_t, -1] = self.L2TileSimulator(
-        #         l2_tile_seq_q,
-        #         seq_len_kv_remaining,
-        #         head_dim,
-        #         data_type,
-        #         mapping,
-        #         pcb_module,
-        #         self.look_up_table,
-        #     )
-        #     kv_tile_size[:, :, -1] = seq_len_kv_remaining * head_dim
-        #     output_tile_size[:, :, :seq_len_q_l2_t, -1] = l2_tile_seq_q * head_dim
-            
-        # if seq_len_q_remaining * seq_len_kv_remaining != 0:
-        #     l2_tiles[:, :, -1, -1] = self.L2TileSimulator(
-        #         seq_len_q_remaining,
-        #         seq_len_kv_remaining,
-        #         head_dim,
-        #         data_type,
-        #         mapping,
-        #         pcb_module,
-        #         self.look_up_table,
-        #     )
-        #     output_tile_size[:, :, -1, -1] = seq_len_q_remaining * head_dim
-        
         active_l2_tile_list = []
         
         previous_read_l2_tiles_q = np.zeros((batch_size, num_heads_q, ceil(seq_len_q / l2_tile_seq_q)), dtype=bool)
@@ -509,8 +424,6 @@ class FlashAttention(Operator):
         
         total_cycle_count = 0
         previous_compute_cycle_count = 0
-        
-        flag = 0
         
         for (l2_tile_i, b, h, l2_tile_j) in self.generate_tile_loops_with_BH(
             ceil(seq_len_q / l2_tile_seq_q),
@@ -590,10 +503,6 @@ class FlashAttention(Operator):
                     + previous_write_cycle_count
                 )
             
-            print(f"Current Read Count: {current_read_count}, Current Read Cycle Count: {current_read_cycle_count}, Previous Compute Cycle Count: {previous_compute_cycle_count}, Previous Write Cycle Count: {previous_write_cycle_count}, Total Cycle Count: {total_cycle_count}")
-            print(f"Current_compute_cycle_count: {current_compute_cycle_count}")
-            # flag = flag + 1
-            
             previous_compute_cycle_count = current_compute_cycle_count
             previous_read_l2_tiles_q = copy.deepcopy(current_read_l2_tiles_q)
             previous_read_l2_tiles_kv = copy.deepcopy(current_read_l2_tiles_kv)
@@ -606,7 +515,6 @@ class FlashAttention(Operator):
             * activation_data_type.word_size
             / (pcb_module.io_module.bandwidth * pcb_module.io_module.bandwidth_efficiency / pcb_module.compute_module.clock_freq)
         )
-        print(f"total_cycle_count: {total_cycle_count}")
         
         return total_cycle_count
         
@@ -781,9 +689,6 @@ class FlashAttention(Operator):
                 
             total_cycle_count += previous_compute_cycle_count
             
-            # if seq_len_kv_l1_t > 1:
-                
-            
             return total_cycle_count
             
     class L1TileSimulator:
@@ -913,13 +818,6 @@ class FlashAttention(Operator):
                 + compute_mat2_cycle_count
                 + update_output_cycle_count
             )
-            
-            # print(compute_mat1_cycle_count, pointwise_mat1_cycle_count, compute_mat2_cycle_count)
-            
-            # print(f"compute_mat1_cycle_count: {compute_mat1_cycle_count}")
-            # print(f"ruduce_mat1_cycle_count: {ruduce_mat1_cycle_count}")
-            # print(f"pointwise_mat1_cycle_count: {pointwise_mat1_cycle_count}")
-            # print(f"compute_mat2_cycle_count: {compute_mat2_cycle_count}")
 
             return total_cycle_count // (4 // activation_data_type.word_size)
         
@@ -1073,13 +971,6 @@ class FlashAttention(Operator):
 
         with torch.nn.attention.sdpa_kernel(SDPBackend.FLASH_ATTENTION):
             for _ in range(10):  # warm up
-                if self.is_decoding:
-                    output_ = flash_attn_func(
-                        q_pt[:, :, -1:, :], k_pt, v_pt,
-                        dropout_p=0.0,
-                        causal=self.is_causal,
-                        incremental_state=None,
-                    )
                 _ = flash_attn_func(
                     q_pt, k_pt, v_pt,
                     dropout_p=0.0,
