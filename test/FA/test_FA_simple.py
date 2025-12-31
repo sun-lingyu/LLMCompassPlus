@@ -8,20 +8,22 @@ if __name__ == "__main__":
     
     seq_len = 1024
     head_dim = 128
-    num_heads_q = 16
-    num_heads_kv = 16
+    num_heads_q = 32
+    num_heads_kv = 8
     batch_size = 1
     
     print(f"problem: seq_len={seq_len}, head_dim={head_dim}, num_heads_q={num_heads_q}, num_heads_kv={num_heads_kv}, batch_size={batch_size}")
+    activation_data_type = data_type_dict["fp16"]
+    weight_data_type = data_type_dict["fp16"]
+    itermediate_data_type = data_type_dict["fp32"]
     
-    model = FlashAttention(data_type=data_type_dict["fp16"], is_causal=False)
+    model = FlashAttention(activation_data_type=activation_data_type, weight_data_type=weight_data_type, intermediate_data_type=itermediate_data_type, is_causal=True)
     
     _ = model(
-      Tensor((batch_size, num_heads_q, seq_len, head_dim), data_type_dict["fp16"]),
-      Tensor((batch_size, num_heads_kv, seq_len, head_dim), data_type_dict["fp16"]),
-      Tensor((batch_size, num_heads_kv, seq_len, head_dim), data_type_dict["fp16"]),
+      Tensor((batch_size, num_heads_q, seq_len, head_dim), activation_data_type),
+      Tensor((batch_size, num_heads_kv, seq_len, head_dim), weight_data_type),
+      Tensor((batch_size, num_heads_kv, seq_len, head_dim), weight_data_type),
     )
-    
     
     real_latency = model.run_on_gpu()
     latency = model.compile_and_simulate(pcb_module=pcb, compile_mode="exhaustive")
@@ -29,6 +31,6 @@ if __name__ == "__main__":
         
     print(f"FlashAttention GPU latency: {real_latency * 1000:.3f} ms")
     
-    print(f"FlashAttention latency: {latency*1e3:.2f} ms")
+    print(f"FlashAttention latency: {latency*1e3:.3f} ms")
     
-    print(f"Roofline model latency: {roofline_latency*1e3:.2f} ms")  
+    print(f"Roofline model latency: {roofline_latency*1e3:.3f} ms")  
