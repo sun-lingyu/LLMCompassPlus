@@ -8,7 +8,8 @@
             "unit_count": 12,
             "area_per_unit": 1.89
         },
-        "ctrl": 1.57
+        "ctrl": 1.57,
+        "capacity_mb": 24
     },
     "gpc_extra":{
         "unit_count": 3,
@@ -25,6 +26,8 @@
             "reg_and_l1": 0.77,
             "core": 2.13,
             "others": 0.21
-        }
+        },
+        "l1_capacity_kb": 304,
+        "reg_capacity_kb": 256
     }
 }

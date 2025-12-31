@@ -24,14 +24,6 @@
                         "exp2": 4,
                         "cvt_int32_fp32": 4,
                         "cvt_fp32_fp16": 16
-                    },
-                    "units": {
-                        "__comment": "For area estimation.",
-                        "int32": 16,
-                        "fp16": 64,
-                        "fp32": 16,
-                        "fp64": 8,
-                        "cvt": 4
                     }
                 },
                 "register_file": {

@@ -16,6 +16,11 @@ class Device:
 
 
 device_dict = {
+    "Thor": Device(
+        compute_module_dict["Thor"],
+        IO_module_dict["Thor"],
+        memory_module_dict["Thor"],
+    ),
     "Orin": Device(
         compute_module_dict["Orin"],
         IO_module_dict["Orin"],

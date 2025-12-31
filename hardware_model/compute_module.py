@@ -27,6 +27,15 @@ class VectorUnit:
             return self.throughput[data_type]
 
 vector_unit_dict = {
+    "Thor": VectorUnit({"int32": 16,
+                        "fp16": 64,
+                        "fp32": 32,
+                        "fp64": 0.5,
+                        "exp2": 4,
+                        "cvt_int32_fp32": 16,
+                        "cvt_fp32_fp16": 16,
+                        "cvt_int32_int8": 16
+                    }),
     "Orin": VectorUnit({"int32": 16,
                         "fp16": 64,
                         "fp32": 32,
@@ -56,6 +65,7 @@ class SystolicArray:
         self.array_height = array_height
 
 systolic_array_dict = {
+    "Thor": SystolicArray(64, 8),
     "Orin": SystolicArray(16, 8),
     "A100": SystolicArray(16, 8),
 }
@@ -76,6 +86,9 @@ class Core:
         self.SRAM_size = SRAM_size  # Byte
 
 core_dict = {
+    "SM_Thor": Core(
+        vector_unit_dict["Thor"], systolic_array_dict["Thor"], 65536, 4, 304 * 1024
+    ),
     "SM_Orin": Core(
         vector_unit_dict["Orin"], systolic_array_dict["Orin"], 65536, 4, 192 * 1024
     ),
@@ -95,6 +108,7 @@ class Overhead:
         self.gelu = gelu
 
 overhead_dict = {
+    "Thor": Overhead(2.1e-5, 1.2e-5, 4.5e-5, 4.5e-5),
     "Orin": Overhead(2.1e-5, 1.2e-5, 4.5e-5, 4.5e-5),
     "A100": Overhead(2.1e-5, 1.2e-5, 4.5e-5, 4.5e-5),
 }
@@ -126,6 +140,15 @@ class ComputeModule:
 
 
 compute_module_dict = {
+    "Thor": ComputeModule(
+        core_dict["SM_Thor"],
+        20,
+        1575e6,
+        24 * 1024**2,
+        1152,
+        192,
+        overhead_dict["Thor"],
+    ),
     "Orin": ComputeModule(
         core_dict["SM_Orin"],
         16,

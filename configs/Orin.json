@@ -6,7 +6,7 @@
         "compute_chiplet": {
             "physical_core_count": 16,
             "core_count": 16,
-            "process_node": "7nm",
+            "process_node": "8nm",
             "core": {
                 "sublane_count": 4,
                 "systolic_array": {
@@ -24,15 +24,6 @@
                         "exp2": 4,
                         "cvt_int32_fp32": 4,
                         "cvt_fp32_fp16": 16
-                    },
-                    "units": {
-                        "__comment": "For area estimation.",
-                        "int32": 16,
-                        "fp16": 64,
-                        "fp32": 32,
-                        "fp64": 0.5,
-                        "exp2": 4,
-                        "cvt": 4
                     }
                 },
                 "register_file": {
@@ -47,7 +38,7 @@
         "__comment": "memory_protocal is used for PHY area estimation",
         "memory_protocol": "LPDDR5x",
         "io": {
-            "process_node": "7nm",
+            "process_node": "8nm",
             "global_buffer_MB": 4,
             "physical_global_buffer_MB": 4,
             "global_buffer_bandwidth_per_cycle_byte": 512,
@@ -55,8 +46,8 @@
             "memory_channel_physical_count": 16,
             "memory_channel_active_count": 16,
             "pin_count_per_channel": 16,
-            "bandwidth_per_pin_bit": 6.4e9,
-            "memory_bandwidth_efficiency": 0.7,
+            "bandwidth_per_pin_bit": 6400e6,
+            "memory_bandwidth_efficiency": 0.87,
             "memory_latency_cycle": 300
 
         },
