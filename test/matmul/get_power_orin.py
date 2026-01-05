@@ -6,10 +6,10 @@ import argparse
 import json
 from typing import Optional
 from test.matmul.test_perf import cutlass_gemm_min_latency_remote
-from test.matmul.utils import test_model_dict
+from test.matmul.utils import get_model_shape
 file_dir = os.path.dirname(os.path.abspath(__file__))
 
-def measure_cutlass_power_remote(
+def measure_power_remote(
     M: int,
     N: int,
     K: int,
@@ -19,20 +19,22 @@ def measure_cutlass_power_remote(
     host: str = "202.120.39.3",
     port: int = 9129,
     user: Optional[str] = "sly",
-    profiler_path: str = "/home/sly/cutlass/build/tools/profiler/cutlass_profiler",
-    cutlass_power_log: str = f"{file_dir}/temp/cutlass_power_log.json",
+    work_dir: str = "/home/sly/marlin", # for marlin
+    python_path: str = "/home/sly/anaconda3/envs/llmcompass/bin/python", # for marlin
+    profiler_path: str = "/home/sly/cutlass/build/tools/profiler/cutlass_profiler", # for cutlass
+    power_log: str = f"{file_dir}/temp/power_log.json",
     ignore_cache: bool = False
 ) -> float:
     existing_data = []
-    if os.path.exists(cutlass_power_log):
-        with open(cutlass_power_log, 'r') as f:
+    if os.path.exists(power_log):
+        with open(power_log, 'r') as f:
             content = f.read().strip()
             if content:
                 data = json.loads(content)
                 if isinstance(data, list):
                     existing_data = data
                 else:
-                    assert False, "cutlass_power_log.json format error"
+                    assert False, "power_log.json format error"
 
     if not ignore_cache:
         for record in existing_data:
@@ -41,21 +43,27 @@ def measure_cutlass_power_remote(
                 record.get("K") == K and 
                 record.get("precision") == precision):
                 return record['power_VDD_GPU_SOC'], record['power_VDDQ_VDD2_1V8AO']
+        
+    print(f"Measuring power for {total_duration}s and take {valid_duration}s in the middle...")
 
-    _, best_op_name = cutlass_gemm_min_latency_remote(
-        M, N, K, precision, host, port, user, profiler_path
-    )
+    if precision == "fp16" or precision == "int8":
+        _, best_op_name = cutlass_gemm_min_latency_remote(
+            M, N, K, precision, host, port, user, profiler_path
+        )
+        full_cmd = (
+            f"{profiler_path} --m={M} --n={N} --k={K} --kernels={best_op_name} "
+            f"--profiling-duration={(total_duration) * 1000} " # ms
+            "--profiling-iterations=0 "
+            "--verification-enabled=false "
+            "--warmup-iterations=0 "
+        )
+    elif precision == "int4":
+        full_cmd = (
+            f"{python_path} {work_dir}/test_simple.py {M} {N} {K} "
+            f"--duration={(total_duration) * 1000} " # ms
+        )
 
-    print(f"Best op found. Measuring power for {total_duration}s and take {valid_duration}s in the middle...")
-
-    full_cutlass_cmd = (
-        f"{profiler_path} --m={M} --n={N} --k={K} --kernels={best_op_name} "
-        f"--profiling-duration={(total_duration) * 1000} " # ms
-        "--profiling-iterations=0 "
-        "--verification-enabled=false "
-        "--warmup-iterations=0 "
-    )
-    print(full_cutlass_cmd)
+    print(full_cmd)
     
     volt_path_VDD_GPU_SOC = "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon1/in1_input"
     curr_path_VDD_GPU_SOC = "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon1/curr1_input"
@@ -70,7 +78,7 @@ import os
 import signal
 import sys
 
-proc = subprocess.Popen('{full_cutlass_cmd}', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+proc = subprocess.Popen('{full_cmd}', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 samples = [] # (timestamp, power_watts)
 
@@ -153,7 +161,7 @@ else:
 
         existing_data.append(new_record)
 
-        with open(cutlass_power_log, 'w') as f:
+        with open(power_log, 'w') as f:
             json.dump(existing_data, f, indent=4, ensure_ascii=False)
     
     return avg_power_VDD_GPU_SOC, avg_power_VDDQ_VDD2_1V8AO
@@ -166,20 +174,7 @@ if __name__ == "__main__":
     parser.add_argument("--precision", type=str, choices=["fp16", "int8", "int4"])
     args = parser.parse_args()
 
-    model_shapes = test_model_dict[args.model]
-    K_shapes = {
-        "qkv_proj": model_shapes["hidden_size"], 
-        "o_proj": model_shapes["head_dim"] * model_shapes["num_attention_heads"],
-        "up_proj": model_shapes["hidden_size"],
-        "down_proj": model_shapes["intermediate_size"]
-        }
-    assert(model_shapes["hidden_act"] in ["silu", "gelu"])
-    N_shapes = {
-        "qkv_proj": model_shapes["head_dim"] * (model_shapes["num_key_value_heads"] * 2 + model_shapes["num_attention_heads"]), 
-        "o_proj": model_shapes["hidden_size"],
-        "up_proj": model_shapes["intermediate_size"] * 2 if model_shapes["hidden_act"] == "silu" else model_shapes["intermediate_size"], # SiLU/GELU
-        "down_proj": model_shapes["hidden_size"]
-        }
+    K_shapes, N_shapes = get_model_shape(args.model)
     M = 1024 if args.mode == "prefill" else 64
     assert(M % 4 == 0)
 
@@ -194,7 +189,7 @@ if __name__ == "__main__":
             # test Context Parallelism
             test_problems = [(M, N, K), (M // 2, N, K), (M // 4, N, K)]
             for problem in test_problems:
-                p1, p2 = measure_cutlass_power_remote(*problem, args.precision)
+                p1, p2 = measure_power_remote(*problem, args.precision)
                 print(f"M N K {problem}, precision {args.precision} Power VDD_GPU_SOC {p1:.2f}W Power VDDQ_VDD2_1V8AO {p2:.2f}W")
 
         # test Tensor Parallelism
@@ -203,5 +198,5 @@ if __name__ == "__main__":
         else: # o_proj or down_proj
             test_problems = [(M, N, K), (M, N, K // 2), (M, N, K // 4)]
         for problem in test_problems:
-            p1, p2 = measure_cutlass_power_remote(*problem, args.precision)
+            p1, p2 = measure_power_remote(*problem, args.precision)
             print(f"M N K {problem}, precision {args.precision} Power VDD_GPU_SOC {p1:.2f}W Power VDDQ_VDD2_1V8AO {p2:.2f}W")

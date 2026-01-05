@@ -16,6 +16,8 @@ from hardware_model.device import device_dict
 file_dir = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE_TEMPLATE = f"{file_dir}/temp/power_features_cache"
 
+intercept_dict = {"Orin": {"soc": 25, "mem": 0.5}}
+
 def plot_fitting_results(y_true, y_pred, feature_names, coefs, intercept, r2, mse, title_suffix=""):
     try:
         plt.style.use('seaborn-v0_8')
@@ -77,7 +79,7 @@ def load_or_generate_data(args):
     pcb = device_dict[args.device]
     existing_data = []
     
-    json_path = f"{file_dir}/temp/cutlass_power_log.json"
+    json_path = f"{file_dir}/temp/power_log.json"
     if os.path.exists(json_path):
         with open(json_path, 'r') as f:
             content = f.read().strip()
@@ -94,8 +96,6 @@ def load_or_generate_data(args):
 
     for record in existing_data:
         M, N, K, precision = record['M'], record['N'], record['K'], record['precision']
-        # if not (M ==1024 and N == 4096 and K == 3072):
-        #     continue
         if precision == "fp16":
             act_dt, wei_dt, int_dt = data_type_dict["fp16"], data_type_dict["fp16"], data_type_dict["fp32"]
         elif precision == "int8":
@@ -116,13 +116,15 @@ def load_or_generate_data(args):
 
         features = [
             model.systolic_array_fma_count / runtime_s, # 0: FMA
-            model.reg_access_count / runtime_s,         # 1: Reg
-            model.l1_access_size / runtime_s,           # 2: L1
-            model.l2_access_size / runtime_s,           # 3: L2
-            model.mem_access_size / runtime_s           # 4: DRAM
+            model.vector_fma_count / runtime_s,         # 1: Vector (for w4a16)
+            model.reg_access_count / runtime_s,         # 2: Reg
+            model.l1_access_size / runtime_s,           # 3: L1
+            model.l2_access_size / runtime_s,           # 4: L2
+            model.mem_access_size / runtime_s           # 5: DRAM
         ]
         
         X_features_raw.append([model.systolic_array_fma_count, 
+                               model.vector_fma_count, 
                                model.reg_access_count, 
                                model.l1_access_size, 
                                model.l2_access_size, 
@@ -149,13 +151,13 @@ def load_or_generate_data(args):
     return X, y_soc, y_mem
 
 def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
-    full_feature_names = ["SysArr FMA", "Reg Access", "L1 Access", "L2 Access", "DRAM Access"]
+    full_feature_names = ["SysArr FMA", "Vector FMA", "Reg Access", "L1 Access", "L2 Access", "DRAM Access"]
     
     feat_map = {name: i for i, name in enumerate(full_feature_names)}
 
     # Custom features here
     # ==============================================================================
-    soc_features_to_use = ["SysArr FMA", "Reg Access", "L1 Access", "L2 Access"] 
+    soc_features_to_use = ["SysArr FMA"] # Vector FMA is not used for INT4 since it is severly coupled with memory access
 
     mem_features_to_use = ["DRAM Access"]
     # ==============================================================================
@@ -202,7 +204,7 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
 
     res_soc = fit_single_rail(X_raw, y_soc, soc_features_to_use, 
                               "Rail 1: VDD_GPU_SOC", enforce_positive=True)
-    res_mem = fit_single_rail(X_raw, y_mem, mem_features_to_use, 
+    res_mem = fit_single_rail(X_raw, y_mem - intercept_dict[args.device]["mem"], mem_features_to_use, 
                               "Rail 2: VDDQ_VDD2_1V8AO", enforce_positive=True, fit_intercept=False)
 
     print("\n" + "-"*85)
@@ -239,8 +241,8 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
                          res_soc['coefs'], res_soc['intercept'], 
                          res_soc['r2'], res_soc['mse'], title_suffix=f"soc_{args.precision}")
                          
-    plot_fitting_results(y_mem, res_mem['y_pred'], full_feature_names, 
-                         res_mem['coefs'], res_mem['intercept'], 
+    plot_fitting_results(y_mem, res_mem['y_pred'] + intercept_dict[args.device]["mem"], full_feature_names, 
+                         res_mem['coefs'], res_mem['intercept'] + intercept_dict[args.device]["mem"], 
                          res_mem['r2'], res_mem['mse'], title_suffix=f"mem_{args.precision}")
 
 if __name__ == "__main__":

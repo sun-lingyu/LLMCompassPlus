@@ -1,7 +1,7 @@
 from software_model.matmul import Matmul
 from software_model.utils import data_type_dict, Tensor
 from hardware_model.device import device_dict
-from test.matmul.utils import test_model_dict
+from test.matmul.utils import get_model_shape
 
 import os
 import sys
@@ -292,20 +292,7 @@ if __name__ == "__main__":
     
     pcb = device_dict[args.device]
     port = 9129 if args.device == "Orin" else 9147 # 9147: Thor
-    model_shapes = test_model_dict[args.model]
-    K_shapes = {
-        "qkv_proj": model_shapes["hidden_size"], 
-        "o_proj": model_shapes["head_dim"] * model_shapes["num_attention_heads"],
-        "up_proj": model_shapes["hidden_size"],
-        "down_proj": model_shapes["intermediate_size"]
-        }
-    assert(model_shapes["hidden_act"] in ["silu", "gelu"])
-    N_shapes = {
-        "qkv_proj": model_shapes["head_dim"] * (model_shapes["num_key_value_heads"] * 2 + model_shapes["num_attention_heads"]), 
-        "o_proj": model_shapes["hidden_size"],
-        "up_proj": model_shapes["intermediate_size"] * 2 if model_shapes["hidden_act"] == "silu" else model_shapes["intermediate_size"], # SiLU/GELU
-        "down_proj": model_shapes["hidden_size"]
-        }
+    K_shapes, N_shapes = get_model_shape(args.model)
     M = 1024 if args.mode == "prefill" else 64
     assert(M % 4 == 0)
 

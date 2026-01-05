@@ -1,6 +1,7 @@
 __pycache__/
 SlurmOutput/
-temp/
 .vscode/
 *.ncu-rep
 microbenchmarks/bin/
+test/matmul/temp/power_features_cache*
+systolic_array_model/temp

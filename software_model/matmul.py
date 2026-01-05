@@ -27,6 +27,7 @@ class Matmul(Operator):
 
         # performance counters
         self.systolic_array_fma_count = 0
+        self.vector_fma_count = 0
         self.reg_access_count = 0
         self.l1_access_size = 0
         self.l2_access_size = 0
@@ -172,11 +173,11 @@ class Matmul(Operator):
         M = self.computational_graph.M
         N = self.computational_graph.N
         K = self.computational_graph.K
-        assert M >= 64, "at least 64 to fit GEMM workflow instead of GEMV"
+        assert M >= 32, "at least 32 to fit GEMM workflow instead of GEMV"
         assert K >= 256, "at least 256 to accurately model loop-K"
         if compile_mode == "heuristic-GPU":
             i = 0
-            for cta_m in [64, 128, 256]:
+            for cta_m in [32, 64, 128, 256]:
                 for cta_n in [64, 128, 256]:
                     for cta_k in [32, 64]:
                         for stages in [2, 3]: # [2, 3, 4, 5, 6]: # 2 is always the best according to execution results
@@ -259,6 +260,7 @@ class Matmul(Operator):
     ) -> int:
         # initialize performance counters
         self.systolic_array_fma_count = 0
+        self.vector_fma_count = 0
         self.reg_access_count = 0
         self.l1_access_size = 0
         self.l2_access_size = 0
@@ -456,6 +458,8 @@ class Matmul(Operator):
                 self.mem_access_size += l2_tiles[m, n, 0].mem_write_size
         
         self.systolic_array_fma_count = sum(l2_tile.systolic_array_fma_count for l2_tile in l2_tiles.flat)
+        if self.weight_data_type.name == "int4":
+            self.vector_fma_count = sum(l2_tile.N * l2_tile.K for l2_tile in l2_tiles.flat)
         self.reg_access_count = sum(l2_tile.reg_access_count for l2_tile in l2_tiles.flat)
         self.l1_access_size = sum(l2_tile.l1_access_size for l2_tile in l2_tiles.flat)
         self.l2_access_size = sum(l2_tile.l2_access_size for l2_tile in l2_tiles.flat)
