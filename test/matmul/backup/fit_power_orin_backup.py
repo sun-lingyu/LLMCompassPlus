@@ -124,7 +124,7 @@ if __name__ == "__main__":
                 Tensor([M, K], activation_data_type),
                 Tensor([K, N], weight_data_type),
             )
-            latency_ms = 1000 * (model.compile_and_simulate(pcb, compile_mode="heuristic-GPU") + 2773 / pcb.compute_module.clock_freq)
+            latency_ms = 1000 * model.compile_and_simulate(pcb, compile_mode="heuristic-GPU")
             runtime_s = latency_ms / 1000.0
             print("-" * 10)
             print("M N K:", M, N, K)

@@ -48,7 +48,7 @@
             "pin_count_per_channel": 16,
             "bandwidth_per_pin_bit": 6400e6,
             "memory_bandwidth_efficiency": 0.87,
-            "memory_latency_cycle": 300
+            "memory_latency_cycle": 600
 
         },
         "memory": {

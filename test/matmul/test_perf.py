@@ -261,14 +261,14 @@ def test_and_save_latency(
             Tensor([M, K], activation_data_type),
             Tensor([K, N], weight_data_type),
         )
-        latency =  1000 * (model.compile_and_simulate(pcb, compile_mode="heuristic-GPU") + 2773 / pcb.compute_module.clock_freq)
+        latency =  1000 * model.compile_and_simulate(pcb, compile_mode="heuristic-GPU")
         if update_ours_only:
             baseline_latency = float(df["Baseline"].iloc[idx]) if precision != "int4" else -1
             roofline_latency = float(df["Roofline"].iloc[idx])
             cutlass_latency = float(df["CUTLASS"].iloc[idx])
         else:
             baseline_latency =  get_baseline_latency(M, N, K, args.precision) if precision != "int4" else -1
-            roofline_latency = 1000 * (model.roofline_model(pcb) + 2773 / pcb.compute_module.clock_freq)
+            roofline_latency = 1000 * model.roofline_model(pcb)
             cutlass_latency = cutlass_gemm_min_latency_remote(M, N, K, precision, port)[0] if precision != "int4" else marlin_gemm_latency_remote(M, N, K)
         print(f"latency {latency:.3f}, baseline_latency {baseline_latency:.3f}, roofline_latency {roofline_latency:.3f}, cutlass_latency {cutlass_latency:.3f}")
         print()

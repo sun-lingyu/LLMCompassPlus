@@ -11,7 +11,7 @@ class VectorUnit:
 
     def get_throughput_per_cycle(self, data_type: DataType, operation: str):
         data_type = data_type.name
-        assert data_type in ["int32", "fp16", "fp32", "fp64", "int8"], f"Datatype {data_type} not supported in VectorUnit"
+        assert data_type in ["int32", "fp16", "fp32", "fp64", "int8", "fp8", "fp4"], f"Datatype {data_type} not supported in VectorUnit"
         assert operation in ["exp2", "cvt", "reduction", "fma"], f"Operation {operation} not supported in VectorUnit"
         if operation == "exp2":
             return self.throughput["exp2"]
@@ -28,6 +28,8 @@ class VectorUnit:
 
 vector_unit_dict = {
     "Thor": VectorUnit({"int32": 16,
+                        "fp4": 256,
+                        "fp8": 128,
                         "fp16": 64,
                         "fp32": 32,
                         "fp64": 0.5,

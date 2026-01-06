@@ -32,7 +32,8 @@
                     "register_bitwidth":32,
                     "num_rdwr_ports":4
                 },
-                "SRAM_KB": 304
+                "SRAM_KB": 512,
+                "__comment": "256KB L1/SMEM + 256KB TMEM"
             }
         },
         "__comment": "memory_protocal is used for PHY area estimation",

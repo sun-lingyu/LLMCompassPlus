@@ -111,7 +111,7 @@ def load_or_generate_data(args):
         model = Matmul(activation_data_type=act_dt, weight_data_type=wei_dt, intermediate_data_type=int_dt)
         _ = model(Tensor([M, K], act_dt), Tensor([K, N], wei_dt))
         
-        latency_ms = 1000 * (model.compile_and_simulate(pcb, compile_mode="heuristic-GPU") + 2773 / pcb.compute_module.clock_freq)
+        latency_ms = 1000 * model.compile_and_simulate(pcb, compile_mode="heuristic-GPU")
         runtime_s = latency_ms / 1000.0
 
         features = [
