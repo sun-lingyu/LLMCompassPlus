@@ -108,7 +108,7 @@ def load_or_generate_data(args):
         if precision != args.precision:
             continue
 
-        model = Matmul(activation_data_type=act_dt, weight_data_type=wei_dt, intermediate_data_type=int_dt)
+        model = Matmul(activation_dtype=act_dt, weight_dtype=wei_dt, intermediate_dtype=int_dt)
         _ = model(Tensor([M, K], act_dt), Tensor([K, N], wei_dt))
         
         latency_ms = 1000 * model.compile_and_simulate(pcb, compile_mode="heuristic-GPU")

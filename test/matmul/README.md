@@ -24,9 +24,9 @@ make -j10
 ```
 mkdir build && cd build
 cmake .. -DCUTLASS_NVCC_ARCHS='110a' \
--DCUTLASS_LIBRARY_KERNELS=cutlass3x_sm100_bstensorop_gemm*_tn*,cutlass3x_sm100_tensorop_gemm_f8_f8*_tn* \
+-DCUTLASS_LIBRARY_KERNELS=cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_*_tn*,cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_*_tn* \
 -DCUTLASS_UNITY_BUILD_ENABLED=ON
 make -j10
 ```
 
-Note that `tn` represents row-major x column-major. `bstensorop` represents block scaled tensor core GEMM for MXFP4/MXFP8.
+Note that `tn` represents row-major x column-major. `bstensorop` represents block scaled tensor core GEMM for NVFP4.

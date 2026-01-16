@@ -14,6 +14,7 @@ def measure_power_remote(
     N: int,
     K: int,
     precision: str,
+    device: str,
     total_duration: int = 5,
     valid_duration: int = 1,
     host: str = "202.120.39.3",
@@ -46,9 +47,14 @@ def measure_power_remote(
         
     print(f"Measuring power for {total_duration}s and take {valid_duration}s in the middle...")
 
-    if precision == "fp16" or precision == "int8":
+    if precision == "int4": # marlin
+        full_cmd = (
+            f"{python_path} {work_dir}/test_simple.py {M} {N} {K} "
+            f"--duration={(total_duration) * 1000} " # ms
+        )
+    else: # CUTLASS
         _, best_op_name = cutlass_gemm_min_latency_remote(
-            M, N, K, precision, host, port, user, profiler_path
+            M, N, K, precision, host, output_dtype, port, user, profiler_path
         )
         full_cmd = (
             f"{profiler_path} --m={M} --n={N} --k={K} --kernels={best_op_name} "
@@ -56,11 +62,6 @@ def measure_power_remote(
             "--profiling-iterations=0 "
             "--verification-enabled=false "
             "--warmup-iterations=0 "
-        )
-    elif precision == "int4":
-        full_cmd = (
-            f"{python_path} {work_dir}/test_simple.py {M} {N} {K} "
-            f"--duration={(total_duration) * 1000} " # ms
         )
 
     print(full_cmd)
@@ -168,6 +169,7 @@ else:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--device", type=str, choices=["Orin", "Thor"],)
     parser.add_argument("--mode", type=str, choices=["prefill", "decode"],)
     parser.add_argument("--test", type=str, choices=["qkv_proj", "o_proj", "up_proj", "down_proj", "all"])
     parser.add_argument("--model", type=str, choices=["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"])
@@ -189,7 +191,7 @@ if __name__ == "__main__":
             # test Context Parallelism
             test_problems = [(M, N, K), (M // 2, N, K), (M // 4, N, K)]
             for problem in test_problems:
-                p1, p2 = measure_power_remote(*problem, args.precision)
+                p1, p2 = measure_power_remote(*problem, args.precision, args.device)
                 print(f"M N K {problem}, precision {args.precision} Power VDD_GPU_SOC {p1:.2f}W Power VDDQ_VDD2_1V8AO {p2:.2f}W")
 
         # test Tensor Parallelism
@@ -198,5 +200,5 @@ if __name__ == "__main__":
         else: # o_proj or down_proj
             test_problems = [(M, N, K), (M, N, K // 2), (M, N, K // 4)]
         for problem in test_problems:
-            p1, p2 = measure_power_remote(*problem, args.precision)
+            p1, p2 = measure_power_remote(*problem, args.precision, args.device)
             print(f"M N K {problem}, precision {args.precision} Power VDD_GPU_SOC {p1:.2f}W Power VDDQ_VDD2_1V8AO {p2:.2f}W")

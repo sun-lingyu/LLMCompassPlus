@@ -89,13 +89,13 @@ class Core:
 
 core_dict = {
     "SM_Thor": Core(
-        vector_unit_dict["Thor"], systolic_array_dict["Thor"], 65536, 4, 304 * 1024
+        vector_unit_dict["Thor"], systolic_array_dict["Thor"], 65536, 4, 227 * 1024
     ),
     "SM_Orin": Core(
-        vector_unit_dict["Orin"], systolic_array_dict["Orin"], 65536, 4, 192 * 1024
+        vector_unit_dict["Orin"], systolic_array_dict["Orin"], 65536, 4, 163 * 1024
     ),
     "SM_A100": Core(
-        vector_unit_dict["A100"], systolic_array_dict["A100"], 65536, 4, 192 * 1024
+        vector_unit_dict["A100"], systolic_array_dict["A100"], 65536, 4, 163 * 1024
     ),
 }
 # compute_tile_dict={'SM_A100_int8':ComputeTile(512, 4096, 192*1024*8,3.41, 'TSMC N7', 128*8),'SM_A100_fp16':ComputeTile(512, 2048, 192*1024*8,3.41, 'TSMC N7', 128),}
@@ -146,7 +146,7 @@ compute_module_dict = {
         core_dict["SM_Thor"],
         20,
         1575e6,
-        24 * 1024**2,
+        32 * 1024**2,
         1152,
         192,
         overhead_dict["Thor"],

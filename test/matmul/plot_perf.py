@@ -23,7 +23,7 @@ def plot_latency(
     x = [_ for _ in range(latency_table.shape[0])]
 
     ax.plot(x, latency_table["Ours"], marker="x", markersize=4, color=color_simulate[2], label="Ours")
-    if precision != "int4":
+    if precision in ("int8", "fp16"):
         ax.plot(x, latency_table["Baseline"], marker="o", markersize=4, color=color_simulate[1], label="LLMCompass")
     ax.plot(x, latency_table["Roofline"], marker="^", markersize=4, color=color_simulate[0], label="Roofline")
     ax.plot(x, latency_table["CUTLASS"], marker=" ", linestyle="--", linewidth=1.5, color=color_machine[0], label="Measurement")
@@ -39,7 +39,7 @@ def plot_latency(
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", type=str, choices=["prefill", "decode"],)
 parser.add_argument("--model", type=str, choices=["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"])
-parser.add_argument("--precision", type=str, choices=["fp16", "int8", "int4"])
+parser.add_argument("--precision", type=str, choices=["fp16", "int8", "int4", "fp8", "fp4"])
 parser.add_argument("--plot_one_figure", action='store_true')
 args = parser.parse_args()
 
@@ -62,7 +62,7 @@ if args.plot_one_figure:
     mape_baseline = np.mean(np.abs((latency_table['Baseline'] - latency_table['CUTLASS']) / latency_table['CUTLASS'])) * 100
     mape_roofline = np.mean(np.abs((latency_table['Roofline'] - latency_table['CUTLASS']) / latency_table['CUTLASS'])) * 100
 
-    if args.precision != "int4":
+    if args.precision in ("int8", "fp16"):
         axes.text(0.5, -0.08, f"MAPE: Ours {mape_ours:.1f}%, LLMCompass {mape_baseline:.1f}%, Roofline {mape_roofline:.1f}%", ha='center', va='bottom', transform=axes.transAxes, fontsize=6)
     else:
         axes.text(0.5, -0.08, f"MAPE: Ours {mape_ours:.1f}%, Roofline {mape_roofline:.1f}%", ha='center', va='bottom', transform=axes.transAxes, fontsize=6)
