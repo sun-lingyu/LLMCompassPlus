@@ -1,12 +1,9 @@
 from utils import size
 from hardware_model.device import Device
 from software_model.operators import Operator
-from software_model.utils import Tensor, DataType, Device, L2AccessType, L2Cache
+from software_model.utils import Tensor, DataType, DeviceType, L2AccessType, L2Cache
 from math import ceil, inf
 from enum import Enum
-from typing import NamedTuple
-from software_model.fast_grid_cover import solve_balanced_tiling
-import numpy as np
 import pandas as pd
 import os
 from scalesim.scale_sim import scalesim
@@ -42,7 +39,7 @@ class Matmul(Operator):
         def display(self):
             print(f'{"-"*10} Mapping {"-"*10}')
             print(f"cta_m: {self.cta_m}, cta_n: {self.cta_n}, cta_k: {self.cta_k}, stages: {self.stages}")
-            print(f"swizzle_size: {self.swizzle_size}, raster_order: {"ALONG_M" if self.raster_order == Matmul.RasterOrder.ALONG_M else "ALONG_N"}")
+            print(f"swizzle_size: {self.swizzle_size}, raster_order: {'ALONG_M' if self.raster_order == Matmul.RasterOrder.ALONG_M else 'ALONG_N'}")
             print(f"is_2sm_mode: {self.is_2sm_mode}, active_ctas_per_core: {self.active_ctas_per_core}")
 
     class L2CacheMatmul(L2Cache):
@@ -63,9 +60,9 @@ class Matmul(Operator):
             self.m_tiles = ceil(M / L2Cache.TILE_LENGTH)
             self.n_tiles = ceil(N / L2Cache.TILE_LENGTH)
             self.k_tiles = ceil(K / L2Cache.TILE_LENGTH)
-            self.activation_tile_size = activation_dtype.wordsize * self.TILE_LENGTH ** 2
-            self.weight_tile_size = weight_dtype.wordsize * self.TILE_LENGTH ** 2
-            self.output_tile_size = output_dtype.wordsize * self.TILE_LENGTH ** 2
+            self.activation_tile_size = activation_dtype.word_size * self.TILE_LENGTH ** 2
+            self.weight_tile_size = weight_dtype.word_size * self.TILE_LENGTH ** 2
+            self.output_tile_size = output_dtype.word_size * self.TILE_LENGTH ** 2
 
             if L2Cache_previous:
                 assert L2Cache_previous.output_tile_size == self.activation_tile_size
@@ -93,7 +90,7 @@ class Matmul(Operator):
             assert coord_tuple[0] % L2Cache.TILE_LENGTH == 0 and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
             assert scope_tuple[0] % L2Cache.TILE_LENGTH == 0 and scope_tuple[1] % L2Cache.TILE_LENGTH == 0
             assert coord_tuple[0] >= 0 and coord_tuple[0] + scope_tuple[0] <= height * L2Cache.TILE_LENGTH
-            assert coord_tuple[1] >= 0 and coord_tuple[1] + scope_tuple[0] <= width * L2Cache.TILE_LENGTH
+            assert coord_tuple[1] >= 0 and coord_tuple[1] + scope_tuple[1] <= width * L2Cache.TILE_LENGTH, f"coord_tuple[1]: {coord_tuple[1]}, scope_tuple[1]: {scope_tuple[1]}, width * L2Cache.TILE_LENGTH: {width * L2Cache.TILE_LENGTH}"
 
             mem_access_size = 0
             for i in range(coord_tuple[0], coord_tuple[0] + scope_tuple[0], L2Cache.TILE_LENGTH):
@@ -102,7 +99,6 @@ class Matmul(Operator):
                     if tile in self.resident_tiles: # HIT
                         assert access_type != L2AccessType.OUTPUT
                         self.resident_tiles.move_to_end(tile) # update LRU
-                        return 0
                     else:
                         while self.occupied_size + tile_size > self.l2_size: # EVICT
                             mem_access_size += self.evict_oldest_tile()
@@ -110,6 +106,7 @@ class Matmul(Operator):
                             mem_access_size += tile_size
                         self.occupied_size += tile_size
                         self.resident_tiles[self.Tile(access_type, (i, j))] = None
+            self.total_mem_access_size += mem_access_size
             return mem_access_size
 
         def evict_oldest_tile(self):
@@ -123,6 +120,7 @@ class Matmul(Operator):
             if oldest_tile.access_type == L2AccessType.OUTPUT:
                 mem_access_size += tile_size
             self.occupied_size -= tile_size
+            self.total_mem_access_size += mem_access_size
             return mem_access_size
 
     def __init__(self, activation_dtype: DataType, \
@@ -140,19 +138,11 @@ class Matmul(Operator):
         self.output_shape = None
         self.look_up_table = None
         self.best_mapping = None
-
-        # performance counters
-        self.systolic_array_fma_count = 0
-        self.vector_fma_count = 0
-        self.reg_access_count = 0
-        self.l1_access_size = 0
-        self.l2_access_size = 0
-        self.mem_access_size = 0
         
         assert device in ["Orin", "Thor"], "Only support Orin and Thor!"
-        self.device = Device.ORIN if device =="Orin" else Device.THOR
-        assert (self.device == Device.ORIN and weight_dtype.name in ("fp16", "int8", "int4")) \
-            or (self.device == Device.THOR and weight_dtype.name in ("fp8", "fp4")), \
+        self.device_type = DeviceType.ORIN if device =="Orin" else DeviceType.THOR
+        assert (self.device_type == DeviceType.ORIN and weight_dtype.name in ("fp16", "int8", "int4")) \
+            or (self.device_type == DeviceType.THOR and weight_dtype.name in ("fp8", "fp4")), \
             "Only support fp16/int8/int4 for Orin and fp8/fp4 for Thor"
 
     def __call__(self, input1: Tensor, input2: Tensor) -> Tensor:
@@ -207,38 +197,41 @@ class Matmul(Operator):
         M = self.M
         N = self.N
         K = self.K
-        assert (self.device == Device.THOR and M >= 64) \
-            or (self.device == Device.ORIN and M >= 32), \
+        assert (self.device_type == DeviceType.THOR and M >= 64) \
+            or (self.device_type == DeviceType.ORIN and M >= 32), \
             "at least 64/32 to fit Thor/Orin GEMM workflow"
         assert K >= 256, "at least 256 to accurately model loop-K"
 
-        cta_m_list = [64, 128, 256] if self.device == Device.THOR else [32, 64, 128, 256]
-        cta_k_list = [128] if self.device == Device.THOR else [32, 64]
+        cta_m_list = [64, 128, 256] if self.device_type == DeviceType.THOR else [32, 64, 128, 256]
+        cta_k_list = [128] if self.device_type == DeviceType.THOR else [32, 64]
         # for cta_m in cta_m_list:
         #     for cta_n in [64, 128, 256]:
         #         for cta_k in cta_k_list:
+        #             for swizzle_size in [1, 2, 4, 8]:
         for cta_m in [256]:
             for cta_n in [256]:
                 for cta_k in [128]:
-                    for swizzle_size in [1, 2, 4, 8]:
+                    for swizzle_size in [1]:
                         activation_tile_size = int(cta_m * cta_k * self.activation_dtype.word_size)
                         weight_tile_size = int(cta_n * cta_k * self.weight_dtype.word_size)
                         output_tile_size = int(cta_m * cta_n * self.output_dtype.word_size)
                         intermediate_tile_size = int(cta_m * cta_n * self.intermediate_dtype.word_size)
-                        is_2sm_mode = (self.device == Device.THOR and cta_m in (128, 256)) # Blackwell 2-SM mode
+                        is_2sm_mode = (self.device_type == DeviceType.THOR and cta_m in (128, 256)) # Blackwell 2-SM mode
                         l1_working_set_size = (activation_tile_size + weight_tile_size)
                         if is_2sm_mode:
                             l1_working_set_size //= 2
 
                         # Check enough stages
-                        if self.device == Device.THOR:
+                        if self.device_type == DeviceType.THOR:
                             # Blackwell: CUTLASS StageCountAuto Policy: 1 CTA/SM
                             stages = pcb_module.compute_module.core.SRAM_size // l1_working_set_size
                             if stages < 3:
                                 continue # not enough pipeline stages
-                        elif self.device == Device.ORIN:
+                        elif self.device_type == DeviceType.ORIN:
                             # Ampere: 3 stages to maximize active_ctas_per_core
                             stages = 3
+                        else:
+                            assert False
 
                         # Check l1 usage
                         l1_working_set_size *= stages
@@ -246,7 +239,7 @@ class Matmul(Operator):
                             continue
 
                         # Check TMEM usage
-                        if self.device == Device.THOR:
+                        if self.device_type == DeviceType.THOR:
                             intermediate_size = intermediate_tile_size
                             if is_2sm_mode:
                                 intermediate_size //= 2
@@ -254,7 +247,7 @@ class Matmul(Operator):
 
                         # Check Register usage
                         register_usage = 1
-                        if self.device == Device.ORIN:
+                        if self.device_type == DeviceType.ORIN:
                             if self.activation_dtype.name == "fp16": # suppose HMMA.m16n8k16
                                 register_usage = cta_m * cta_n * self.intermediate_dtype.word_size // 4 + \
                                     (16 * 16 + 16 * 8) * self.activation_dtype.word_size // 4 * pcb_module.compute_module.core.sublane_count * 2 # double buffering
@@ -269,13 +262,14 @@ class Matmul(Operator):
                             pcb_module.compute_module.core.SRAM_size // l1_working_set_size, 
                             pcb_module.compute_module.core.total_registers // register_usage
                         )
-                        assert self.device == Device.THOR and active_ctas_per_core == 1
+                        assert self.device_type == DeviceType.THOR and active_ctas_per_core == 1
                         
                         raster_order = Matmul.RasterOrder.ALONG_M if M <= N else Matmul.RasterOrder.ALONG_N
                         mapping = self.Mapping(
                             cta_m,
                             cta_n,
                             cta_k,
+                            stages,
                             swizzle_size,
                             raster_order,
                             is_2sm_mode,
@@ -283,13 +277,14 @@ class Matmul(Operator):
                         )
                         l2_status = Matmul.L2CacheMatmul(
                             pcb_module.compute_module.l2_size, 
-                            ceil(M / L2Cache.TILE_LENGTH), 
-                            ceil(N / L2Cache.TILE_LENGTH), 
-                            ceil(K / L2Cache.TILE_LENGTH),
-                            self.activation_dtype, 
+                            M,
+                            N,
+                            K,
+                            self.activation_dtype,
                             self.weight_dtype,
                             self.output_dtype
                         )
+                        pending_write_cycle = 0
                         cycle_count, pending_write_cycle = self.simulate(
                             mapping,
                             pcb_module,
@@ -302,11 +297,13 @@ class Matmul(Operator):
                             / pcb_module.compute_module.clock_freq
                         ))
                         cycle_count += pending_write_cycle + drain_cycle # clean up
-
+                        # print(f"pending_write_cycle: {pending_write_cycle}")
+                        # print(f"drain_cycle: {drain_cycle}")
                         if cycle_count < min_cycle_count:
                             min_cycle_count = cycle_count
-        self.best_cycle_count = min_cycle_count
+                            self.best_mapping = mapping
         self.latency = min_cycle_count / pcb_module.compute_module.clock_freq
+        self.mem_access_size = l2_status.total_mem_access_size
         self.best_mapping.display()
         return self.latency
 
@@ -352,37 +349,10 @@ class Matmul(Operator):
         cta_n = mapping.cta_n
         cta_k = mapping.cta_k
         raster_order = mapping.raster_order
-        swizzle_size = mapping.swizzle_size
+        swizzle_size = mapping.swizzle_size if mapping.swizzle_size > 1 else ceil(M / cta_m) # 1 means no swizzle
         is_2sm_mode = mapping.is_2sm_mode
         dataflow = mapping.dataflow
         total_ctas = ceil(M / cta_m) * ceil(N / cta_n)
-
-        normal_l2_tiles = [] # l2_tile_K == cta_k
-        tail_l2_tiles = [] # l2_tile_K < cta_k
-        normal_l1_tile = Matmul.L1TileSimulator(
-            cta_m,
-            cta_n,
-            cta_k,
-            self.activation_dtype,
-            self.weight_dtype,
-            self.intermediate_dtype,
-            pcb_module,
-            self.look_up_table,
-            is_2sm_mode,
-            dataflow
-        )
-        tail_l1_tile = Matmul.L1TileSimulator(
-            cta_m,
-            cta_n,
-            K % cta_k,
-            self.activation_dtype,
-            self.weight_dtype,
-            self.intermediate_dtype,
-            pcb_module,
-            self.look_up_table,
-            is_2sm_mode,
-            dataflow
-        )
 
         cta_sequence = []
         # L2 swizzling
@@ -392,152 +362,87 @@ class Matmul(Operator):
                     for m_offset in range(swizzle_size):
                         m = m_base + m_offset
                         if m < ceil(M / cta_m):
-                            cta_sequence.append(m * cta_m, n * cta_n)
+                            cta_sequence.append((m * cta_m, n * cta_n))
         elif raster_order == Matmul.RasterOrder.ALONG_N:
             for n_base in range(0, ceil(N / cta_n), swizzle_size):
                 for m in range(ceil(M / cta_m)):
                     for n_offset in range(swizzle_size):
                         n = n_base + n_offset
                         if n < ceil(N / cta_n):
-                            cta_sequence.append(m * cta_m, n * cta_n)
+                            cta_sequence.append((m * cta_m, n * cta_n))
 
-        for waveid, i in range(0, total_ctas, active_ctas_per_wave):
-            cta_chunk = cta_sequence[i : i + self.num_sm]
+        # Build waves
+        shared_l1_simulator_args = (
+            self.activation_dtype, self.weight_dtype, self.intermediate_dtype, self.output_dtype,
+            pcb_module, self.look_up_table, is_2sm_mode, dataflow
+        )
+        if K // cta_k > 0:
+            normal_l1_tile = Matmul.L1TileSimulator(cta_m, cta_n, cta_k, *shared_l1_simulator_args)
+        if K % cta_k > 0:
+            tail_l1_tile = Matmul.L1TileSimulator(cta_m, cta_n, K % cta_k, *shared_l1_simulator_args)
+        waves = []
+        for i in range(0, total_ctas, active_ctas_per_wave):
+            cta_chunk = cta_sequence[i : i + active_ctas_per_wave]
+            curr_wave = []
             m_coords = [p[0] for p in cta_chunk]
             n_coords = [p[1] for p in cta_chunk]
-            
-            normal_l2_tiles.append(
-                self.L2TileSimulator(
-
+            for k_start in range(0, K, cta_k):
+                k_size = min(cta_k, K - k_start)
+                curr_wave.append(
+                    self.L2TileSimulator(
+                        max(m_coords) - min(m_coords) + cta_m, max(n_coords) - min(n_coords) + cta_n, k_size,
+                        min(m_coords), min(n_coords), k_start, cta_chunk,
+                        tail_l1_tile if k_size < cta_k else normal_l1_tile,
+                        ceil(len(cta_chunk) / execution_unit_num), l2_status, pcb_module
+                    )
                 )
-            )
+            waves.append(curr_wave)
 
-        l2_tile_M = mapping.l2_tile_M
-        l2_tile_N = mapping.l2_tile_N
-        l2_tile_K = mapping.l2_tile_K
-        assert l2_tile_M % mapping.cta_m == 0 and l2_tile_N % mapping.cta_n == 0
-        l2_tile_M_in_tile = l2_tile_M // mapping.cta_m
-        l2_tile_N_in_tile = l2_tile_N // mapping.cta_n
-        l2_coord_M_in_tile = mapping.l2_coord_M_in_tile
-        l2_coord_N_in_tile = mapping.l2_coord_N_in_tile
-
-        K_l2_t = K // l2_tile_K
-        K_remain = K % l2_tile_K
-
-        l2_tiles = np.empty(
-            [ceil(K / l2_tile_K)],
-            dtype=self.L2TileSimulator,
-        )
-        # print('-'*20)
-        # print(l2_tiles.shape)
-        if K_l2_t != 0:
-            l2_tiles[:K_l2_t] = self.L2TileSimulator(
-                l2_tile_M,
-                l2_tile_N,
-                l2_tile_K,
-                self.activation_dtype,
-                self.weight_dtype,
-                self.intermediate_dtype,
-                mapping,
-                pcb_module,
-                self.look_up_table,
-                l2_status
-            )
-        if K_remain != 0:
-            l2_tiles[-1] = self.L2TileSimulator(
-                l2_tile_M,
-                l2_tile_N,
-                K_remain,
-                self.activation_dtype,
-                self.weight_dtype,
-                self.intermediate_dtype,
-                mapping,
-                pcb_module,
-                self.look_up_table,
-                l2_status
-            )
-
+        # ----------------Begin Counting cycles-------------------
         total_cycle_count = 0
-        # Prologue
-        M_K_io_cycle_count = l2_tiles[0].simulate_l2_tile_io_cycle_count(
-            L2AccessType.ACTIVATION, 
-            (l2_coord_M_in_tile, 0), 
-            (l2_tile_M_in_tile, 1), 
-            pcb_module
-        )
-        K_N_io_cycle_count = l2_tiles[0].simulate_l2_tile_io_cycle_count(
-            L2AccessType.WEIGHT, 
-            (0, l2_coord_N_in_tile), 
-            (1, l2_tile_N_in_tile), 
-            pcb_module
-        )
-        # total_cycle_count += max(M_K_io_cycle_count, l2_tiles[0].M_K_l1_cycle_count) + \
-        #     max(K_N_io_cycle_count, l2_tiles[0].K_N_l1_cycle_count)
-        total_cycle_count += max(
-            M_K_io_cycle_count + K_N_io_cycle_count, 
-            l2_tiles[0].M_K_l1_cycle_count + l2_tiles[0].K_N_l1_cycle_count
-        )
-        if M_K_io_cycle_count + K_N_io_cycle_count == 0:
-            pending_write_cycle = max(
-                0, 
-                pending_write_cycle - (l2_tiles[0].K_N_l1_cycle_count + l2_tiles[0].M_K_l1_cycle_count)
-            ) # overlap pending write with compute
-        else:
-            total_cycle_count += pending_write_cycle
-            pending_write_cycle = 0
-        if self.weight_dtype.name == "int4":
-            offset_for_w4a16 = 0.03 # obtained by fitting real machine cycles
-            total_cycle_count += l2_tiles[0].K * l2_tiles[0].N * offset_for_w4a16 # mainly models non-overlapped dequant overhead
-
-        # Loop K: double buffering
-        wait_ready_cycle = 0
-        for k in range(ceil(K / l2_tile_K)):
-            # current tile compute latency
-            total_cycle_count += wait_ready_cycle + l2_tiles[k].compute_cycle_count
-            if M_K_io_cycle_count + K_N_io_cycle_count == 0:
-                pending_write_cycle = max(
-                    0, 
-                    pending_write_cycle - (wait_ready_cycle + l2_tiles[k].compute_cycle_count)
-                ) # overlap pending write with compute
+        for l2_tiles in waves:
+            # Prologue
+            input_io_cycle_count = l2_tiles[0].get_input_io_cycle_count()
+            total_cycle_count += input_io_cycle_count
+            if input_io_cycle_count == l2_tiles[0].l1_input_io_cycle_count: # Not accessing DRAM
+                pending_write_cycle = max(0, pending_write_cycle - input_io_cycle_count)
             else:
                 total_cycle_count += pending_write_cycle
                 pending_write_cycle = 0
-            # print(f"wait_ready_cycle {wait_ready_cycle}, l2_tiles[k].compute_cycle_count {l2_tiles[k].compute_cycle_count}")
+            if self.weight_dtype.name == "int4":
+                offset_for_w4a16 = 0.03 # obtained by fitting real machine cycles
+                total_cycle_count += l2_tiles[0].K * l2_tiles[0].N * offset_for_w4a16 # mainly models non-overlapped dequant overhead
 
-            # update wait_ready_cycle
-            if k + 1 < ceil(K / l2_tile_K):
-                M_K_io_cycle_count = l2_tiles[k + 1].simulate_l2_tile_io_cycle_count(
-                    L2AccessType.ACTIVATION, 
-                    (l2_coord_M_in_tile, k + 1),
-                    (l2_tile_M_in_tile, 1),
-                    pcb_module)
-                K_N_io_cycle_count = l2_tiles[k + 1].simulate_l2_tile_io_cycle_count(
-                                    L2AccessType.WEIGHT, 
-                                    (k + 1, l2_coord_N_in_tile),
-                                    (1, l2_tile_N_in_tile),
-                                    pcb_module)
-                read_next_tile_cycle = max(
-                    M_K_io_cycle_count + K_N_io_cycle_count, 
-                    l2_tiles[k].K_N_l1_cycle_count + l2_tiles[k].M_K_l1_cycle_count
-                )
-                wait_ready_cycle = max(0, read_next_tile_cycle - l2_tiles[k].compute_cycle_count)
-            else:
-                wait_ready_cycle = 0
+            # Loop K: double buffering
+            wait_ready_cycle = 0
+            for iter in range(ceil(K / cta_k)):
+                # current tile compute latency
+                curr_iter_cycle_count = wait_ready_cycle + l2_tiles[iter].compute_cycle_count
+                total_cycle_count += curr_iter_cycle_count
+                # print(f"input_io_cycle_count: {input_io_cycle_count}, l1_input_io_cycle_count: {l2_tiles[iter].l1_input_io_cycle_count}")
+                if input_io_cycle_count == l2_tiles[iter].l1_input_io_cycle_count: # Not accessing DRAM
+                    pending_write_cycle = max(0, pending_write_cycle - curr_iter_cycle_count)
+                else:
+                    total_cycle_count += pending_write_cycle
+                    pending_write_cycle = 0
+                
+                # print(f"wait_ready_cycle {wait_ready_cycle}, l2_tiles[iter].compute_cycle_count {l2_tiles[iter].compute_cycle_count}")
 
-        # Epilogue
-        total_cycle_count += l2_tiles[0].M * l2_tiles[0].N // pcb_module.compute_module.get_total_vector_throughput_per_cycle(self.output_dtype, "cvt")
-        offset_for_smem_reorganizing_etc = 0 if self.device == Device.THOR else 0.01 # obtained by fitting real machine cycles
-        total_cycle_count += l2_tiles[0].M * l2_tiles[0].N * offset_for_smem_reorganizing_etc # offset, mainly models data reorganizing through smem before write to DRAM. For Blackwell, smem data reorganizing is taken over asynchronously by TMA hardware.
-        M_N_io_cycle_count = l2_tiles[0].simulate_l2_tile_io_cycle_count(L2AccessType.OUTPUT, (l2_coord_M_in_tile, l2_coord_N_in_tile), (l2_tile_M_in_tile, l2_tile_N_in_tile), pcb_module)
-        pending_write_cycle += max(0, M_N_io_cycle_count - l2_tiles[k].compute_cycle_count) # overlap with compute
-        self.systolic_array_fma_count = sum(l2_tile.systolic_array_fma_count for l2_tile in l2_tiles.flat)
-        if self.weight_dtype.name == "int4":
-            self.vector_fma_count = sum(l2_tile.N * l2_tile.K for l2_tile in l2_tiles.flat)
-        self.reg_access_count = sum(l2_tile.reg_access_count for l2_tile in l2_tiles.flat)
-        self.l1_access_size = sum(l2_tile.l1_access_size for l2_tile in l2_tiles.flat)
-        self.l2_access_size = sum(l2_tile.l2_access_size for l2_tile in l2_tiles.flat)
-        self.mem_access_size += sum(l2_tile.mem_access_size for l2_tile in l2_tiles.flat)
-        # print(f"total_cycle_count: {total_cycle_count}")
+                # update wait_ready_cycle
+                if iter + 1 < ceil(K / cta_k):
+                    input_io_cycle_count = l2_tiles[iter + 1].get_input_io_cycle_count()
+                    wait_ready_cycle = max(0, input_io_cycle_count - l2_tiles[iter].compute_cycle_count)
+                else:
+                    wait_ready_cycle = 0
+
+            # Epilogue
+            total_cycle_count += l2_tiles[0].M * l2_tiles[0].N // pcb_module.compute_module.get_total_vector_throughput_per_cycle(self.output_dtype, "cvt")
+            output_io_cycle_count = l2_tiles[-1].get_output_io_cycle_count()
+            if self.device_type == DeviceType.ORIN:
+                offset_for_smem_reorganizing_etc = 0.01 # obtained by fitting real machine cycles
+                total_cycle_count += l2_tiles[0].M * l2_tiles[0].N * offset_for_smem_reorganizing_etc # offset, mainly models data reorganizing through smem before write to DRAM. For Blackwell, smem data reorganizing is taken over asynchronously by TMA hardware.
+            pending_write_cycle += output_io_cycle_count
+            # print(f"total_cycle_count: {total_cycle_count}")
         return total_cycle_count, pending_write_cycle
 
     class L2TileSimulator:
@@ -548,34 +453,65 @@ class Matmul(Operator):
             K: int,
             coord_M: int,
             coord_N: int,
-            l1_tile_count: int,
+            coord_K: int,
+            cta_chunk: list,
             l1_tile: "Matmul.L1TileSimulator",
             active_ctas_per_core: int,
-            l2_status: "Matmul.L2CacheMatmul"
+            l2_status: "Matmul.L2CacheMatmul",
+            pcb_module: Device
         ):
             self.l2_status = l2_status
-
             self.M = M
             self.N = N
             self.K = K
-            self.coord_tuple = (coord_M, coord_N)
-            self.size_tuple = 
-
-            self.l1_tile_count = l1_tile_count
+            self.coord_M = coord_M
+            self.coord_N = coord_N
+            self.coord_K = coord_K
+            self.cta_chunk = cta_chunk
             self.l1_tile = l1_tile
+            self.pcb_module = pcb_module
 
-            self.active_ctas_per_core = active_ctas_per_core
-
-            self.M_K_l1_cycle_count = self.l1_tile.M_K_io_cycle_count * self.l1_tile_count
-            self.K_N_l1_cycle_count = self.l1_tile.K_N_io_cycle_count * self.l1_tile_count
-
-            self.compute_cycle_count = self.simulate_l2_tile_compute_cycle_count()
+            self.l1_input_io_cycle_count = self.l1_tile.input_io_cycle_count * len(self.cta_chunk)
+            self.l1_output_io_cycle_count = self.l1_tile.output_io_cycle_count * len(self.cta_chunk)
+            self.l1_compute_cycle_count = self.l1_tile.compute_cycle_count
+            self.compute_cycle_count = self.l1_compute_cycle_count * active_ctas_per_core
+        
+        def get_input_io_cycle_count(self):
+            M_K_io_cycle_count = self.simulate_l2_tile_io_cycle_count(
+                L2AccessType.ACTIVATION, 
+                (self.coord_M, self.coord_K),
+                (self.M, self.K),
+                self.pcb_module
+            )
+            K_N_io_cycle_count = self.simulate_l2_tile_io_cycle_count(
+                L2AccessType.WEIGHT, 
+                (self.coord_K, self.coord_N),
+                (self.K, self.N),
+                self.pcb_module
+            )
+            return max(
+                M_K_io_cycle_count + K_N_io_cycle_count,
+                self.l1_input_io_cycle_count
+            )
+        
+        def get_output_io_cycle_count(self):
+            M_N_io_cycle_count = 0
+            for cta_coord in self.cta_chunk: # May not be a rectangle
+                M_N_io_cycle_count += self.simulate_l2_tile_io_cycle_count(
+                    L2AccessType.OUTPUT, 
+                    cta_coord,
+                    (self.l1_tile.M, self.l1_tile.N),
+                    self.pcb_module
+                )
+            return max(
+                M_N_io_cycle_count,
+                self.l1_output_io_cycle_count
+            )
 
         def simulate_l2_tile_io_cycle_count(
-            self, access_type: L2AccessType, size_tuple: tuple[int, int], pcb_module: Device
+            self, access_type: L2AccessType, coord_tuple: tuple[int, int], size_tuple: tuple[int, int], pcb_module: Device
         ): # cycles to load the tile from DRAM to l2
-            mem_access_size = self.l2_status.access(access_type, self.coord_tuple, size_tuple)
-            self.mem_access_size += mem_access_size
+            mem_access_size = self.l2_status.access(access_type, coord_tuple, size_tuple)
             mem_access_cycle = ceil(
                 mem_access_size
                 / (
@@ -584,10 +520,7 @@ class Matmul(Operator):
                     / pcb_module.compute_module.clock_freq
                 ))
             return mem_access_cycle
-
-        def simulate_l2_tile_compute_cycle_count(self):
-            return self.l1_tile.compute_cycle_count * self.active_ctas_per_core
-
+            
     class L1TileSimulator:
         def __init__(
             self,
@@ -597,10 +530,11 @@ class Matmul(Operator):
             activation_dtype: DataType,
             weight_dtype: DataType,
             intermediate_dtype: DataType,
+            output_dtype: DataType,
             pcb_module: Device,
             look_up_table: pd.DataFrame,
             is_2sm_mode: bool,
-            dataflow: str,
+            dataflow: str
         ):
             # performance counters
             self.systolic_array_fma_count = 0
@@ -611,21 +545,33 @@ class Matmul(Operator):
             self.M = M
             self.N = N
             self.K = K
-            
-            self.compute_cycle_count = self.simulate_l1_tile_compute_cycle_count(
-                M // 2 if is_2sm_mode else M, N, K, activation_dtype, intermediate_dtype, dataflow, pcb_module, look_up_table
-            )
-            self.M_K_io_cycle_count = self.simulate_l1_tile_io_cycle_count(
-                M // 2 if is_2sm_mode else M, K, activation_dtype, pcb_module
-            )
-            self.K_N_io_cycle_count = self.simulate_l1_tile_io_cycle_count(
-                K, N // 2 if is_2sm_mode else N, weight_dtype, pcb_module
-            )
+            self.is_2sm_mode = is_2sm_mode
+            self.activation_dtype = activation_dtype
+            self.weight_dtype = weight_dtype
+            self.intermediate_dtype = intermediate_dtype
+            self.output_dtype = output_dtype
+            self.pcb_module = pcb_module
+            self.look_up_table = look_up_table
+            self.dataflow = dataflow
 
+            M_K_io_cycle_count = self.simulate_l1_tile_io_cycle_count(
+                self.M // 2 if self.is_2sm_mode else self.M, self.K, self.activation_dtype, self.pcb_module
+            )
+            K_N_io_cycle_count = self.simulate_l1_tile_io_cycle_count(
+                self.K, self.N // 2 if self.is_2sm_mode else self.N, self.weight_dtype, self.pcb_module
+            )
+            M_N_io_cycle_count = self.simulate_l1_tile_io_cycle_count(
+                self.M // 2 if self.is_2sm_mode else self.M, self.N, self.output_dtype, self.pcb_module
+            )
+            self.input_io_cycle_count = M_K_io_cycle_count + K_N_io_cycle_count
+            self.output_io_cycle_count = M_N_io_cycle_count
+            self.compute_cycle_count = self.simulate_l1_tile_compute_cycle_count(
+                self.M // 2 if self.is_2sm_mode else self.M, self.N, self.K, self.activation_dtype, self.intermediate_dtype, self.dataflow, self.pcb_module, self.look_up_table
+            )
+        
         def simulate_l1_tile_io_cycle_count(
             self, M: int, N: int, data_type: DataType, pcb_module: Device
         ): # cycles to load the tile from L2 to L1
-            self.l2_access_size += M * N * data_type.word_size
             return ceil(
                 M
                 * N
@@ -644,45 +590,26 @@ class Matmul(Operator):
             pcb_module: Device,
             look_up_table: pd.DataFrame,
         ):
-            self.systolic_array_fma_count = M * N * K
-            if activation_dtype.name == "fp16": # suppose HMMA.m16n8k16
-                instruction_execution_count = self.systolic_array_fma_count // (16 * 8 * 16)
-                self.reg_access_count = instruction_execution_count * (16 * 16 + 8 * 16) * activation_dtype.word_size // 4
-                self.reg_access_count += instruction_execution_count * (16 * 8) * intermediate_dtype.word_size // 4
-                self.reg_access_count += instruction_execution_count * (16 * 8) * intermediate_dtype.word_size // 4
-            elif activation_dtype.name == "int8": # suppose HMMA.m16n8k32
-                instruction_execution_count = self.systolic_array_fma_count // (16 * 8 * 32)
-                self.reg_access_count = instruction_execution_count * (16 * 32 + 8 * 32) * activation_dtype.word_size // 4
-                self.reg_access_count += instruction_execution_count * (16 * 8) * intermediate_dtype.word_size // 4
-                self.reg_access_count += instruction_execution_count * (16 * 8) * intermediate_dtype.word_size // 4
-            elif activation_dtype.name == "fp8" or activation_dtype.name == "fp4":
-                pass
-            else:
-                assert False, "not implemented yet"
-
-            compute_cycle_count = inf
-            l1_access_size = inf
-            for (
-                M_tiling_factor,
-                N_tiling_factor, # does not model sliced-K
-            ) in Matmul.all_factor_pairs(pcb_module.compute_module.core.sublane_count):
-                compute_cycle_count_temp = ceil(Matmul.simulate_systolic_array_cycle_count(
-                    look_up_table,
-                    ceil(M / M_tiling_factor),
-                    ceil(N / N_tiling_factor),
-                    K,
-                    pcb_module.compute_module.core.systolic_array.array_height,
-                    pcb_module.compute_module.core.systolic_array.array_width,
-                    dataflow,
-                ))
-                l1_access_size_temp = (M_tiling_factor * K * N + N_tiling_factor * M * K) * activation_dtype.word_size
-                if compute_cycle_count_temp < compute_cycle_count:
-                    compute_cycle_count = compute_cycle_count_temp
-                    l1_access_size = l1_access_size_temp
-                elif compute_cycle_count_temp == compute_cycle_count:
-                    l1_access_size = min(l1_access_size, l1_access_size_temp)
-            self.l1_access_size = l1_access_size
-
+            print(M,N,K)
+            assert M >= pcb_module.compute_module.core.systolic_array.array_width
+            assert N >= pcb_module.compute_module.core.systolic_array.array_height
+            assert K >= 32
+            # compute_cycle_count = inf
+            # for (
+            #     M_tiling_factor,
+            #     N_tiling_factor, # does not model sliced-K
+            # ) in Matmul.all_factor_pairs(pcb_module.compute_module.core.sublane_count):
+            #     compute_cycle_count_temp = ceil(Matmul.simulate_systolic_array_cycle_count(
+            #         look_up_table,
+            #         ceil(M / M_tiling_factor),
+            #         ceil(N / N_tiling_factor),
+            #         K,
+            #         pcb_module.compute_module.core.systolic_array.array_height,
+            #         pcb_module.compute_module.core.systolic_array.array_width,
+            #         dataflow,
+            #     ))
+            compute_cycle_count = M* N * K // (pcb_module.compute_module.core.systolic_array.array_height * pcb_module.compute_module.core.systolic_array.array_width * pcb_module.compute_module.core.sublane_count)
+            
             return compute_cycle_count // (4 // activation_dtype.word_size)
 
     @staticmethod

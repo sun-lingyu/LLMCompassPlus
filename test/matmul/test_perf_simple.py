@@ -52,7 +52,7 @@ if __name__ == "__main__":
         Tensor([K, N], data_type=weight_dtype),
     )
 
-    latency =  model.compile_and_simulate(pcb, compile_mode="heuristic-GPU")
+    latency =  model.compile_and_simulate(pcb)
 
     roofline_latency = model.roofline_model(pcb)
 

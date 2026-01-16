@@ -183,7 +183,7 @@ def cutlass_gemm_min_latency_remote(
             profiler_path, f"--m={M}", f"--n={N}", f"--k={K}",
             f"--kernels={best_op_name}", "--llc-capacity=524288",
             "--profiling-duration=100", "--profiling-iterations=0", # Run for 100ms
-            "--warmup-iterations=100"
+            "--warmup-iterations=100", "--enable-best-kernel-for-fixed-shape"
         ]
     remote_cmd_str = " ".join(shlex.quote(arg) for arg in cutlass_cmd)
     ssh_cmd = ["ssh", "-p", str(port), target, remote_cmd_str]
@@ -335,7 +335,7 @@ def test_and_save_latency(
             Tensor([M, K], activation_dtype),
             Tensor([K, N], weight_dtype),
         )
-        latency =  1000 * model.compile_and_simulate(pcb, compile_mode="heuristic-GPU")
+        latency =  1000 * model.compile_and_simulate(pcb)
         if update_ours_only:
             baseline_latency = float(df["Baseline"].iloc[idx]) if precision != "int4" else -1
             roofline_latency = float(df["Roofline"].iloc[idx])

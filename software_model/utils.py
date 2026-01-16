@@ -19,9 +19,9 @@ class Tensor:
         self.size = size(shape)
         self.data_type = data_type
 
-class Device(Enum):
-    ORIN: 0
-    THOR: 1
+class DeviceType(Enum):
+    ORIN = 0
+    THOR = 1
 
 class L2AccessType(Enum):
     ACTIVATION = 1
@@ -44,6 +44,7 @@ class L2Cache:
         self.resident_tiles = OrderedDict() # LRU queue
         self.occupied_size = 0
         self.output_tile_size = None
+        self.total_mem_access_size = 0
 
     def access(self,
                access_type: L2AccessType,
@@ -61,4 +62,6 @@ class L2Cache:
             oldest_tile = self.resident_tiles.popitem(last=False)[0]
             if oldest_tile.access_type == L2AccessType.OUTPUT:
                 mem_access_size += self.output_tile_size
+        self.occupied_size = 0
+        self.total_mem_access_size += mem_access_size
         return mem_access_size
