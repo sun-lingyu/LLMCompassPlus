@@ -83,4 +83,6 @@ def get_output_dtype(activation_dtype: DataType, op_name: str, is_test: bool):
         elif op_name == "up_proj":
             return data_type_dict["fp4"]
         else:
+            if is_test:
+                return data_type_dict["fp8"] # CUTLASS profiler does not support F4 GEMM with F16 output
             return data_type_dict["fp16"]

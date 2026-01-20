@@ -5,11 +5,12 @@ from typing import NamedTuple
 from collections import OrderedDict
 
 class DataType:
-    def __init__(self, name: str, word_size: int) -> None:
+    def __init__(self, name: str, word_size: int, scale_block_size: int = None) -> None:
         self.name = name
-        self.word_size:int = word_size
+        self.word_size = word_size
+        self.scale_block_size = scale_block_size
 
-data_type_dict = {"int4": DataType("int4", 0.5), "int8": DataType("int8", 1), "int32": DataType("int32", 4), "fp4": DataType("fp4", 0.5), "fp8": DataType("fp8", 1), "fp16": DataType("fp16", 2), "fp32": DataType("fp32", 4)}
+data_type_dict = {"int4": DataType("int4", 0.5), "int8": DataType("int8", 1), "int32": DataType("int32", 4), "fp4": DataType("fp4", 0.5, 16), "fp8": DataType("fp8", 1), "fp16": DataType("fp16", 2), "fp32": DataType("fp32", 4)}
 
 class Tensor:
     def __init__(
@@ -27,9 +28,12 @@ class L2AccessType(Enum):
     ACTIVATION = 1
     WEIGHT = 2
     OUTPUT = 3
-    Q = 4
-    K = 5
-    V = 6
+    ACTIVATION_SCALE = 4
+    WEIGHT_SCALE = 5
+    OUTPUT_SCALE = 6
+    Q = 7
+    K = 8
+    V = 9
 
 class L2Cache:
     TILE_LENGTH = 32

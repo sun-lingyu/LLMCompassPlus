@@ -124,11 +124,11 @@ def cutlass_gemm_min_latency_remote(
         assert output_dtype.name in ("fp4", "fp8", "fp16")
         kernel_prefix=f"cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_" # nvfp4
         if output_dtype.name == "fp4":
-            kernel_prefix += "ue4m3xe2m1"
+            kernel_prefix += "ue8m0xe2m1"
         elif output_dtype.name == "fp8":
             kernel_prefix += "e5m2" # Ideally this should be e4m3, but CUTLASS does not support.
         else:
-            kernel_prefix += "bf16"
+            kernel_prefix += "e5m2" # This should be fp16/bf16 if supported
         cutlass_cmd = [
             profiler_path, f"--m={M}", f"--n={N}", f"--k={K}",
             f"--kernels={kernel_prefix}*"
@@ -142,6 +142,7 @@ def cutlass_gemm_min_latency_remote(
 
     # 1. Fast scanning, might be inaccurate
     remote_cmd_str = " ".join(shlex.quote(arg) for arg in cutlass_cmd)
+    print(remote_cmd_str)
     target = f"{user}@{host}" if user is not None else host
     ssh_cmd = ["ssh", "-p", str(port), target, remote_cmd_str]
     proc = subprocess.run(
@@ -186,6 +187,7 @@ def cutlass_gemm_min_latency_remote(
             "--warmup-iterations=100", "--enable-best-kernel-for-fixed-shape"
         ]
     remote_cmd_str = " ".join(shlex.quote(arg) for arg in cutlass_cmd)
+    print(remote_cmd_str)
     ssh_cmd = ["ssh", "-p", str(port), target, remote_cmd_str]
     proc = subprocess.run(
         ssh_cmd,
@@ -202,13 +204,15 @@ def cutlass_gemm_min_latency_remote(
             f"Output:\n{output}"
         )
     best_runtime = None
+    results = []
     for line in output.splitlines():
         line = line.strip()
                
         if "Runtime:" in line and current_op:
             match = re.search(r"Runtime:\s*([0-9]+(?:\.[0-9]+)?)", line)
             if match:
-                best_runtime = float(match.group(1))
+                results.append(float(match.group(1)))
+    best_runtime = min(results)
     if not best_runtime:
         raise RuntimeError(
             "No valid performance data found in profiler output.\n"
@@ -236,8 +240,26 @@ def marlin_gemm_latency_remote(
     port: int = 9129,
     user: Optional[str] = "sly",
     work_dir: str = "/home/sly/marlin",
-    python_path: str = "/home/sly/anaconda3/envs/llmcompass/bin/python"
+    python_path: str = "/home/sly/anaconda3/envs/llmcompass/bin/python",
+    marlin_perf_log: str = f"{file_dir}/temp/marlin_perf_log.json",
 ) -> float:
+    existing_data = []
+    if os.path.exists(marlin_perf_log):
+        with open(marlin_perf_log, 'r') as f:
+            content = f.read().strip()
+            if content:
+                data = json.loads(content)
+                if isinstance(data, list):
+                    existing_data = data
+                else:
+                    assert False, "marlin_perf_log.json format error"
+
+    for record in existing_data:
+        if (record.get("M") == M and 
+            record.get("N") == N and 
+            record.get("K") == K):
+            return record['min_runtime']
+
     python_cmd = [
         python_path,
         "test_simple.py",
@@ -284,8 +306,18 @@ def marlin_gemm_latency_remote(
             f"SSH Command: {' '.join(ssh_cmd)}\n"
             f"Output:\n{output}"
         )
+    best_runtime = float(match.group(1))
+    new_record = {
+        "M": M, "N": N, "K": K,
+        "min_runtime": best_runtime, 
+    }
 
-    return float(match.group(1))
+    existing_data.append(new_record)
+
+    with open(marlin_perf_log, 'w') as f:
+        json.dump(existing_data, f, indent=4, ensure_ascii=False)
+
+    return best_runtime
 
 def test_and_save_latency(
     test_problems: list,
@@ -335,7 +367,7 @@ def test_and_save_latency(
             Tensor([M, K], activation_dtype),
             Tensor([K, N], weight_dtype),
         )
-        latency =  1000 * model.compile_and_simulate(pcb)
+        latency =  1000 * (model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency)
         if update_ours_only:
             baseline_latency = float(df["Baseline"].iloc[idx]) if precision != "int4" else -1
             roofline_latency = float(df["Roofline"].iloc[idx])
@@ -369,6 +401,8 @@ if __name__ == "__main__":
     K_shapes, N_shapes = get_model_shape(args.model)
     M = 1024 if args.mode == "prefill" else 64
     assert(M % 4 == 0)
+    if args.precision == "fp4" and args.mode == "decode":
+        M = 128 # at least 128
 
     os.makedirs(f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}", exist_ok=True)
     for op_name in ["qkv_proj", "o_proj", "up_proj", "down_proj"]:

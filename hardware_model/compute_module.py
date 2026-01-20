@@ -102,19 +102,6 @@ core_dict = {
 # flops: https://docs.nvidia.com/deeplearning/performance/dl-performance-gpu-background/index.html#gpu-arch__fig2
 # area: https://pbs.twimg.com/media/FOT_-NJWUAARrtB?format=jpg&name=large
 
-class Overhead:
-    def __init__(self, matmul, softmax, layernorm, gelu):
-        self.matmul = matmul
-        self.softmax = softmax
-        self.layernorm = layernorm
-        self.gelu = gelu
-
-overhead_dict = {
-    "Thor": Overhead(2.1e-5, 1.2e-5, 4.5e-5, 4.5e-5),
-    "Orin": Overhead(2.1e-5, 1.2e-5, 4.5e-5, 4.5e-5),
-    "A100": Overhead(2.1e-5, 1.2e-5, 4.5e-5, 4.5e-5),
-}
-
 class ComputeModule:
     def __init__(
         self,
@@ -124,7 +111,7 @@ class ComputeModule:
         l2_size,
         l2_bandwidth_per_cycle,
         l2_latency_cycles,
-        overhead: Overhead = overhead_dict["A100"],
+        launch_latency,
     ):
         self.core = core
         self.core_count = core_count
@@ -132,7 +119,7 @@ class ComputeModule:
         self.l2_size = int(l2_size)  # Byte
         self.l2_bandwidth_per_cycle = l2_bandwidth_per_cycle  # Byte/clock
         self.l2_latency_cycles = l2_latency_cycles
-        self.overhead = overhead
+        self.launch_latency = launch_latency
     
     def get_total_vector_throughput_per_cycle(self, data_type: DataType, operation: str):
         return self.core.vector_unit.get_throughput_per_cycle(data_type, operation) * self.core.sublane_count * self.core_count
@@ -149,7 +136,7 @@ compute_module_dict = {
         32 * 1024**2,
         1152,
         192,
-        overhead_dict["Thor"],
+        5e-6,
     ),
     "Orin": ComputeModule(
         core_dict["SM_Orin"],
@@ -158,7 +145,7 @@ compute_module_dict = {
         4 * 1024**2,
         512,
         146,
-        overhead_dict["Orin"],
+        5e-6,
     ),
     "A100": ComputeModule(
         core_dict["SM_A100"],
@@ -167,6 +154,6 @@ compute_module_dict = {
         40 * 1024**2,
         5120,
         223,
-        overhead_dict["A100"],
+        5e-6,
     ),
 }

@@ -49,9 +49,9 @@ def plot_latency(
     x = sorted_table["CUTLASS"]
 
     ax.scatter(x, sorted_table["Ours"], color='navy', alpha=0.6, s=8, label="Ours")
-    if precision in ("int8", "fp16"):
-        ax.plot(x, sorted_table["Baseline"], marker="^", alpha=0.6, s=8, label="LLMCompass")
     ax.scatter(x, sorted_table["Roofline"], marker="x", alpha=0.6, s=8, label="Roofline")
+    if precision in ("int8", "fp16"):
+        ax.scatter(x, sorted_table["Baseline"], marker="^", alpha=0.6, s=8, label="LLMCompass")
     ax.plot(x, x, 'r--', linewidth=1, label="Ideal (y=x)")
     
     ax.set_title(title)
