@@ -1,0 +1,98 @@
+import torch
+import argparse
+import sys
+import time
+
+try:
+    # 依然引用同一个 Triton 实现
+    from flash_attn.ops.triton.layer_norm import rms_norm_fn
+except ImportError:
+    print("Error: Could not import rms_norm_fn. Ensure flash_attn is installed.")
+    sys.exit(1)
+
+def benchmark_with_cuda_graphs(m, n, iterations=1000, duration=0):
+    print(f"--- Benchmarking with CUDA Graphs ---")
+    print(f"Shape: M={m}, N={n}, Batch=1, FP16")
+    
+    dev = torch.device('cuda:0')
+    dtype = torch.float16
+
+    # 1. 准备静态数据 (Static Placeholders)
+    # 注意：CUDA Graphs 录制后，输入数据的内存地址必须固定
+    # 为了测纯 Kernel 性能，我们这里暂时接受 L2 Cache 命中 (对于小 Batch 无论如何都会命中)
+    static_x = torch.randn((1, m, n), dtype=dtype, device=dev)
+    static_res = torch.randn((1, m, n), dtype=dtype, device=dev)
+    static_weight = torch.ones((n,), dtype=dtype, device=dev)
+    static_bias = None 
+
+    # 2. 预热 (Warmup) - 跑几次让 Triton 编译好 Kernel
+    print("Warming up Triton kernel...")
+    for _ in range(10):
+        rms_norm_fn(static_x, static_weight, static_bias, residual=static_res, eps=1e-5, prenorm=True)
+    torch.cuda.synchronize()
+
+    # 3. 录制 CUDA Graph (The Magic Step)
+    print("Capturing CUDA Graph...")
+    g = torch.cuda.CUDAGraph()
+    
+    # 在录制期间，我们执行一次操作
+    # 所有的显存分配、Kernel Launch 都会被“冻结”在图里
+    with torch.cuda.graph(g):
+        out, new_res = rms_norm_fn(
+            static_x, 
+            static_weight, 
+            static_bias, 
+            residual=static_res, 
+            eps=1e-5, 
+            prenorm=True
+        )
+    
+    # 4. 性能测试 (Performance Test)
+    print(f"Replaying Graph min({iterations} times, {duration} ms)...")
+    
+    start_event = torch.cuda.Event(enable_timing=True)
+    end_event = torch.cuda.Event(enable_timing=True)
+    
+    start_cpu = time.time()
+    start_event.record()
+    
+    for i in range(iterations):
+        # 这一步极快，只是告诉 GPU "Run the graph"，没有 Python 开销
+        g.replay()
+        
+        # 混合退出条件检测 (仅在特定的 Checkpoint 检查以减少系统调用干扰)
+        if i % 1000 == 0 and duration > 0:
+             if (time.time() - start_cpu) * 1000 >= duration:
+                 iterations = i
+                 break
+
+    end_event.record()
+    end_event.synchronize()
+    
+    # 5. 计算结果
+    total_time_ms = start_event.elapsed_time(end_event)
+    avg_latency_ms = (total_time_ms / iterations)
+    
+    # Bandwidth Calculation
+    # Read X, Read Res, Write Res, Write Out
+    total_bytes = 4 * m * n * 2 # FP16 = 2 bytes
+    gb_per_sec = (total_bytes / (avg_latency_ms * 1e-3)) / (1024**3)
+
+    print(f"\n--- Results (CUDA Graphs) ---")
+    print(f"Average Latency: {avg_latency_ms:.3f} ms")
+    print(f"Effective Bandwidth: {gb_per_sec:.2f} GB/s")
+    print(f"Effective Bandwidth (offset launch latency corrected): {(total_bytes / (avg_latency_ms * 1e-3 - 8e-6)) / (1024**3):.2f} GB/s")
+    
+    # 理论检查
+    if avg_latency_ms < 5e-3:
+        print("\n[Note] Latency is extremely low (<5us). This is typical for small kernels executed via Graphs.")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("m", type=int, default=16, help="Sequence Length (M) - Try small value like 1 or 16")
+    parser.add_argument("n", type=int, default=4096, help="Hidden Size (N)")
+    parser.add_argument("--iter", type=int, default=100000, help="Iterations")
+    parser.add_argument("--duration", type=float, default=1000, help="Duration in ms")
+    args = parser.parse_args()
+
+    benchmark_with_cuda_graphs(args.m, args.n, args.iter, args.duration)

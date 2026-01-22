@@ -52,7 +52,7 @@ if __name__ == "__main__":
         Tensor([K, N], data_type=weight_dtype),
     )
 
-    latency = model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency
+    latency = model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency.matmul
 
     roofline_latency = model.roofline_model(pcb)
 

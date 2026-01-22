@@ -367,7 +367,7 @@ def test_and_save_latency(
             Tensor([M, K], activation_dtype),
             Tensor([K, N], weight_dtype),
         )
-        latency =  1000 * (model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency)
+        latency =  1000 * (model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency.matmul)
         if update_ours_only:
             baseline_latency = float(df["Baseline"].iloc[idx]) if precision != "int4" else -1
             roofline_latency = float(df["Roofline"].iloc[idx])

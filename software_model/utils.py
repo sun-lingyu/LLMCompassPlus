@@ -28,12 +28,14 @@ class L2AccessType(Enum):
     ACTIVATION = 1
     WEIGHT = 2
     OUTPUT = 3
-    ACTIVATION_SCALE = 4
-    WEIGHT_SCALE = 5
-    OUTPUT_SCALE = 6
-    Q = 7
-    K = 8
-    V = 9
+    ACTIVATION_SCALE = 4 # for fp4
+    WEIGHT_SCALE = 5 # for fp4
+    OUTPUT_SCALE = 6 # for fp4
+    Q = 7 # for flashattn
+    K = 8 # for flashattn
+    V = 9 # for flashattn
+    RESIDUAL_INPUT = 10 # for layernorm
+    RESIDUAL_OUTPUT = 11 # for layernorm
 
 class L2Cache:
     TILE_LENGTH = 32

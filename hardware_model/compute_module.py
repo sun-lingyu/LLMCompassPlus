@@ -46,15 +46,7 @@ vector_unit_dict = {
                         "cvt_int32_fp32": 16,
                         "cvt_fp32_fp16": 16,
                         "cvt_int32_int8": 16
-                    }),
-    "A100": VectorUnit({"int32": 16,
-                        "fp16": 64,
-                        "fp32": 16,
-                        "fp64": 8,
-                        "exp2": 4,
-                        "cvt_int32_fp32": 4,
-                        "cvt_fp32_fp16": 16
-                    }),
+                    })
 }
 
 class SystolicArray:
@@ -69,7 +61,6 @@ class SystolicArray:
 systolic_array_dict = {
     "Thor": SystolicArray(64, 8),
     "Orin": SystolicArray(16, 8),
-    "A100": SystolicArray(16, 8),
 }
 
 class Core:
@@ -94,13 +85,18 @@ core_dict = {
     "SM_Orin": Core(
         vector_unit_dict["Orin"], systolic_array_dict["Orin"], 65536, 4, 163 * 1024
     ),
-    "SM_A100": Core(
-        vector_unit_dict["A100"], systolic_array_dict["A100"], 65536, 4, 163 * 1024
-    ),
 }
-# compute_tile_dict={'SM_A100_int8':ComputeTile(512, 4096, 192*1024*8,3.41, 'TSMC N7', 128*8),'SM_A100_fp16':ComputeTile(512, 2048, 192*1024*8,3.41, 'TSMC N7', 128),}
-# flops: https://docs.nvidia.com/deeplearning/performance/dl-performance-gpu-background/index.html#gpu-arch__fig2
-# area: https://pbs.twimg.com/media/FOT_-NJWUAARrtB?format=jpg&name=large
+
+class LaunchLatency:
+    def __init__(self, matmul, layernorm, flashattn):
+        self.matmul = matmul
+        self.layernorm = layernorm
+        self.flashattn = flashattn
+
+launch_latency_dict = {
+    "Thor": LaunchLatency(5e-6, 6.5e-6, 0),
+    "Orin": LaunchLatency(5e-6, 6.5e-6, 0),
+}
 
 class ComputeModule:
     def __init__(
@@ -111,7 +107,7 @@ class ComputeModule:
         l2_size,
         l2_bandwidth_per_cycle,
         l2_latency_cycles,
-        launch_latency,
+        launch_latency: LaunchLatency,
     ):
         self.core = core
         self.core_count = core_count
@@ -127,7 +123,6 @@ class ComputeModule:
     def get_total_systolic_array_throughput_per_cycle(self, data_type: DataType):
         return self.core_count * self.core.sublane_count * self.core.systolic_array.array_height * self.core.systolic_array.array_width * (4 // data_type.word_size)
 
-
 compute_module_dict = {
     "Thor": ComputeModule(
         core_dict["SM_Thor"],
@@ -136,7 +131,7 @@ compute_module_dict = {
         32 * 1024**2,
         1152,
         192,
-        5e-6,
+        launch_latency_dict["Thor"],
     ),
     "Orin": ComputeModule(
         core_dict["SM_Orin"],
@@ -145,15 +140,6 @@ compute_module_dict = {
         4 * 1024**2,
         512,
         146,
-        5e-6,
-    ),
-    "A100": ComputeModule(
-        core_dict["SM_A100"],
-        108,
-        1410e6,
-        40 * 1024**2,
-        5120,
-        223,
-        5e-6,
-    ),
+        launch_latency_dict["Orin"],
+    )
 }

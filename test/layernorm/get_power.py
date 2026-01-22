@@ -4,26 +4,21 @@ import subprocess
 import time
 import argparse
 import json
+import shlex
 from typing import Optional
-from test.matmul.test_perf import cutlass_gemm_min_latency_remote
-from test.matmul.utils import get_model_shape, get_output_dtype
+from test.layernorm.utils import get_model_shape
 file_dir = os.path.dirname(os.path.abspath(__file__))
 
 def measure_power_remote(
     M: int,
     N: int,
-    K: int,
-    op_name: str, 
-    precision: str,
     device: str,
-    total_duration: int = 5,
+    total_duration: int = 10,
     valid_duration: int = 1,
     host: str = "202.120.39.3",
     port: int = 9129,
     user: Optional[str] = "sly",
-    work_dir: str = "/home/sly/marlin", # for marlin
     python_path: str = "/home/sly/anaconda3/envs/llmcompass/bin/python", # for marlin
-    profiler_path: str = "/home/sly/cutlass/build/tools/profiler/cutlass_profiler", # for cutlass
     power_log: str = f"{file_dir}/temp/power_log.json",
     ignore_cache: bool = False
 ) -> float:
@@ -41,32 +36,21 @@ def measure_power_remote(
     if not ignore_cache:
         for record in existing_data:
             if (record.get("M") == M and 
-                record.get("N") == N and 
-                record.get("K") == K and 
-                record.get("precision") == precision):
+                record.get("N") == N):
                 return record['power_VDD_GPU_SOC'], record['power_VDDQ_VDD2_1V8AO']
         
     print(f"Measuring power for {total_duration}s and take {valid_duration}s in the middle...")
 
-    if precision == "int4": # marlin
-        full_cmd = (
-            f"{python_path} {work_dir}/test_simple.py {M} {N} {K} "
-            f"--duration={(total_duration) * 1000} " # ms
-        )
-    else: # CUTLASS
-        output_dtype = get_output_dtype(precision, op_name, True)
-        _, best_op_name = cutlass_gemm_min_latency_remote(
-            M, N, K, precision, host, output_dtype, port, user, profiler_path
-        )
-        full_cmd = (
-            f"{profiler_path} --m={M} --n={N} --k={K} --kernels={best_op_name} "
-            f"--profiling-duration={(total_duration) * 1000} " # ms
-            "--profiling-iterations=0 "
-            "--verification-enabled=false "
-            "--warmup-iterations=0 "
-        )
+    python_cmd = [
+        "TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas",
+        python_path,
+        "benchmark_fused_rmsnorm.py",
+        str(M),
+        str(N),
+        f"--duration={total_duration * 1000}"
+    ]
 
-    print(full_cmd)
+    full_cmd = " ".join(shlex.quote(arg) for arg in python_cmd)
     
     remote_script_path = os.path.join(os.path.dirname(file_dir), "power_monitor.py")
     if not os.path.exists(remote_script_path):
@@ -78,7 +62,7 @@ def measure_power_remote(
     variables_header = f"""
 FULL_CMD = {repr(full_cmd)}
 VALID_DURATION = {valid_duration}
-DEVICE = {device}
+DEVICE = "{device}"
 """
     remote_script_source = variables_header + "\n" + script_body
 
@@ -115,7 +99,7 @@ DEVICE = {device}
     
     if not ignore_cache:
         new_record = {
-            "M": M, "N": N, "K": K, "precision": precision,
+            "M": M, "N": N, 
             "power_VDD_GPU_SOC": avg_power_VDD_GPU_SOC, "power_VDDQ_VDD2_1V8AO": avg_power_VDDQ_VDD2_1V8AO
         }
 
@@ -130,34 +114,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", type=str, choices=["Orin", "Thor"],)
     parser.add_argument("--mode", type=str, choices=["prefill", "decode"],)
-    parser.add_argument("--op_name", type=str, choices=["qkv_proj", "o_proj", "up_proj", "down_proj", "all"])
-    parser.add_argument("--model", type=str, choices=["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"])
-    parser.add_argument("--precision", type=str, choices=["fp16", "int8", "int4"])
+    parser.add_argument("--precision", type=str, choices=["fp16"])
     args = parser.parse_args()
 
-    K_shapes, N_shapes = get_model_shape(args.model)
     M = 1024 if args.mode == "prefill" else 64
     assert(M % 4 == 0)
 
-    for op_name in ["qkv_proj", "o_proj", "up_proj", "down_proj"]:
-        if args.op_name != "all" and args.op_name != op_name:
-            continue
-
-        K, N = K_shapes[op_name], N_shapes[op_name]
-        assert(N % 4 == 0 and K % 4 == 0)
-
-        if args.mode == "prefill":
-            # op_name Context Parallelism
-            test_problems = [(M, N, K), (M // 2, N, K), (M // 4, N, K)]
-            for problem in test_problems:
-                p1, p2 = measure_power_remote(*problem, op_name, args.precision, args.device)
-                print(f"M N K {problem}, precision {args.precision} Power VDD_GPU_SOC {p1:.2f}W Power VDDQ_VDD2_1V8AO {p2:.2f}W")
-
-        # test Tensor Parallelism
-        if op_name == "qkv_proj" or op_name == "up_proj":
-            test_problems = [(M, N, K), (M, N // 2, K), (M, N // 4, K)]
-        else: # o_proj or down_proj
-            test_problems = [(M, N, K), (M, N, K // 2), (M, N, K // 4)]
-        for problem in test_problems:
-            p1, p2 = measure_power_remote(*problem, op_name, args.precision, args.device)
-            print(f"M N K {problem}, precision {args.precision} Power VDD_GPU_SOC {p1:.2f}W Power VDDQ_VDD2_1V8AO {p2:.2f}W")
+    test_problems = []
+    for model in ["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"]:
+        N = get_model_shape(model)
+        test_problems.append((M, N))
+    
+    for problem in test_problems:
+        p1, p2 = measure_power_remote(*problem, args.device)
+        print(f"M N {problem}, Power VDD_GPU_SOC {p1:.2f}W Power VDDQ_VDD2_1V8AO {p2:.2f}W")

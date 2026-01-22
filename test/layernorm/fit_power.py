@@ -9,11 +9,10 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, r2_score
 
-from software_model.matmul import Matmul
+from software_model.layernorm import FusedLayerNorm
 from software_model.utils import data_type_dict, Tensor
 from hardware_model.device import device_dict
-from test.matmul.utils import get_model_shape, get_output_dtype
-
+from test.layernorm.utils import get_model_shape
 file_dir = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE_TEMPLATE = f"{file_dir}/temp/power_features_cache"
 
@@ -95,63 +94,14 @@ def load_or_generate_data(args):
     y_mem_list = []
     M_list = []
 
-    shape_to_op = {}
-    for model in ["InternVision", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"]:
-        K_shapes, N_shapes = get_model_shape(model)
-        for op_name in K_shapes.keys():
-            k = K_shapes[op_name]
-            n = N_shapes[op_name]
-            shape_to_op[(1024, n, k)] = (op_name, model)
-            shape_to_op[(512, n, k)] = (op_name, model)
-            shape_to_op[(256, n, k)] = (op_name, model)
-            shape_to_op[(128, n, k)] = (op_name, model)
-            shape_to_op[(64, n, k)] = (op_name, model)
-            shape_to_op[(32, n, k)] = (op_name, model)
-            if op_name == "qkv_proj" or op_name == "up_proj":
-                shape_to_op[(1024, n // 2, k)] = (op_name, model)
-                shape_to_op[(1024, n // 4, k)] = (op_name, model)
-                shape_to_op[(128, n // 2, k)] = (op_name, model)
-                shape_to_op[(128, n // 4, k)] = (op_name, model)
-                shape_to_op[(64, n // 2, k)] = (op_name, model)
-                shape_to_op[(64, n // 4, k)] = (op_name, model)
-                shape_to_op[(32, n // 2, k)] = (op_name, model)
-                shape_to_op[(32, n // 4, k)] = (op_name, model)
-            else: # o_proj or down_proj
-                shape_to_op[(1024, n, k // 2)] = (op_name, model)
-                shape_to_op[(1024, n, k // 4)] = (op_name, model)
-                shape_to_op[(128, n, k // 2)] = (op_name, model)
-                shape_to_op[(128, n, k // 4)] = (op_name, model)
-                shape_to_op[(64, n, k // 2)] = (op_name, model)
-                shape_to_op[(64, n, k // 4)] = (op_name, model)
-                shape_to_op[(32, n, k // 2)] = (op_name, model)
-                shape_to_op[(32, n, k // 4)] = (op_name, model)
-
     for record in existing_data:
-        M, N, K, precision = record['M'], record['N'], record['K'], record['precision']
-        if precision == "fp16":
-            act_dt, wei_dt, int_dt = data_type_dict["fp16"], data_type_dict["fp16"], data_type_dict["fp32"]
-        elif precision == "int8":
-            act_dt, wei_dt, int_dt = data_type_dict["int8"], data_type_dict["int8"], data_type_dict["int32"]
-        elif precision == "int4":
-            act_dt, wei_dt, int_dt = data_type_dict["fp16"], data_type_dict["int4"], data_type_dict["fp32"]
-        elif precision == "fp8":
-            act_dt, wei_dt, int_dt = data_type_dict["fp8"], data_type_dict["int8"], data_type_dict["fp32"]
-        elif precision == "fp4":
-            act_dt, wei_dt, int_dt = data_type_dict["fp4"], data_type_dict["int4"], data_type_dict["fp32"]
-        else:
-            continue
-        op_name, model = shape_to_op[(M, N, K)]
-        if model == "Qwen3_0_6B":
-            continue
-        o_dt = get_output_dtype(act_dt, op_name, True)
-        
-        if precision != args.precision:
-            continue
+        M, N = record['M'], record['N']
 
-        model = Matmul(activation_dtype=act_dt, weight_dtype=wei_dt, intermediate_dtype=int_dt, output_dtype=o_dt)
-        _ = model(Tensor([M, K], act_dt), Tensor([K, N], wei_dt))
+        model = FusedLayerNorm(data_type_dict["fp16"])
+        _ = model(Tensor([M, N], data_type_dict["fp16"]), Tensor([M, N], data_type_dict["fp16"]))
         
-        latency_ms = 1000 * (model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency.matmul)
+        latency_ms =  1000 * max(model.compile_and_simulate(pcb), pcb.compute_module.launch_latency.layernorm)
+        # latency_ms = 1000 * model.compile_and_simulate(pcb)
         runtime_s = latency_ms / 1000.0
 
         features = [
@@ -166,7 +116,7 @@ def load_or_generate_data(args):
         y_mem_list.append(record['power_VDDQ_VDD2_1V8AO'])
         M_list.append(M)
         
-        print(f"M={M}, N={N}, K={K} | Latency={latency_ms:.2f}ms | SOC={record['power_VDD_GPU_SOC']}W, MEM={record['power_VDDQ_VDD2_1V8AO']}W")
+        print(f"M={M}, N={N} | Latency={latency_ms:.2f}ms | SOC={record['power_VDD_GPU_SOC']}W, MEM={record['power_VDDQ_VDD2_1V8AO']}W")
         print(f"  Features_raw: FMA={model.fma_count}, DRAM={model.mem_access_size}")
 
     if len(X_features) > 0:
@@ -280,7 +230,7 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("device", type=str, choices=["Orin", "Thor"])
-    parser.add_argument("precision", type=str, choices=["fp16", "int8", "int4"])
+    parser.add_argument("precision", type=str, choices=["fp16"])
     args = parser.parse_args()
 
     X, y_soc, y_mem = load_or_generate_data(args)

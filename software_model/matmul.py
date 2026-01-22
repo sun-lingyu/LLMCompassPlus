@@ -8,6 +8,105 @@ import pandas as pd
 import os
 from scalesim.scale_sim import scalesim
 
+class L2CacheMatmul(L2Cache):
+    def __init__(self,
+                l2_size: int,
+                M: int,
+                N: int,
+                K: int,
+                activation_dtype: DataType,
+                weight_dtype: DataType,
+                output_dtype: DataType,
+                scale_dtype: DataType = data_type_dict["fp8"], # NVFP4 use fp8 (ue4m3) scale
+                L2Cache_previous: L2Cache = None
+                ):
+        super().__init__(l2_size)
+        # change output to activation
+        assert M > 0 and N > 0 and K > 0
+        scale_block_size = activation_dtype.scale_block_size
+
+        self.m_tiles = ceil(M / L2Cache.TILE_LENGTH)
+        self.n_tiles = ceil(N / L2Cache.TILE_LENGTH)
+        self.k_tiles = ceil(K / L2Cache.TILE_LENGTH)
+        self.n_scale_tiles = ceil(N / L2Cache.TILE_LENGTH / scale_block_size) if scale_block_size else None
+        self.k_scale_tiles = ceil(K / L2Cache.TILE_LENGTH / scale_block_size) if scale_block_size else None
+        self.activation_tile_size = activation_dtype.word_size * self.TILE_LENGTH ** 2
+        self.weight_tile_size = weight_dtype.word_size * self.TILE_LENGTH ** 2
+        self.output_tile_size = output_dtype.word_size * self.TILE_LENGTH ** 2
+        self.scale_tile_size = scale_dtype.word_size * self.TILE_LENGTH ** 2
+
+        if L2Cache_previous:
+            assert L2Cache_previous.output_tile_size == self.activation_tile_size
+            while L2Cache_previous.resident_tiles:
+                tile = L2Cache_previous.resident_tiles.popitem(last=False)[0]
+                if tile.access_type == L2AccessType.OUTPUT:
+                    self.resident_tiles[L2Cache.Tile(L2AccessType.ACTIVATION, tile.coord_tuple)] = None
+                    self.occupied_size += L2Cache_previous.output_tile_size
+                if tile.access_type == L2AccessType.OUTPUT_SCALE:
+                    self.resident_tiles[L2Cache.Tile(L2AccessType.ACTIVATION_SCALE, tile.coord_tuple)] = None
+                    self.occupied_size += L2Cache_previous.scale_tile_size
+    
+    def access(self,
+                access_type: L2AccessType,
+                coord_tuple: tuple[int, int],
+                scope_tuple: tuple[int, int]
+                ):
+        height = self.m_tiles if access_type == L2AccessType.ACTIVATION else \
+                self.k_tiles if access_type == L2AccessType.WEIGHT else \
+                self.m_tiles if access_type == L2AccessType.OUTPUT else \
+                self.m_tiles if access_type == L2AccessType.ACTIVATION_SCALE else \
+                self.k_scale_tiles if access_type == L2AccessType.WEIGHT_SCALE else \
+                self.m_tiles if access_type == L2AccessType.OUTPUT_SCALE else \
+                None
+        width = self.k_tiles if access_type == L2AccessType.ACTIVATION else \
+                self.n_tiles if access_type == L2AccessType.WEIGHT else \
+                self.n_tiles if access_type == L2AccessType.OUTPUT else \
+                self.k_scale_tiles if access_type == L2AccessType.ACTIVATION_SCALE else \
+                self.n_tiles if access_type == L2AccessType.WEIGHT_SCALE else \
+                self.n_scale_tiles if access_type == L2AccessType.OUTPUT_SCALE else \
+                None
+        tile_size = self.activation_tile_size if access_type == L2AccessType.ACTIVATION else \
+                self.weight_tile_size if access_type == L2AccessType.WEIGHT else \
+                self.output_tile_size if access_type == L2AccessType.OUTPUT else \
+                self.scale_tile_size
+        assert height and width
+        assert coord_tuple[0] % L2Cache.TILE_LENGTH == 0 and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
+        assert scope_tuple[0] % L2Cache.TILE_LENGTH == 0 and scope_tuple[1] % L2Cache.TILE_LENGTH == 0
+        assert coord_tuple[0] >= 0 and coord_tuple[0] + scope_tuple[0] <= height * L2Cache.TILE_LENGTH, f"coord_tuple[0]: {coord_tuple[0]}, scope_tuple[0]: {scope_tuple[0]}, height * L2Cache.TILE_LENGTH: {height * L2Cache.TILE_LENGTH}"
+        assert coord_tuple[1] >= 0 and coord_tuple[1] + scope_tuple[1] <= width * L2Cache.TILE_LENGTH, f"coord_tuple[1]: {coord_tuple[1]}, scope_tuple[1]: {scope_tuple[1]}, width * L2Cache.TILE_LENGTH: {width * L2Cache.TILE_LENGTH}"
+
+        mem_access_size = 0
+        for i in range(coord_tuple[0], coord_tuple[0] + scope_tuple[0], L2Cache.TILE_LENGTH):
+            for j in range(coord_tuple[1], coord_tuple[1] + scope_tuple[1], L2Cache.TILE_LENGTH):
+                tile = self.Tile(access_type, (i, j))
+                if tile in self.resident_tiles: # HIT
+                    # assert access_type not in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE)
+                    self.resident_tiles.move_to_end(tile) # update LRU
+                else:
+                    while self.occupied_size + tile_size > self.l2_size: # EVICT
+                        mem_access_size += self.evict_oldest_tile()
+                    if access_type not in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE): # load from DRAM
+                        mem_access_size += tile_size
+                    self.occupied_size += tile_size
+                    self.resident_tiles[self.Tile(access_type, (i, j))] = None
+        self.total_mem_access_size += mem_access_size
+        return mem_access_size
+
+    def evict_oldest_tile(self):
+        assert self.resident_tiles
+        
+        mem_access_size = 0
+        oldest_tile = self.resident_tiles.popitem(last=False)[0]
+        tile_size = self.activation_tile_size if oldest_tile.access_type == L2AccessType.ACTIVATION else \
+                self.weight_tile_size if oldest_tile.access_type == L2AccessType.WEIGHT else \
+                self.output_tile_size if oldest_tile.access_type == L2AccessType.OUTPUT else \
+                self.scale_tile_size
+        if oldest_tile.access_type in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE):
+            mem_access_size += tile_size
+        self.occupied_size -= tile_size
+        self.total_mem_access_size += mem_access_size
+        return mem_access_size
+
 class Matmul(Operator):
     class RasterOrder(Enum):
         ALONG_M = 1
@@ -41,105 +140,6 @@ class Matmul(Operator):
             print(f"cta_m: {self.cta_m}, cta_n: {self.cta_n}, cta_k: {self.cta_k}, stages: {self.stages}")
             print(f"swizzle_size: {self.swizzle_size}, raster_order: {'ALONG_M' if self.raster_order == Matmul.RasterOrder.ALONG_M else 'ALONG_N'}")
             print(f"is_2sm_mode: {self.is_2sm_mode}, active_ctas_per_core: {self.active_ctas_per_core}")
-
-    class L2CacheMatmul(L2Cache):
-        def __init__(self,
-                    l2_size: int,
-                    M: int,
-                    N: int,
-                    K: int,
-                    activation_dtype: DataType,
-                    weight_dtype: DataType,
-                    output_dtype: DataType,
-                    scale_dtype: DataType = data_type_dict["fp8"], # NVFP4 use fp8 (ue4m3) scale
-                    L2Cache_previous: L2Cache = None
-                    ):
-            super().__init__(l2_size)
-            # change output to activation
-            assert M > 0 and N > 0 and K > 0
-            scale_block_size = activation_dtype.scale_block_size
-
-            self.m_tiles = ceil(M / L2Cache.TILE_LENGTH)
-            self.n_tiles = ceil(N / L2Cache.TILE_LENGTH)
-            self.k_tiles = ceil(K / L2Cache.TILE_LENGTH)
-            self.n_scale_tiles = ceil(N / L2Cache.TILE_LENGTH / scale_block_size) if scale_block_size else None
-            self.k_scale_tiles = ceil(K / L2Cache.TILE_LENGTH / scale_block_size) if scale_block_size else None
-            self.activation_tile_size = activation_dtype.word_size * self.TILE_LENGTH ** 2
-            self.weight_tile_size = weight_dtype.word_size * self.TILE_LENGTH ** 2
-            self.output_tile_size = output_dtype.word_size * self.TILE_LENGTH ** 2
-            self.scale_tile_size = scale_dtype.word_size * self.TILE_LENGTH ** 2
-
-            if L2Cache_previous:
-                assert L2Cache_previous.output_tile_size == self.activation_tile_size
-                while L2Cache_previous.resident_tiles:
-                    tile = L2Cache_previous.resident_tiles.popitem(last=False)[0]
-                    if tile.access_type == L2AccessType.OUTPUT:
-                        self.resident_tiles[L2Cache.Tile(L2AccessType.ACTIVATION, tile.coord_tuple)] = None
-                        self.occupied_size += L2Cache_previous.output_tile_size
-                    if tile.access_type == L2AccessType.OUTPUT_SCALE:
-                        self.resident_tiles[L2Cache.Tile(L2AccessType.ACTIVATION_SCALE, tile.coord_tuple)] = None
-                        self.occupied_size += L2Cache_previous.scale_tile_size
-        
-        def access(self,
-                   access_type: L2AccessType,
-                   coord_tuple: tuple[int, int],
-                   scope_tuple: tuple[int, int]
-                   ):
-            height = self.m_tiles if access_type == L2AccessType.ACTIVATION else \
-                    self.k_tiles if access_type == L2AccessType.WEIGHT else \
-                    self.m_tiles if access_type == L2AccessType.OUTPUT else \
-                    self.m_tiles if access_type == L2AccessType.ACTIVATION_SCALE else \
-                    self.k_scale_tiles if access_type == L2AccessType.WEIGHT_SCALE else \
-                    self.m_tiles if access_type == L2AccessType.OUTPUT_SCALE else \
-                    None
-            width = self.k_tiles if access_type == L2AccessType.ACTIVATION else \
-                    self.n_tiles if access_type == L2AccessType.WEIGHT else \
-                    self.n_tiles if access_type == L2AccessType.OUTPUT else \
-                    self.k_scale_tiles if access_type == L2AccessType.ACTIVATION_SCALE else \
-                    self.n_tiles if access_type == L2AccessType.WEIGHT_SCALE else \
-                    self.n_scale_tiles if access_type == L2AccessType.OUTPUT_SCALE else \
-                    None
-            tile_size = self.activation_tile_size if access_type == L2AccessType.ACTIVATION else \
-                    self.weight_tile_size if access_type == L2AccessType.WEIGHT else \
-                    self.output_tile_size if access_type == L2AccessType.OUTPUT else \
-                    self.scale_tile_size
-            assert height and width
-            assert coord_tuple[0] % L2Cache.TILE_LENGTH == 0 and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
-            assert scope_tuple[0] % L2Cache.TILE_LENGTH == 0 and scope_tuple[1] % L2Cache.TILE_LENGTH == 0
-            assert coord_tuple[0] >= 0 and coord_tuple[0] + scope_tuple[0] <= height * L2Cache.TILE_LENGTH, f"coord_tuple[0]: {coord_tuple[0]}, scope_tuple[0]: {scope_tuple[0]}, height * L2Cache.TILE_LENGTH: {height * L2Cache.TILE_LENGTH}"
-            assert coord_tuple[1] >= 0 and coord_tuple[1] + scope_tuple[1] <= width * L2Cache.TILE_LENGTH, f"coord_tuple[1]: {coord_tuple[1]}, scope_tuple[1]: {scope_tuple[1]}, width * L2Cache.TILE_LENGTH: {width * L2Cache.TILE_LENGTH}"
-
-            mem_access_size = 0
-            for i in range(coord_tuple[0], coord_tuple[0] + scope_tuple[0], L2Cache.TILE_LENGTH):
-                for j in range(coord_tuple[1], coord_tuple[1] + scope_tuple[1], L2Cache.TILE_LENGTH):
-                    tile = self.Tile(access_type, (i, j))
-                    if tile in self.resident_tiles: # HIT
-                        # assert access_type not in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE)
-                        self.resident_tiles.move_to_end(tile) # update LRU
-                    else:
-                        while self.occupied_size + tile_size > self.l2_size: # EVICT
-                            mem_access_size += self.evict_oldest_tile()
-                        if access_type not in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE): # load from DRAM
-                            mem_access_size += tile_size
-                        self.occupied_size += tile_size
-                        self.resident_tiles[self.Tile(access_type, (i, j))] = None
-            self.total_mem_access_size += mem_access_size
-            return mem_access_size
-
-        def evict_oldest_tile(self):
-            assert self.resident_tiles
-            
-            mem_access_size = 0
-            oldest_tile = self.resident_tiles.popitem(last=False)[0]
-            tile_size = self.activation_tile_size if oldest_tile.access_type == L2AccessType.ACTIVATION else \
-                    self.weight_tile_size if oldest_tile.access_type == L2AccessType.WEIGHT else \
-                    self.output_tile_size if oldest_tile.access_type == L2AccessType.OUTPUT else \
-                    self.scale_tile_size
-            if oldest_tile.access_type in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE):
-                mem_access_size += tile_size
-            self.occupied_size -= tile_size
-            self.total_mem_access_size += mem_access_size
-            return mem_access_size
 
     def __init__(self, activation_dtype: DataType, \
                 weight_dtype: DataType, \
@@ -334,7 +334,7 @@ class Matmul(Operator):
                             is_2sm_mode,
                             active_ctas_per_core
                         )
-                        l2_status = Matmul.L2CacheMatmul(
+                        l2_status = L2CacheMatmul(
                             pcb_module.compute_module.l2_size, 
                             M,
                             N,
@@ -515,7 +515,7 @@ class Matmul(Operator):
             cta_chunk: list,
             l1_tile: "Matmul.L1TileSimulator",
             active_ctas_per_core: int,
-            l2_status: "Matmul.L2CacheMatmul",
+            l2_status: L2CacheMatmul,
             activation_dtype: DataType,
             pcb_module: Device
         ):

@@ -8,5 +8,4 @@ class IOModule:
 IO_module_dict = {
     "Thor": IOModule(273.1e9, 0.87, 470),
     "Orin": IOModule(204.8e9, 0.87, 600),
-    "A100": IOModule(2039e9, 1, 209),
 }

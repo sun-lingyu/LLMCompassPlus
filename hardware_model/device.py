@@ -26,9 +26,4 @@ device_dict = {
         IO_module_dict["Orin"],
         memory_module_dict["Orin"],
     ),
-    "A100": Device(
-        compute_module_dict["A100"],
-        IO_module_dict["A100"],
-        memory_module_dict["A100"],
-    ),
 }
