@@ -156,6 +156,7 @@ class Matmul(Operator):
         self.output_shape = None
         self.look_up_table = None
         self.best_mapping = None
+        self.l2_access_size = 0
         
         assert device in ["Orin", "Thor"], "Only support Orin and Thor!"
         self.device_type = DeviceType.ORIN if device =="Orin" else DeviceType.THOR
@@ -501,6 +502,7 @@ class Matmul(Operator):
                 total_cycle_count += l2_tiles[-1].M * l2_tiles[-1].N * offset_for_smem_reorganizing_etc # offset, mainly models data reorganizing through smem before write to DRAM. For Blackwell, smem data reorganizing is taken over asynchronously by TMA hardware.
             pending_write_cycle += output_io_cycle_count
             # print(f"total_cycle_count: {total_cycle_count}")
+            self.l2_access_size += sum(l2_tile.l1_input_io_cycle_count + l2_tile.l1_output_io_cycle_count for l2_tile in l2_tiles) * pcb_module.compute_module.l2_bandwidth_per_cycle
         return total_cycle_count, pending_write_cycle
 
     class L2TileSimulator:

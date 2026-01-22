@@ -1,0 +1,24 @@
+{
+    "name": "NVIDIA AGX Thor",
+    "matmul": {
+        "k_mem": 5.5e-11,
+        "mem_intercept": 6.7,
+        "k_soc_fma": {
+            "fp8": 2.1e-13,
+            "fp4": 2.2e-13
+        },
+        "k_soc_input": {
+            "fp8": 4.6e-11,
+            "fp4": 1.8e-10
+        },
+        "soc_intercept": 19
+    },
+    "layernorm": {
+        "k_mem": -1,
+        "mem_intercept": -1,
+        "fma_intercept": {
+            "prefill": -1,
+            "decode": -1
+        }
+    } 
+}

@@ -3,8 +3,9 @@ import time
 import subprocess
 import sys
 
-if 'FULL_CMD' not in globals():
+if 'FULL_CMD' not in globals(): # to get rid of compiler complains
     FULL_CMD = ""
+    VALID_START_TIME = 0
     VALID_DURATION = 1
     DEVICE = ""
 
@@ -14,8 +15,13 @@ if DEVICE == "Orin":
     CURR_PATH_GPU = "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon1/curr1_input"
     VOLT_PATH_VDDQ = "/sys/bus/i2c/drivers/ina3221/1-0041/hwmon/hwmon2/in2_input"
     CURR_PATH_VDDQ = "/sys/bus/i2c/drivers/ina3221/1-0041/hwmon/hwmon2/curr2_input"
+elif DEVICE == "Thor":
+    VOLT_PATH_GPU = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/in1_input"
+    CURR_PATH_GPU = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/curr1_input"
+    VOLT_PATH_VDDQ = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/in3_input"
+    CURR_PATH_VDDQ = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/curr3_input"
 else:
-    assert False, "Not implemented yet"
+    assert False, f"illegal {DEVICE}"
 
 
 proc = subprocess.Popen(FULL_CMD, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -55,7 +61,7 @@ if not samples:
 end_time = samples[-1][0]
 start_time = samples[0][0]
 
-valid_start_time = (start_time + end_time) / 2 - VALID_DURATION / 2
+valid_start_time = start_time + VALID_START_TIME
 valid_end_time = valid_start_time + VALID_DURATION
 
 valid_samples = [

@@ -2350,5 +2350,1445 @@
         "precision": "int4",
         "power_VDD_GPU_SOC": 41.288177777777776,
         "power_VDDQ_VDD2_1V8AO": 5.716195555555556
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 78.71859368421052,
+        "power_VDDQ_VDD2_1V8AO": 15.970256842105265
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 66.04168421052633,
+        "power_VDDQ_VDD2_1V8AO": 16.039553684210528
+    },
+    {
+        "M": 256,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 50.83632,
+        "power_VDDQ_VDD2_1V8AO": 16.08219789473684
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 63.00884210526316,
+        "power_VDDQ_VDD2_1V8AO": 15.485178947368423
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 50.010720000000006,
+        "power_VDDQ_VDD2_1V8AO": 14.489903157894735
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 48.02928,
+        "power_VDDQ_VDD2_1V8AO": 15.26938947368421
+    },
+    {
+        "M": 256,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 43.055040000000005,
+        "power_VDDQ_VDD2_1V8AO": 14.77167157894737
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 56.9018947368421,
+        "power_VDDQ_VDD2_1V8AO": 15.172623157894739
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 47.3688,
+        "power_VDDQ_VDD2_1V8AO": 14.287023157894737
+    },
+    {
+        "M": 1024,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 99.56329263157896,
+        "power_VDDQ_VDD2_1V8AO": 16.30608
+    },
+    {
+        "M": 512,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 91.20355368421053,
+        "power_VDDQ_VDD2_1V8AO": 18.281431578947366
+    },
+    {
+        "M": 256,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 71.19114105263158,
+        "power_VDDQ_VDD2_1V8AO": 18.30804210526316
+    },
+    {
+        "M": 1024,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 99.59032421052632,
+        "power_VDDQ_VDD2_1V8AO": 16.38603789473684
+    },
+    {
+        "M": 1024,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 96.43755789473684,
+        "power_VDDQ_VDD2_1V8AO": 16.540623157894736
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 98.51666526315789,
+        "power_VDDQ_VDD2_1V8AO": 18.526248421052635
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 80.83038315789474,
+        "power_VDDQ_VDD2_1V8AO": 18.21224421052632
+    },
+    {
+        "M": 256,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 61.10641684210526,
+        "power_VDDQ_VDD2_1V8AO": 18.05790315789474
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 82.43833263157894,
+        "power_VDDQ_VDD2_1V8AO": 17.42016
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 79.1605894736842,
+        "power_VDDQ_VDD2_1V8AO": 16.647233684210526
+    },
+    {
+        "M": 1024,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 99.50147368421054,
+        "power_VDDQ_VDD2_1V8AO": 17.32288842105263
+    },
+    {
+        "M": 512,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 85.49560421052632,
+        "power_VDDQ_VDD2_1V8AO": 18.276109473684212
+    },
+    {
+        "M": 256,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 66.07659789473684,
+        "power_VDDQ_VDD2_1V8AO": 18.32933052631579
+    },
+    {
+        "M": 1024,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 96.05215157894737,
+        "power_VDDQ_VDD2_1V8AO": 17.504404210526317
+    },
+    {
+        "M": 1024,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 80.43870315789474,
+        "power_VDDQ_VDD2_1V8AO": 16.76983578947368
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 99.40544000000001,
+        "power_VDDQ_VDD2_1V8AO": 18.041936842105265
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 80.78540631578947,
+        "power_VDDQ_VDD2_1V8AO": 17.84501894736842
+    },
+    {
+        "M": 256,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 64.3236294736842,
+        "power_VDDQ_VDD2_1V8AO": 18.052581052631577
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 88.52473263157894,
+        "power_VDDQ_VDD2_1V8AO": 17.281566315789473
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 80.53809684210528,
+        "power_VDDQ_VDD2_1V8AO": 16.284757894736845
+    },
+    {
+        "M": 1024,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 99.6981052631579,
+        "power_VDDQ_VDD2_1V8AO": 16.99904842105263
+    },
+    {
+        "M": 512,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 93.69982315789474,
+        "power_VDDQ_VDD2_1V8AO": 19.86741894736842
+    },
+    {
+        "M": 256,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 75.64143157894736,
+        "power_VDDQ_VDD2_1V8AO": 19.973861052631577
+    },
+    {
+        "M": 1024,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 99.70453052631579,
+        "power_VDDQ_VDD2_1V8AO": 16.60992
+    },
+    {
+        "M": 1024,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 82.58545684210526,
+        "power_VDDQ_VDD2_1V8AO": 15.581128421052632
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 84.50832000000001,
+        "power_VDDQ_VDD2_1V8AO": 16.540623157894736
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 88.00957473684211,
+        "power_VDDQ_VDD2_1V8AO": 19.39375157894737
+    },
+    {
+        "M": 256,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 68.62645894736842,
+        "power_VDDQ_VDD2_1V8AO": 19.478905263157895
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 99.44663578947369,
+        "power_VDDQ_VDD2_1V8AO": 17.31845052631579
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 93.98819368421054,
+        "power_VDDQ_VDD2_1V8AO": 17.637456842105266
+    },
+    {
+        "M": 1024,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 91.50881684210526,
+        "power_VDDQ_VDD2_1V8AO": 16.215461052631582
+    },
+    {
+        "M": 512,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 96.39814736842106,
+        "power_VDDQ_VDD2_1V8AO": 19.08506947368421
+    },
+    {
+        "M": 256,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 75.8106357894737,
+        "power_VDDQ_VDD2_1V8AO": 19.39375157894737
+    },
+    {
+        "M": 1024,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 99.44663578947369,
+        "power_VDDQ_VDD2_1V8AO": 17.70132210526316
+    },
+    {
+        "M": 1024,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 87.40064000000001,
+        "power_VDDQ_VDD2_1V8AO": 18.05790315789474
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 81.14448842105264,
+        "power_VDDQ_VDD2_1V8AO": 15.943604210526317
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 88.056,
+        "power_VDDQ_VDD2_1V8AO": 18.781709473684213
+    },
+    {
+        "M": 256,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 77.99490526315789,
+        "power_VDDQ_VDD2_1V8AO": 18.920084210526316
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 83.74406736842104,
+        "power_VDDQ_VDD2_1V8AO": 16.99904842105263
+    },
+    {
+        "M": 1024,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 99.69809684210527,
+        "power_VDDQ_VDD2_1V8AO": 17.057684210526315
+    },
+    {
+        "M": 512,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 92.07258947368422,
+        "power_VDDQ_VDD2_1V8AO": 20.388606315789474
+    },
+    {
+        "M": 256,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 88.46795789473686,
+        "power_VDDQ_VDD2_1V8AO": 20.36735157894737
+    },
+    {
+        "M": 1024,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 94.59842526315789,
+        "power_VDDQ_VDD2_1V8AO": 16.40202947368421
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 92.22910315789473,
+        "power_VDDQ_VDD2_1V8AO": 16.833802105263157
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 98.43827368421051,
+        "power_VDDQ_VDD2_1V8AO": 20.53738947368421
+    },
+    {
+        "M": 256,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 78.48945684210526,
+        "power_VDDQ_VDD2_1V8AO": 20.447056842105262
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 89.20324210526316,
+        "power_VDDQ_VDD2_1V8AO": 16.545953684210524
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 80.44705684210525,
+        "power_VDDQ_VDD2_1V8AO": 16.08752842105263
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 57.89615157894736,
+        "power_VDDQ_VDD2_1V8AO": 17.98705684210526
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 36.06400000000001,
+        "power_VDDQ_VDD2_1V8AO": 16.098189473684208
+    },
+    {
+        "M": 128,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 25.88256,
+        "power_VDDQ_VDD2_1V8AO": 14.100159999999999
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 29.412,
+        "power_VDDQ_VDD2_1V8AO": 13.865246315789477
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 24.70608,
+        "power_VDDQ_VDD2_1V8AO": 12.379789473684209
+    },
+    {
+        "M": 128,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 85.79757473684212,
+        "power_VDDQ_VDD2_1V8AO": 19.30859789473684
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 79.9525052631579,
+        "power_VDDQ_VDD2_1V8AO": 18.38787368421053
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 47.79104,
+        "power_VDDQ_VDD2_1V8AO": 17.00437894736842
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 57.93045052631578,
+        "power_VDDQ_VDD2_1V8AO": 18.473027368421054
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 38.95242105263158,
+        "power_VDDQ_VDD2_1V8AO": 17.11098947368421
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 32.9208,
+        "power_VDDQ_VDD2_1V8AO": 15.00778105263158
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 44.89431578947368,
+        "power_VDDQ_VDD2_1V8AO": 19.106357894736842
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 40.72673684210527,
+        "power_VDDQ_VDD2_1V8AO": 17.80928842105263
+    },
+    {
+        "M": 128,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 45.01810526315789,
+        "power_VDDQ_VDD2_1V8AO": 15.35888
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 55.538164210526304,
+        "power_VDDQ_VDD2_1V8AO": 17.697347368421052
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 37.632,
+        "power_VDDQ_VDD2_1V8AO": 16.99371789473684
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 27.430560000000003,
+        "power_VDDQ_VDD2_1V8AO": 14.7088
+    },
+    {
+        "M": 128,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 90.67193263157895,
+        "power_VDDQ_VDD2_1V8AO": 19.89402947368421
+    },
+    {
+        "M": 128,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 85.66664421052633,
+        "power_VDDQ_VDD2_1V8AO": 19.21812210526316
+    },
+    {
+        "M": 128,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 54.79573052631578,
+        "power_VDDQ_VDD2_1V8AO": 18.68591157894737
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 58.68087578947368,
+        "power_VDDQ_VDD2_1V8AO": 18.669945263157896
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 56.46620631578947,
+        "power_VDDQ_VDD2_1V8AO": 18.077566315789475
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 48.15507368421052,
+        "power_VDDQ_VDD2_1V8AO": 17.494787368421054
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 81.72464842105263,
+        "power_VDDQ_VDD2_1V8AO": 19.164901052631578
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 45.027132631578944,
+        "power_VDDQ_VDD2_1V8AO": 18.994593684210525
+    },
+    {
+        "M": 128,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 43.03747368421053,
+        "power_VDDQ_VDD2_1V8AO": 17.20693894736842
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 78.26278736842106,
+        "power_VDDQ_VDD2_1V8AO": 18.643334736842107
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 31.366063157894736,
+        "power_VDDQ_VDD2_1V8AO": 16.58326736842105
+    },
+    {
+        "M": 128,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 82.84473263157895,
+        "power_VDDQ_VDD2_1V8AO": 20.26080842105263
+    },
+    {
+        "M": 128,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 88.55034947368422,
+        "power_VDDQ_VDD2_1V8AO": 19.99514947368421
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 64.73027368421053,
+        "power_VDDQ_VDD2_1V8AO": 19.729044210526315
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 62.60695578947368,
+        "power_VDDQ_VDD2_1V8AO": 19.13829052631579
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "power_VDD_GPU_SOC": 60.00949894736842,
+        "power_VDDQ_VDD2_1V8AO": 18.451738947368423
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 48.896842105263154,
+        "power_VDDQ_VDD2_1V8AO": 17.356193684210524
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 42.336000000000006,
+        "power_VDDQ_VDD2_1V8AO": 17.649372631578945
+    },
+    {
+        "M": 256,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 26.274720000000002,
+        "power_VDDQ_VDD2_1V8AO": 18.015014736842105
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 44.770526315789475,
+        "power_VDDQ_VDD2_1V8AO": 17.19627789473684
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 35.95488,
+        "power_VDDQ_VDD2_1V8AO": 16.476656842105264
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 35.68656,
+        "power_VDDQ_VDD2_1V8AO": 17.057684210526315
+    },
+    {
+        "M": 256,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 25.4904,
+        "power_VDDQ_VDD2_1V8AO": 16.668555789473682
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 34.32432,
+        "power_VDDQ_VDD2_1V8AO": 17.063014736842103
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 31.3728,
+        "power_VDDQ_VDD2_1V8AO": 15.900960000000001
+    },
+    {
+        "M": 1024,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 52.50656,
+        "power_VDDQ_VDD2_1V8AO": 18.36126315789474
+    },
+    {
+        "M": 512,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 42.975578947368426,
+        "power_VDDQ_VDD2_1V8AO": 18.877507368421053
+    },
+    {
+        "M": 256,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 33.3336,
+        "power_VDDQ_VDD2_1V8AO": 19.095713684210526
+    },
+    {
+        "M": 1024,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 54.34202105263157,
+        "power_VDDQ_VDD2_1V8AO": 17.702677894736844
+    },
+    {
+        "M": 1024,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 48.58736842105264,
+        "power_VDDQ_VDD2_1V8AO": 17.794189473684213
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 46.77178947368421,
+        "power_VDDQ_VDD2_1V8AO": 18.499637894736843
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 42.31536842105263,
+        "power_VDDQ_VDD2_1V8AO": 18.802997894736844
+    },
+    {
+        "M": 256,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 30.98064,
+        "power_VDDQ_VDD2_1V8AO": 19.39375157894737
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 42.23284210526316,
+        "power_VDDQ_VDD2_1V8AO": 18.159023157894737
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 41.428210526315794,
+        "power_VDDQ_VDD2_1V8AO": 17.313549473684212
+    },
+    {
+        "M": 1024,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 55.16694736842104,
+        "power_VDDQ_VDD2_1V8AO": 18.318686315789474
+    },
+    {
+        "M": 512,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 46.977094736842105,
+        "power_VDDQ_VDD2_1V8AO": 18.68591157894737
+    },
+    {
+        "M": 256,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 33.147839999999995,
+        "power_VDDQ_VDD2_1V8AO": 19.29263157894737
+    },
+    {
+        "M": 1024,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 49.94047157894737,
+        "power_VDDQ_VDD2_1V8AO": 18.292075789473685
+    },
+    {
+        "M": 1024,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 43.49136842105264,
+        "power_VDDQ_VDD2_1V8AO": 17.596875789473685
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 44.584842105263164,
+        "power_VDDQ_VDD2_1V8AO": 18.47834947368421
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 41.923368421052636,
+        "power_VDDQ_VDD2_1V8AO": 18.233532631578946
+    },
+    {
+        "M": 256,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 30.898080000000004,
+        "power_VDDQ_VDD2_1V8AO": 18.675267368421054
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 41.015578947368425,
+        "power_VDDQ_VDD2_1V8AO": 17.292227368421052
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 37.77642105263158,
+        "power_VDDQ_VDD2_1V8AO": 17.574745263157894
+    },
+    {
+        "M": 1024,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 56.8168,
+        "power_VDDQ_VDD2_1V8AO": 19.38842947368421
+    },
+    {
+        "M": 512,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 50.506113684210526,
+        "power_VDDQ_VDD2_1V8AO": 19.122324210526315
+    },
+    {
+        "M": 256,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 34.86736842105264,
+        "power_VDDQ_VDD2_1V8AO": 19.98982736842105
+    },
+    {
+        "M": 1024,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 58.63163789473683,
+        "power_VDDQ_VDD2_1V8AO": 18.48367157894737
+    },
+    {
+        "M": 1024,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 55.1463242105263,
+        "power_VDDQ_VDD2_1V8AO": 18.355941052631582
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 47.7240252631579,
+        "power_VDDQ_VDD2_1V8AO": 18.276109473684212
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 44.27536842105263,
+        "power_VDDQ_VDD2_1V8AO": 19.297953684210526
+    },
+    {
+        "M": 256,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 32.15712,
+        "power_VDDQ_VDD2_1V8AO": 20.00047157894737
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 44.93557894736842,
+        "power_VDDQ_VDD2_1V8AO": 18.116446315789474
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 41.510736842105274,
+        "power_VDDQ_VDD2_1V8AO": 17.889246315789475
+    },
+    {
+        "M": 1024,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 55.12570105263157,
+        "power_VDDQ_VDD2_1V8AO": 18.776387368421055
+    },
+    {
+        "M": 512,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 49.74305684210526,
+        "power_VDDQ_VDD2_1V8AO": 18.723166315789474
+    },
+    {
+        "M": 256,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 39.055578947368424,
+        "power_VDDQ_VDD2_1V8AO": 19.494871578947368
+    },
+    {
+        "M": 1024,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 50.03178105263158,
+        "power_VDDQ_VDD2_1V8AO": 18.595435789473687
+    },
+    {
+        "M": 1024,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 45.011326315789475,
+        "power_VDDQ_VDD2_1V8AO": 17.718669473684212
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 48.09320421052631,
+        "power_VDDQ_VDD2_1V8AO": 18.600757894736844
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 44.95621052631579,
+        "power_VDDQ_VDD2_1V8AO": 18.403840000000002
+    },
+    {
+        "M": 256,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 32.40064842105263,
+        "power_VDDQ_VDD2_1V8AO": 19.13829052631579
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 38.416000000000004,
+        "power_VDDQ_VDD2_1V8AO": 17.553423157894738
+    },
+    {
+        "M": 1024,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 66.48252631578947,
+        "power_VDDQ_VDD2_1V8AO": 19.234088421052633
+    },
+    {
+        "M": 512,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 54.03267368421052,
+        "power_VDDQ_VDD2_1V8AO": 19.095713684210526
+    },
+    {
+        "M": 256,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 35.672000000000004,
+        "power_VDDQ_VDD2_1V8AO": 19.79290947368421
+    },
+    {
+        "M": 1024,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 62.15343157894738,
+        "power_VDDQ_VDD2_1V8AO": 19.202155789473682
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 54.34202105263157,
+        "power_VDDQ_VDD2_1V8AO": 19.98982736842105
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 49.72243368421052,
+        "power_VDDQ_VDD2_1V8AO": 19.59599157894737
+    },
+    {
+        "M": 256,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 34.434105263157896,
+        "power_VDDQ_VDD2_1V8AO": 20.410273684210527
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 50.85670736842105,
+        "power_VDDQ_VDD2_1V8AO": 19.580025263157896
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 47.371393684210524,
+        "power_VDDQ_VDD2_1V8AO": 18.297397894736843
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 23.50896,
+        "power_VDDQ_VDD2_1V8AO": 18.43045052631579
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 21.878400000000003,
+        "power_VDDQ_VDD2_1V8AO": 17.19627789473684
+    },
+    {
+        "M": 64,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 27.05904,
+        "power_VDDQ_VDD2_1V8AO": 15.580513684210526
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 20.00016,
+        "power_VDDQ_VDD2_1V8AO": 15.381507368421051
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 19.223679999999998,
+        "power_VDDQ_VDD2_1V8AO": 13.662366315789475
+    },
+    {
+        "M": 64,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 35.176842105263155,
+        "power_VDDQ_VDD2_1V8AO": 19.473583157894737
+    },
+    {
+        "M": 64,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 23.5296,
+        "power_VDDQ_VDD2_1V8AO": 18.797675789473686
+    },
+    {
+        "M": 64,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 22.332479999999997,
+        "power_VDDQ_VDD2_1V8AO": 17.819949473684208
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 32.94144,
+        "power_VDDQ_VDD2_1V8AO": 19.26602105263158
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 31.24896,
+        "power_VDDQ_VDD2_1V8AO": 18.161903157894738
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 20.784480000000002,
+        "power_VDDQ_VDD2_1V8AO": 16.450004210526316
+    },
+    {
+        "M": 64,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 34.442989473684214,
+        "power_VDDQ_VDD2_1V8AO": 19.276665263157895
+    },
+    {
+        "M": 64,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 32.487359999999995,
+        "power_VDDQ_VDD2_1V8AO": 18.499637894736843
+    },
+    {
+        "M": 64,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 29.721599999999995,
+        "power_VDDQ_VDD2_1V8AO": 17.20160842105263
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 32.549279999999996,
+        "power_VDDQ_VDD2_1V8AO": 18.47834947368421
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 21.899040000000003,
+        "power_VDDQ_VDD2_1V8AO": 17.473465263157895
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 20.39232,
+        "power_VDDQ_VDD2_1V8AO": 15.821002105263158
+    },
+    {
+        "M": 64,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 51.26917052631579,
+        "power_VDDQ_VDD2_1V8AO": 19.957894736842103
+    },
+    {
+        "M": 64,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 35.26012631578948,
+        "power_VDDQ_VDD2_1V8AO": 19.71307789473684
+    },
+    {
+        "M": 64,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 34.01178947368421,
+        "power_VDDQ_VDD2_1V8AO": 19.05313684210526
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 33.60192,
+        "power_VDDQ_VDD2_1V8AO": 19.899351578947368
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 31.764960000000002,
+        "power_VDDQ_VDD2_1V8AO": 18.88282947368421
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 30.98064,
+        "power_VDDQ_VDD2_1V8AO": 18.12239157894737
+    },
+    {
+        "M": 64,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 34.8261052631579,
+        "power_VDDQ_VDD2_1V8AO": 19.191511578947367
+    },
+    {
+        "M": 64,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 33.33216842105263,
+        "power_VDDQ_VDD2_1V8AO": 18.643334736842107
+    },
+    {
+        "M": 64,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 31.145760000000003,
+        "power_VDDQ_VDD2_1V8AO": 17.686686315789476
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 23.5296,
+        "power_VDDQ_VDD2_1V8AO": 18.973305263157894
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 21.568800000000003,
+        "power_VDDQ_VDD2_1V8AO": 17.01504
+    },
+    {
+        "M": 64,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 51.59914105263157,
+        "power_VDDQ_VDD2_1V8AO": 19.64389052631579
+    },
+    {
+        "M": 64,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 50.753591578947365,
+        "power_VDDQ_VDD2_1V8AO": 19.48954947368421
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 23.92176,
+        "power_VDDQ_VDD2_1V8AO": 20.25061052631579
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 23.71536,
+        "power_VDDQ_VDD2_1V8AO": 19.909995789473683
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp8",
+        "power_VDD_GPU_SOC": 23.137439999999998,
+        "power_VDDQ_VDD2_1V8AO": 19.18618947368421
     }
 ]

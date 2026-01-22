@@ -7,7 +7,7 @@ import seaborn as sns
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_percentage_error, r2_score
 
 from software_model.matmul import Matmul
 from software_model.utils import data_type_dict, Tensor
@@ -17,9 +17,9 @@ from test.matmul.utils import get_model_shape, get_output_dtype
 file_dir = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE_TEMPLATE = f"{file_dir}/temp/power_features_cache"
 
-intercept_dict = {"Orin": {"soc": 25, "mem": 0.5}}
+intercept_dict = {"Orin": {"soc": 25, "mem": 0.5}, "Thor": {"soc": 25, "mem": 6.7}}
 
-def plot_fitting_results(y_true, y_pred, feature_names, coefs, intercept, r2, mse, title_suffix=""):
+def plot_fitting_results(y_true, y_pred, feature_names, coefs, intercept, r2, mape, title_suffix=""):
     try:
         plt.style.use('seaborn-v0_8')
     except:
@@ -31,7 +31,7 @@ def plot_fitting_results(y_true, y_pred, feature_names, coefs, intercept, r2, ms
     ax1.scatter(y_true, y_pred, color='navy', alpha=0.6, s=60, label='Records')
     min_val, max_val = min(y_true.min(), y_pred.min()), max(y_true.max(), y_pred.max())
     ax1.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='Ideal (y=x)')
-    ax1.set_title(f'Physical Power Model (NNLS)\n$R^2={r2:.4f}, MSE={mse:.4f}$', fontsize=14)
+    ax1.set_title(f'Physical Power Model (NNLS)\n$R^2={r2:.4f}, MAPE={mape:.4f}$', fontsize=14)
     ax1.set_xlabel('Measured Power (W)', fontsize=12)
     ax1.set_ylabel('Predicted Power (W)', fontsize=12)
     ax1.legend()
@@ -135,9 +135,9 @@ def load_or_generate_data(args):
         elif precision == "int4":
             act_dt, wei_dt, int_dt = data_type_dict["fp16"], data_type_dict["int4"], data_type_dict["fp32"]
         elif precision == "fp8":
-            act_dt, wei_dt, int_dt = data_type_dict["fp8"], data_type_dict["int8"], data_type_dict["fp32"]
+            act_dt, wei_dt, int_dt = data_type_dict["fp8"], data_type_dict["fp8"], data_type_dict["fp32"]
         elif precision == "fp4":
-            act_dt, wei_dt, int_dt = data_type_dict["fp4"], data_type_dict["int4"], data_type_dict["fp32"]
+            act_dt, wei_dt, int_dt = data_type_dict["fp4"], data_type_dict["fp4"], data_type_dict["fp32"]
         else:
             continue
         op_name, model = shape_to_op[(M, N, K)]
@@ -147,8 +147,7 @@ def load_or_generate_data(args):
         
         if precision != args.precision:
             continue
-
-        model = Matmul(activation_dtype=act_dt, weight_dtype=wei_dt, intermediate_dtype=int_dt, output_dtype=o_dt)
+        model = Matmul(act_dt, wei_dt, int_dt, o_dt, device=args.device)
         _ = model(Tensor([M, K], act_dt), Tensor([K, N], wei_dt))
         
         latency_ms = 1000 * (model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency.matmul)
@@ -156,7 +155,10 @@ def load_or_generate_data(args):
 
         features = [
             model.fma_count / runtime_s, # 0: FMA
-            model.mem_access_size / runtime_s           # 1: DRAM
+            (model.M * model.K * model.activation_dtype.word_size + model.K * model.N * model.weight_dtype.word_size) / runtime_s, # 1: Input
+            model.M * model.N * model.output_dtype.word_size  / runtime_s, # 2. Output
+            model.l2_access_size  / runtime_s, # 3. l2 cache access size
+            model.mem_access_size / runtime_s # 4: DRAM
         ]
         
         X_features_raw.append([model.fma_count, 
@@ -183,13 +185,14 @@ def load_or_generate_data(args):
     return X, y_soc, y_mem
 
 def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
-    full_feature_names = ["FMA", "DRAM Access Byte"]
+    full_feature_names = ["FMA", "INPUT Size", "OUTPUT Size", "L2 Access Byte", "DRAM Access Byte"]
+    # full_feature_names = ["FMA", "DRAM Access Byte"]
     
     feat_map = {name: i for i, name in enumerate(full_feature_names)}
 
     # Custom features here
     # ==============================================================================
-    soc_features_to_use = ["FMA"] # Vector FMA is not used for INT4 since it is severly coupled with memory access
+    soc_features_to_use = ["FMA"]
 
     mem_features_to_use = ["DRAM Access Byte"]
     # ==============================================================================
@@ -223,14 +226,14 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
 
         y_pred = model.predict(X_scaled)
         r2 = r2_score(y, y_pred)
-        mse = mean_squared_error(y, y_pred)
+        mape = mean_absolute_percentage_error(y, y_pred)
 
         return {
             "coefs": aligned_coefs,
             "intercept": intercept,
             "y_pred": y_pred,
             "r2": r2,
-            "mse": mse,
+            "mape": mape,
             "model": model
         }
 
@@ -240,7 +243,7 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
                               "Rail 2: VDDQ_VDD2_1V8AO", enforce_positive=True, fit_intercept=False)
 
     print("\n" + "-"*85)
-    print(f" SoC RESULTS (R^2: {res_soc['r2']:.4f}, MSE: {res_soc['mse']:.4f})")
+    print(f" SoC RESULTS (R^2: {res_soc['r2']:.4f}, MAPE: {res_soc['mape']:.4f})")
     print(f" SoC Static Power: {res_soc['intercept']:.4f} W")
     print("-" * 85)
     print(f"{'Component':<15} | {'Coef (J/op)':<20} | {'Status'}")
@@ -255,7 +258,7 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
         print(f"{name:<15} | {val:.6e}           | {status}")
 
     print("\n" + "-"*85)
-    print(f" Mem RESULTS (R^2: {res_mem['r2']:.4f}, MSE: {res_mem['mse']:.4f})")
+    print(f" Mem RESULTS (R^2: {res_mem['r2']:.4f}, MAPE: {res_mem['mape']:.4f})")
     print(f" Mem Static Power: {res_mem['intercept']:.4f} W")
     print("-" * 85)
     print(f"{'Component':<15} | {'Coef (J/op)':<20} | {'Status'}")
@@ -271,16 +274,16 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
 
     plot_fitting_results(y_soc, res_soc['y_pred'], full_feature_names, 
                          res_soc['coefs'], res_soc['intercept'], 
-                         res_soc['r2'], res_soc['mse'], title_suffix=f"soc_{args.precision}")
+                         res_soc['r2'], res_soc['mape'], title_suffix=f"soc_{args.precision}")
                          
     plot_fitting_results(y_mem, res_mem['y_pred'] + intercept_dict[args.device]["mem"], full_feature_names, 
                          res_mem['coefs'], res_mem['intercept'] + intercept_dict[args.device]["mem"], 
-                         res_mem['r2'], res_mem['mse'], title_suffix=f"mem_{args.precision}")
+                         res_mem['r2'], res_mem['mape'], title_suffix=f"mem_{args.precision}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("device", type=str, choices=["Orin", "Thor"])
-    parser.add_argument("precision", type=str, choices=["fp16", "int8", "int4"])
+    parser.add_argument("precision", type=str, choices=["fp16", "int8", "int4", "fp8", "fp4"])
     args = parser.parse_args()
 
     X, y_soc, y_mem = load_or_generate_data(args)
