@@ -11,7 +11,7 @@
         "soc_intercept": 25
     },
     "layernorm": {
-        "k_mem": 4e-11,
+        "k_mem": 4.1e-11,
         "mem_intercept": 0.5,
         "fma_intercept": {
             "prefill": 28,

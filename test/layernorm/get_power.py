@@ -36,7 +36,8 @@ def measure_power_remote(
     if not ignore_cache:
         for record in existing_data:
             if (record.get("M") == M and 
-                record.get("N") == N):
+                record.get("N") == N and
+                record.get("device") == device):
                 return record['power_VDD_GPU_SOC'], record['power_VDDQ_VDD2_1V8AO']
         
     print(f"Measuring power for {total_duration}s and take {valid_duration}s in the middle...")
@@ -61,6 +62,7 @@ def measure_power_remote(
 
     variables_header = f"""
 FULL_CMD = {repr(full_cmd)}
+VALID_START_TIME = {total_duration / 2 - valid_duration / 2}
 VALID_DURATION = {valid_duration}
 DEVICE = "{device}"
 """
@@ -68,6 +70,7 @@ DEVICE = "{device}"
 
     b64_script = base64.b64encode(remote_script_source.encode('utf-8')).decode('utf-8')
     
+    port = 9129 if device == "Orin" else 9147
     target = f"{user}@{host}" if user is not None else host
     ssh_cmd = [
         "ssh",
@@ -99,7 +102,7 @@ DEVICE = "{device}"
     
     if not ignore_cache:
         new_record = {
-            "M": M, "N": N, 
+            "M": M, "N": N, "device": device,
             "power_VDD_GPU_SOC": avg_power_VDD_GPU_SOC, "power_VDDQ_VDD2_1V8AO": avg_power_VDDQ_VDD2_1V8AO
         }
 

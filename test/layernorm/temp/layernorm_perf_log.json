@@ -1,0 +1,98 @@
+[
+    {
+        "M": 64,
+        "N": 1024,
+        "device": "Orin",
+        "min_runtime": 0.004
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "device": "Orin",
+        "min_runtime": 0.006
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "device": "Orin",
+        "min_runtime": 0.007
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "device": "Orin",
+        "min_runtime": 0.01
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "device": "Orin",
+        "min_runtime": 0.046
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "device": "Orin",
+        "min_runtime": 0.091
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "device": "Orin",
+        "min_runtime": 0.113
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "device": "Orin",
+        "min_runtime": 0.177
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "device": "Thor",
+        "min_runtime": 0.029
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "device": "Thor",
+        "min_runtime": 0.088
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "device": "Thor",
+        "min_runtime": 0.095
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "device": "Thor",
+        "min_runtime": 0.152
+    },
+    {
+        "M": 64,
+        "N": 1024,
+        "device": "Thor",
+        "min_runtime": 0.003
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "device": "Thor",
+        "min_runtime": 0.004
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "device": "Thor",
+        "min_runtime": 0.006
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "device": "Thor",
+        "min_runtime": 0.008
+    }
+]

@@ -16,6 +16,7 @@ file_dir = os.path.dirname(os.path.abspath(__file__))
 def layernorm_latency_remote(
     M: int,
     N: int,
+    device: str,
     host: str = "202.120.39.3",
     port: int = 9129,
     user: Optional[str] = "sly",
@@ -36,9 +37,11 @@ def layernorm_latency_remote(
 
     for record in existing_data:
         if (record.get("M") == M and 
-            record.get("N") == N):
+            record.get("N") == N and
+            record.get("device") == device):
             return record['min_runtime']
-
+        
+    port = 9129 if device == "Orin" else 9147
     python_cmd = [
         "TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas",
         python_path,
@@ -87,7 +90,7 @@ def layernorm_latency_remote(
         )
     best_runtime = float(match.group(1))
     new_record = {
-        "M": M, "N": N,
+        "M": M, "N": N, "device": device,
         "min_runtime": best_runtime, 
     }
 
@@ -129,8 +132,7 @@ def test_and_save_latency(
         if update_ours_only:
             measured_latency = float(df["Measured"].iloc[idx])
         else:
-            port = 9129 if args.device == "Orin" else 9147
-            measured_latency = layernorm_latency_remote(M, N, port=port)
+            measured_latency = layernorm_latency_remote(M, N, args.device)
         print(f"latency {latency:.3f}, roofline_latency {roofline_latency:.3f}, measured_latency {measured_latency:.3f}")
         print()
         latency_list.append((latency, roofline_latency, measured_latency))
@@ -157,4 +159,4 @@ if __name__ == "__main__":
         M = 128 # at least 128
 
     os.makedirs(f"{file_dir}/results_perf/", exist_ok=True)
-    test_and_save_latency(M, f"{file_dir}/results_perf/{args.mode}.csv", args.precision, args.update_ours_only, args.device)
+    test_and_save_latency(M, f"{file_dir}/results_perf/{args.device}_{args.mode}.csv", args.precision, args.update_ours_only, args.device)

@@ -71,11 +71,11 @@ class L2CacheLayerNorm(L2Cache):
         self.total_mem_access_size += mem_access_size
         return mem_access_size
     
-    def drain_residual_output(self):
+    def drain(self):
         mem_access_size = 0
         while self.resident_tiles:
             oldest_tile = self.resident_tiles.popitem(last=False)[0]
-            if oldest_tile.access_type == L2AccessType.RESIDUAL_OUTPUT:
+            if oldest_tile.access_type in (L2AccessType.RESIDUAL_OUTPUT, L2AccessType.OUTPUT):
                 mem_access_size += self.output_tile_size
         self.occupied_size = 0
         self.total_mem_access_size += mem_access_size
@@ -111,7 +111,6 @@ class FusedLayerNorm(Operator): # Residual + LayerNorm/RMSNorm
         mem_access_size += self.l2_status.access(L2AccessType.RESIDUAL_INPUT, (0, 0), (self.M, self.N))
         mem_access_size += self.l2_status.access(L2AccessType.RESIDUAL_OUTPUT, (0, 0), (self.M, self.N))
         mem_access_size += self.l2_status.access(L2AccessType.OUTPUT, (0, 0), (self.M, self.N))
-        mem_access_size += self.l2_status.drain_residual_output()
         mem_access_size += self.l2_status.drain()
         mem_access_cycle = ceil(
             mem_access_size

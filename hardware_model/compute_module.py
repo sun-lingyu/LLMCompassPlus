@@ -94,8 +94,8 @@ class LaunchLatency:
         self.flashattn = flashattn
 
 launch_latency_dict = {
-    "Thor": LaunchLatency(5e-6, 6.5e-6, 0),
-    "Orin": LaunchLatency(5e-6, 6.5e-6, 0),
+    "Thor": LaunchLatency(5e-6, 2e-6, 0),
+    "Orin": LaunchLatency(5e-6, 2e-6, 0),
 }
 
 class ComputeModule:

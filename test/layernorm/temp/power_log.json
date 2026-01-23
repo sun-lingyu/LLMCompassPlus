@@ -2,49 +2,113 @@
     {
         "M": 1024,
         "N": 1024,
+        "device": "Orin",
         "power_VDD_GPU_SOC": 26.85360000000001,
         "power_VDDQ_VDD2_1V8AO": 6.028800000000001
     },
     {
         "M": 1024,
         "N": 2048,
+        "device": "Orin",
         "power_VDD_GPU_SOC": 27.44425263157894,
         "power_VDDQ_VDD2_1V8AO": 6.22976
     },
     {
         "M": 1024,
         "N": 2560,
+        "device": "Orin",
         "power_VDD_GPU_SOC": 30.460799999999995,
         "power_VDDQ_VDD2_1V8AO": 6.22976
     },
     {
         "M": 1024,
         "N": 4096,
+        "device": "Orin",
         "power_VDD_GPU_SOC": 28.86487578947369,
         "power_VDDQ_VDD2_1V8AO": 6.330240000000002
     },
     {
         "M": 64,
         "N": 1024,
+        "device": "Orin",
         "power_VDD_GPU_SOC": 13.22556631578948,
         "power_VDDQ_VDD2_1V8AO": 0.7033600000000001
     },
     {
         "M": 64,
         "N": 2048,
+        "device": "Orin",
         "power_VDD_GPU_SOC": 15.627915789473683,
         "power_VDDQ_VDD2_1V8AO": 0.8249936842105261
     },
     {
         "M": 64,
         "N": 2560,
+        "device": "Orin",
         "power_VDD_GPU_SOC": 19.238400000000006,
         "power_VDDQ_VDD2_1V8AO": 0.8038399999999996
     },
     {
         "M": 64,
         "N": 4096,
+        "device": "Orin",
         "power_VDD_GPU_SOC": 18.028799999999997,
         "power_VDDQ_VDD2_1V8AO": 0.9201852631578946
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "device": "Thor",
+        "power_VDD_GPU_SOC": 30.757888,
+        "power_VDDQ_VDD2_1V8AO": 13.288640000000001
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "device": "Thor",
+        "power_VDD_GPU_SOC": 27.329568000000002,
+        "power_VDDQ_VDD2_1V8AO": 12.451759999999998
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "device": "Thor",
+        "power_VDD_GPU_SOC": 28.502048000000002,
+        "power_VDDQ_VDD2_1V8AO": 13.085759999999999
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "device": "Thor",
+        "power_VDD_GPU_SOC": 27.795871999999996,
+        "power_VDDQ_VDD2_1V8AO": 16.711199999999998
+    },
+    {
+        "M": 64,
+        "N": 1024,
+        "device": "Thor",
+        "power_VDD_GPU_SOC": 19.290392,
+        "power_VDDQ_VDD2_1V8AO": 11.122032
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "device": "Thor",
+        "power_VDD_GPU_SOC": 23.666544,
+        "power_VDDQ_VDD2_1V8AO": 12.953888000000001
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "device": "Thor",
+        "power_VDD_GPU_SOC": 22.194743999999996,
+        "power_VDDQ_VDD2_1V8AO": 12.269167999999999
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "device": "Thor",
+        "power_VDD_GPU_SOC": 23.147376842105263,
+        "power_VDDQ_VDD2_1V8AO": 12.98432
     }
 ]
