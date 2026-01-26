@@ -43,6 +43,10 @@ class L2Cache:
         access_type: L2AccessType
         location_tuple: tuple[int, int]
     
+    class Tile3D(NamedTuple):
+        access_type: L2AccessType
+        location_tuple: tuple[int, int, int]
+    
     def __init__(self, l2_size: int):
         assert l2_size > 0
         self.l2_size = l2_size

@@ -5,3 +5,6 @@ SlurmOutput/
 microbenchmarks/bin/
 test/matmul/temp/power_features_cache*
 systolic_array_model/temp
+
+*.nsys-rep
+*.sqlite
