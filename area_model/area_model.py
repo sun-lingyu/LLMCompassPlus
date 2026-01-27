@@ -2,8 +2,8 @@ import json
 import os
 import argparse
 
-def load_gpu_data(hardware_name):
-    file_name = f"{hardware_name}_die_mm.json"
+def load_area_data(hardware_name):
+    file_name = f"configs/{hardware_name}_die_mm.json"
     
     if not os.path.exists(file_name):
         print(f"Error: {file_name} not found")
@@ -23,7 +23,7 @@ def calculate_gpu_area(hw, target_sm_count, target_l2_size_mb, target_l1_size_kb
     Returns:
         dict: include total die area and breakdown
     """
-    gpu_data = load_gpu_data(hw)
+    gpu_data = load_area_data(hw)
     # 1. Prepare Base Data
 
     # Command Front (fixed)
@@ -112,11 +112,13 @@ if __name__ == "__main__":
     if args.hw == "Thor":
         res_thor = calculate_gpu_area(args.hw, target_sm_count=22, target_l2_size_mb=24)
         print_report(res_thor)
-        res_thor_half = calculate_gpu_area(args.hw, target_sm_count=10, target_l2_size_mb=12, target_l1_size_kb=152)
+        res_thor_half = calculate_gpu_area(args.hw, target_sm_count=10, target_l2_size_mb=12)
         print_report(res_thor_half)
-    else:
+    elif args.hw == "Orin":
         res_orin = calculate_gpu_area(args.hw, target_sm_count=16, target_l2_size_mb=4.0)
         print_report(res_orin)
 
-        res_orin_half = calculate_gpu_area(args.hw, target_sm_count=8, target_l2_size_mb=2, target_l1_size_kb=96)
+        res_orin_half = calculate_gpu_area(args.hw, target_sm_count=8, target_l2_size_mb=2)
         print_report(res_orin_half)
+    else:
+        assert False

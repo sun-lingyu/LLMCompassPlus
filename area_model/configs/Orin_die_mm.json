@@ -1,0 +1,15 @@
+{
+  "name": "NVIDIA AGX Orin",
+  "height": 22.2, "width": 20.17, "command_front_area": 20.0,
+  "l2_cache": {
+    "capacity_mb": 4, "ctrl": 1.83,
+    "data": { "unit_count": 8, "area_per_unit": 1.47 }
+  },
+  "gpc_extra": { "unit_count": 2, "area_per_unit": 8.56 },
+  "tpc_extra": { "unit_count": 8, "area_per_unit": 2.30 },
+  "sm": {
+    "unit_count": 16, "area_per_unit": 3.26,
+    "l1_capacity_kb": 192, "reg_capacity_kb": 256,
+    "area_breakdown": { "reg_and_l1": 1.1, "core": 1.56, "others": 0.6 }
+  }
+}

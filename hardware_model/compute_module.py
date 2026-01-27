@@ -1,67 +1,40 @@
 from math import ceil
-from software_model.utils import DataType, data_type_dict
+from software_model.utils import DataType
 
 
 class VectorUnit:
-    def __init__(
-        self,
-        throughput: dict
-    ):
+    def __init__(self, throughput: dict):
         self.throughput = throughput
 
     def get_throughput_per_cycle(self, data_type: DataType, operation: str):
-        data_type = data_type.name
-        assert data_type in ["int32", "fp16", "fp32", "fp64", "int8", "fp8", "fp4"], f"Datatype {data_type} not supported in VectorUnit"
-        assert operation in ["exp2", "cvt", "reduction", "fma"], f"Operation {operation} not supported in VectorUnit"
+        data_type_name = data_type.name
+        # Validation
+        valid_types = ["int32", "fp16", "fp32", "fp64", "int8", "fp8", "fp4"]
+        valid_ops = ["exp2", "cvt", "reduction", "fma"]
+        
+        assert data_type_name in valid_types, f"Datatype {data_type_name} not supported"
+        assert operation in valid_ops, f"Operation {operation} not supported"
+
         if operation == "exp2":
             return self.throughput["exp2"]
-        if operation == "cvt" and (data_type == "int32" or data_type == "fp32"):
-            return self.throughput["cvt_int32_fp32"]
-        if operation == "cvt" and data_type == "fp16":
-            return self.throughput["cvt_int32_fp32"]
-        if operation == "cvt" and data_type == "int8":
-            return self.throughput["cvt_int32_int8"]
-        if operation == "reduction" and data_type == "int32": # special case for int32 add/sub
+        if operation == "cvt":
+            if data_type_name in ["int32", "fp32"]:
+                return self.throughput["cvt_int32_fp32"]
+            if data_type_name == "fp16":
+                return self.throughput["cvt_fp32_fp16"]
+            if data_type_name == "int8":
+                return self.throughput["cvt_int32_int8"]
+        if operation == "reduction" and data_type_name == "int32":
             return self.throughput["int32"] * 2
-        else:
-            return self.throughput[data_type]
+        
+        return self.throughput[data_type_name]
 
-vector_unit_dict = {
-    "Thor": VectorUnit({"int32": 16,
-                        "fp4": 256,
-                        "fp8": 128,
-                        "fp16": 64,
-                        "fp32": 32,
-                        "fp64": 0.5,
-                        "exp2": 4,
-                        "cvt_int32_fp32": 16,
-                        "cvt_fp32_fp16": 16,
-                        "cvt_int32_int8": 16
-                    }),
-    "Orin": VectorUnit({"int32": 16,
-                        "fp16": 64,
-                        "fp32": 32,
-                        "fp64": 0.5,
-                        "exp2": 4,
-                        "cvt_int32_fp32": 16,
-                        "cvt_fp32_fp16": 16,
-                        "cvt_int32_int8": 16
-                    })
-}
 
 class SystolicArray:
-    def __init__(
-        self,
-        array_width,
-        array_height,
-    ):
+    def __init__(self, array_width, array_height):
         self.array_width = array_width
         self.array_height = array_height
 
-systolic_array_dict = {
-    "Thor": SystolicArray(64, 8),
-    "Orin": SystolicArray(16, 8),
-}
 
 class Core:
     def __init__(
@@ -78,14 +51,6 @@ class Core:
         self.sublane_count = sublane_count
         self.SRAM_size = SRAM_size  # Byte
 
-core_dict = {
-    "SM_Thor": Core(
-        vector_unit_dict["Thor"], systolic_array_dict["Thor"], 65536, 4, 227 * 1024
-    ),
-    "SM_Orin": Core(
-        vector_unit_dict["Orin"], systolic_array_dict["Orin"], 65536, 4, 163 * 1024
-    ),
-}
 
 class LaunchLatency:
     def __init__(self, matmul, layernorm, flashattn):
@@ -93,10 +58,6 @@ class LaunchLatency:
         self.layernorm = layernorm
         self.flashattn = flashattn
 
-launch_latency_dict = {
-    "Thor": LaunchLatency(5e-6, 2e-6, 0),
-    "Orin": LaunchLatency(5e-6, 2e-6, 0),
-}
 
 class ComputeModule:
     def __init__(
@@ -118,28 +79,13 @@ class ComputeModule:
         self.launch_latency = launch_latency
     
     def get_total_vector_throughput_per_cycle(self, data_type: DataType, operation: str):
-        return self.core.vector_unit.get_throughput_per_cycle(data_type, operation) * self.core.sublane_count * self.core_count
+        return (self.core.vector_unit.get_throughput_per_cycle(data_type, operation) 
+                * self.core.sublane_count 
+                * self.core_count)
     
     def get_total_systolic_array_throughput_per_cycle(self, data_type: DataType):
-        return self.core_count * self.core.sublane_count * self.core.systolic_array.array_height * self.core.systolic_array.array_width * (4 // data_type.word_size)
-
-compute_module_dict = {
-    "Thor": ComputeModule(
-        core_dict["SM_Thor"],
-        20,
-        1575e6,
-        32 * 1024**2,
-        1152,
-        192,
-        launch_latency_dict["Thor"],
-    ),
-    "Orin": ComputeModule(
-        core_dict["SM_Orin"],
-        16,
-        1301e6,
-        4 * 1024**2,
-        512,
-        146,
-        launch_latency_dict["Orin"],
-    )
-}
+        return (self.core_count 
+                * self.core.sublane_count 
+                * self.core.systolic_array.array_height 
+                * self.core.systolic_array.array_width 
+                * (4 // data_type.word_size))

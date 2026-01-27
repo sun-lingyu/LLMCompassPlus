@@ -1,0 +1,46 @@
+{
+  "name": "NVIDIA AGX Thor",
+  "compute_module": {
+    "core_count": 20,
+    "clock_freq": 1575000000,
+    "l2_size": 33554432,
+    "l2_bandwidth_per_cycle": 1152,
+    "l2_latency_cycles": 192,
+    "core": {
+      "total_registers": 65536,
+      "sublane_count": 4,
+      "SRAM_size": 232448,
+      "vector_unit": {
+        "throughput": {
+          "int32": 16,
+          "fp4": 256,
+          "fp8": 128,
+          "fp16": 64,
+          "fp32": 32,
+          "fp64": 0.5,
+          "exp2": 4,
+          "cvt_int32_fp32": 16,
+          "cvt_fp32_fp16": 16,
+          "cvt_int32_int8": 16
+        }
+      },
+      "systolic_array": {
+        "array_width": 64,
+        "array_height": 8
+      }
+    },
+    "launch_latency": {
+      "matmul": 5e-06,
+      "layernorm": 2e-06,
+      "flashattn": 0
+    }
+  },
+  "io_module": {
+    "bandwidth": 273100000000,
+    "bandwidth_efficiency": 0.87,
+    "latency_cycles": 470
+  },
+  "memory_module": {
+    "memory_capacity": 128000000000
+  }
+}

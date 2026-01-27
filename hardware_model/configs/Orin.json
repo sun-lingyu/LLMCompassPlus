@@ -1,0 +1,44 @@
+{
+  "name": "NVIDIA AGX Orin",
+  "compute_module": {
+    "core_count": 16,
+    "clock_freq": 1301000000,
+    "l2_size": 4194304,
+    "l2_bandwidth_per_cycle": 512,
+    "l2_latency_cycles": 146,
+    "core": {
+      "total_registers": 65536,
+      "sublane_count": 4,
+      "SRAM_size": 166912,
+      "vector_unit": {
+        "throughput": {
+          "int32": 16,
+          "fp16": 64,
+          "fp32": 32,
+          "fp64": 0.5,
+          "exp2": 4,
+          "cvt_int32_fp32": 16,
+          "cvt_fp32_fp16": 16,
+          "cvt_int32_int8": 16
+        }
+      },
+      "systolic_array": {
+        "array_width": 16,
+        "array_height": 8
+      }
+    },
+    "launch_latency": {
+      "matmul": 5e-06,
+      "layernorm": 2e-06,
+      "flashattn": 0
+    }
+  },
+  "io_module": {
+    "bandwidth": 204800000000,
+    "bandwidth_efficiency": 0.87,
+    "latency_cycles": 600
+  },
+  "memory_module": {
+    "memory_capacity": 64000000000
+  } 
+}
