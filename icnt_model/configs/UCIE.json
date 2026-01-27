@@ -1,0 +1,35 @@
+{
+  "spec_version": "1.0/1.1",
+  "description": "UCIe Physical Layer with Voltage-Dependent Power Modeling",
+  "latency": 330e-9,
+  "bandwidth_efficiency": 0.87,
+  "max_modules": 4,
+  "packages": {
+    "standard": {
+      "name": "Standard Package",
+      "lane_count": 16,
+      "phy_width_um": 571.5,
+      "configurations": [
+        { "rate_gt": 4,  "phy_depth_um": 1320.0, "efficiency_pj_per_bit": { "0.7V": 0.5, "0.5V": 0.5 } },
+        { "rate_gt": 8,  "phy_depth_um": 1320.0, "efficiency_pj_per_bit": { "0.7V": 1.0, "0.5V": 0.5 } },
+        { "rate_gt": 12, "phy_depth_um": 1320.0, "efficiency_pj_per_bit": { "0.7V": 1.0, "0.5V": 0.5 } },
+        { "rate_gt": 16, "phy_depth_um": 1320.0, "efficiency_pj_per_bit": { "0.7V": 1.0, "0.5V": 0.5 } },
+        { "rate_gt": 24, "phy_depth_um": 1540.0, "efficiency_pj_per_bit": { "0.7V": 1.25, "0.5V": 0.75 } },
+        { "rate_gt": 32, "phy_depth_um": 1540.0, "efficiency_pj_per_bit": { "0.7V": 1.25, "0.5V": 0.75 } }
+      ]
+    },
+    "advanced": {
+      "name": "Advanced Package",
+      "lane_count": 64,
+      "phy_width_um": 388.8,
+      "configurations": [
+        { "rate_gt": 4,  "phy_depth_um": 1043.0, "efficiency_pj_per_bit": { "0.7V": 0.5, "0.5V": 0.25 } },
+        { "rate_gt": 8,  "phy_depth_um": 1043.0, "efficiency_pj_per_bit": { "0.7V": 0.5, "0.5V": 0.25 } },
+        { "rate_gt": 12, "phy_depth_um": 1043.0, "efficiency_pj_per_bit": { "0.7V": 0.5, "0.5V": 0.25 } },
+        { "rate_gt": 16, "phy_depth_um": 1043.0, "efficiency_pj_per_bit": { "0.7V": 0.6, "0.5V": 0.3 } },
+        { "rate_gt": 24, "phy_depth_um": 1258.0, "efficiency_pj_per_bit": { "0.7V": 0.6, "0.5V": 0.3 } },
+        { "rate_gt": 32, "phy_depth_um": 1258.0, "efficiency_pj_per_bit": { "0.7V": 0.6, "0.5V": 0.3 } }
+      ]
+    }
+  }
+}
