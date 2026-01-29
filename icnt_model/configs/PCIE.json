@@ -1,0 +1,20 @@
+{
+  "spec_version": "5.0",
+  "description": "PCIE 5.0 PHY and switch Power Modeling",
+  "latency": 379e-9,
+  "bandwidth_efficiency": 0.87,
+  "rate_gt": 32,
+  "efficiency_pj_per_bit": 8,
+  "available_lane_count": [4, 8, 16],
+  "switches": [
+    { "total_lane_count": 24, "efficiency_watt": 14, "model": "Broadcom PEX89024" },
+    { "total_lane_count": 32, "efficiency_watt": 17.2, "model": "Broadcom PEX89032" },
+    { "total_lane_count": 48, "efficiency_watt": 23.7, "model": "Broadcom PEX89048" },
+    { "total_lane_count": 72, "efficiency_watt": 29, "model": "Broadcom PEX89072" },
+    { "total_lane_count": 88, "efficiency_watt": 33, "model": "Broadcom PEX89088" },
+    { "total_lane_count": 104, "efficiency_watt": 38, "model": "Broadcom PEX890108" },
+    { "total_lane_count": 144, "efficiency_watt": 49, "model": "Broadcom PEX890144" }
+  ],
+  "switch_power_k": 0.2844,
+  "switch_power_intercept": 8.3247
+}

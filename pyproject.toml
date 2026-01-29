@@ -1,0 +1,18 @@
+[project]
+name = "LLMCompassPlus"
+version = "0.1.0"
+dependencies = [
+    "requests>=2.28.0",
+    "pandas",
+    "pytorch",
+    "scalesim=2.0.2",
+    "matplotlib",
+    "seaborn",
+    "scipy"
+]
+
+[tool.ruff]
+line-length = 88
+select = ["C", "E", "F", "W"]
+ignore = ["E501"]
+extend-select = ["I"]

@@ -1,4 +1,3 @@
-from math import ceil
 from software_model.utils import DataType
 
 
@@ -11,7 +10,7 @@ class VectorUnit:
         # Validation
         valid_types = ["int32", "fp16", "fp32", "fp64", "int8", "fp8", "fp4"]
         valid_ops = ["exp2", "cvt", "reduction", "fma"]
-        
+
         assert data_type_name in valid_types, f"Datatype {data_type_name} not supported"
         assert operation in valid_ops, f"Operation {operation} not supported"
 
@@ -26,7 +25,7 @@ class VectorUnit:
                 return self.throughput["cvt_int32_int8"]
         if operation == "reduction" and data_type_name == "int32":
             return self.throughput["int32"] * 2
-        
+
         return self.throughput[data_type_name]
 
 
@@ -77,15 +76,21 @@ class ComputeModule:
         self.l2_bandwidth_per_cycle = l2_bandwidth_per_cycle  # Byte/clock
         self.l2_latency_cycles = l2_latency_cycles
         self.launch_latency = launch_latency
-    
-    def get_total_vector_throughput_per_cycle(self, data_type: DataType, operation: str):
-        return (self.core.vector_unit.get_throughput_per_cycle(data_type, operation) 
-                * self.core.sublane_count 
-                * self.core_count)
-    
+
+    def get_total_vector_throughput_per_cycle(
+        self, data_type: DataType, operation: str
+    ):
+        return (
+            self.core.vector_unit.get_throughput_per_cycle(data_type, operation)
+            * self.core.sublane_count
+            * self.core_count
+        )
+
     def get_total_systolic_array_throughput_per_cycle(self, data_type: DataType):
-        return (self.core_count 
-                * self.core.sublane_count 
-                * self.core.systolic_array.array_height 
-                * self.core.systolic_array.array_width 
-                * (4 // data_type.word_size))
+        return (
+            self.core_count
+            * self.core.sublane_count
+            * self.core.systolic_array.array_height
+            * self.core.systolic_array.array_width
+            * (4 // data_type.word_size)
+        )

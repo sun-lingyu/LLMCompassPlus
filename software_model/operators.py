@@ -1,7 +1,7 @@
-from utils import size, closest_factors
-from typing import List, Tuple, Union
-from hardware_model.device import Device
-from software_model.utils import Tensor, DataType
+from typing import List
+
+from software_model.utils import DataType, Tensor
+from utils import size
 
 
 class Operator:

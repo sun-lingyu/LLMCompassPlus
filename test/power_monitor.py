@@ -1,9 +1,9 @@
 # power_monitor.py
-import time
 import subprocess
 import sys
+import time
 
-if 'FULL_CMD' not in globals(): # to get rid of compiler complains
+if "FULL_CMD" not in globals():  # to get rid of compiler complains
     FULL_CMD = ""
     VALID_START_TIME = 0
     VALID_DURATION = 1
@@ -24,12 +24,14 @@ else:
     assert False, f"illegal {DEVICE}"
 
 
-proc = subprocess.Popen(FULL_CMD, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+proc = subprocess.Popen(
+    FULL_CMD, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+)
 
-samples = [] # (timestamp, power_watts_gpu, power_watts_vddq)
+samples = []  # (timestamp, power_watts_gpu, power_watts_vddq)
 
 try:
-    while proc.poll() is None:        
+    while proc.poll() is None:
         try:
             now = time.time()
             with open(VOLT_PATH_GPU, "r") as fv:
@@ -40,13 +42,15 @@ try:
                 mV_VDDQ_VDD2_1V8AO = int(fv.read().strip())
             with open(CURR_PATH_VDDQ, "r") as fc:
                 mA_VDDQ_VDD2_1V8AO = int(fc.read().strip())
-            
+
             power_VDD_GPU_SOC = (mV_VDD_GPU_SOC / 1000.0) * (mA_VDD_GPU_SOC / 1000.0)
-            power_VDDQ_VDD2_1V8AO  = (mV_VDDQ_VDD2_1V8AO / 1000.0) * (mA_VDDQ_VDD2_1V8AO / 1000.0)
+            power_VDDQ_VDD2_1V8AO = (mV_VDDQ_VDD2_1V8AO / 1000.0) * (
+                mA_VDDQ_VDD2_1V8AO / 1000.0
+            )
             samples.append((now, power_VDD_GPU_SOC, power_VDDQ_VDD2_1V8AO))
         except Exception:
-            pass # ignore temporary read errors
-            
+            pass  # ignore temporary read errors
+
         time.sleep(0.05)
 
 finally:
@@ -65,8 +69,7 @@ valid_start_time = start_time + VALID_START_TIME
 valid_end_time = valid_start_time + VALID_DURATION
 
 valid_samples = [
-    (p1, p2) for (t, p1, p2) in samples 
-    if t >= valid_start_time and t <= valid_end_time
+    (p1, p2) for (t, p1, p2) in samples if t >= valid_start_time and t <= valid_end_time
 ]
 
 if valid_samples:

@@ -30,22 +30,24 @@ v_new = torch.randn(batch_size, 1, nheads_kv, headdim, device=device, dtype=dtyp
 cache_seqlens = torch.full((batch_size,), seqlen_k, device=device, dtype=torch.int32)
 
 # 5. 调用 flash_attn_with_kvcache 启用 Flash-Decoding
-print(f"Before: k_cache at index {seqlen_k} (first batch, first head): {k_cache[0, seqlen_k, 0, :5]}")
+print(
+    f"Before: k_cache at index {seqlen_k} (first batch, first head): {k_cache[0, seqlen_k, 0, :5]}"
+)
 print(f"New K (first batch, first head): {k_new[0, 0, 0, :5]}")
 
 output = flash_attn_with_kvcache(
     q,
     k_cache,
     v_cache,
-    k=k_new,              # 传入新 KV 会自动更新到 cache 中 cache_seqlens 的位置
+    k=k_new,  # 传入新 KV 会自动更新到 cache 中 cache_seqlens 的位置
     v=v_new,
     cache_seqlens=cache_seqlens,
-    causal=True,          # 解码通常是 causal 的
-    num_splits=2          # <--- 关键点: 设置 > 1 启用 Flash-Decoding 并行
+    causal=True,  # 解码通常是 causal 的
+    num_splits=2,  # <--- 关键点: 设置 > 1 启用 Flash-Decoding 并行
 )
 
-print("Output shape:", output.shape) # (batch_size, 1, nheads, headdim)
-print("Cache sequence length", cache_seqlens) # 应该是原来的 seqlen_k + 1
+print("Output shape:", output.shape)  # (batch_size, 1, nheads, headdim)
+print("Cache sequence length", cache_seqlens)  # 应该是原来的 seqlen_k + 1
 
 # 验证 KV Cache 是否更新
 # k_new 的 shape 是 (batch_size, 1, nheads, headdim)
@@ -58,7 +60,9 @@ if torch.allclose(updated_k, k_new.squeeze(1), atol=1e-3):
     print("SUCCESS: KV Cache updated correctly!")
 else:
     print("FAILURE: KV Cache NOT updated correctly!")
-    print(f"After: k_cache at index {seqlen_k} (first batch, first head): {k_cache[0, seqlen_k, 0, :5]}")
+    print(
+        f"After: k_cache at index {seqlen_k} (first batch, first head): {k_cache[0, seqlen_k, 0, :5]}"
+    )
     print(f"Diff: {(updated_k - k_new.squeeze(1)).abs().max()}")
 
 # 检查 cache_seqlens 是否更新 (通常 flash_attn 不会原地更新这个 tensor，需要用户自己维护)

@@ -1,12 +1,13 @@
+import glob
 import json
 import os
-import glob
+
 from hardware_model.compute_module import (
     ComputeModule,
     Core,
-    VectorUnit,
+    LaunchLatency,
     SystolicArray,
-    LaunchLatency
+    VectorUnit,
 )
 from hardware_model.io_module import IOModule
 from hardware_model.memory_module import MemoryModule
@@ -40,7 +41,7 @@ def _create_device_from_config(config_data: dict) -> Device:
         systolic_array=systolic_array,
         total_registers=core_params["total_registers"],
         sublane_count=core_params["sublane_count"],
-        SRAM_size=core_params["SRAM_size"]
+        SRAM_size=core_params["SRAM_size"],
     )
 
     launch_latency = LaunchLatency(**comp_params["launch_latency"])
@@ -52,7 +53,7 @@ def _create_device_from_config(config_data: dict) -> Device:
         l2_size=comp_params["l2_size"],
         l2_bandwidth_per_cycle=comp_params["l2_bandwidth_per_cycle"],
         l2_latency_cycles=comp_params["l2_latency_cycles"],
-        launch_latency=launch_latency
+        launch_latency=launch_latency,
     )
 
     # 2. Build IO Module
@@ -78,7 +79,7 @@ def _load_all_devices(config_dir: str):
     for file_path in json_files:
         # Extract name from filename (e.g., 'Thor.json' -> 'Thor')
         device_name = os.path.splitext(os.path.basename(file_path))[0]
-        
+
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             devices[device_name] = _create_device_from_config(data)
