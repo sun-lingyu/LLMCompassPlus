@@ -23,8 +23,8 @@ if __name__ == "__main__":
 
     model = FusedLayerNorm(data_type_dict["fp16"])
     _ = model(
-        Tensor([M, N], data_type=data_type_dict["fp16"]),
-        Tensor([M, N], data_type=data_type_dict["fp16"]),
+        Tensor([M, N], data_type_dict["fp16"]),
+        Tensor([M, N], data_type_dict["fp16"]),
     )
 
     latency = max(

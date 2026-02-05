@@ -118,25 +118,23 @@ class L2CacheLayerNorm(L2Cache):
 
 
 class FusedLayerNorm(Operator):  # Residual + LayerNorm/RMSNorm
-    def __init__(self, data_type: DataType):
-        super().__init__(0, 0, 0, 0, data_type)
+    def __init__(self, dtype: DataType):
+        super().__init__(0, 0, 0, 0, dtype)
         self.shape = None
 
     def __call__(self, input1: Tensor, input2: Tensor) -> Tensor:
-        assert self.data_type == input1.data_type
-        assert input1.data_type == input2.data_type
+        assert self.dtype == input1.dtype
+        assert input1.dtype == input2.dtype
         assert input1.shape == input2.shape
         self.shape = input1.shape
         self.M = size(input1.shape[:-1])
         self.N = input1.shape[-1]
-        self.io_count = (
-            self.M * self.N * self.data_type.word_size * 4
-        )  # 2 input + 2 output
+        self.io_size = self.M * self.N * self.dtype.word_size * 4  # 2 input + 2 output
         self.fma_count = self.M * self.N
         return input1, input2
 
     def roofline_model(self, pcb_module: Device):
-        self.roofline_latency = self.io_count / min(
+        self.roofline_latency = self.io_size / min(
             pcb_module.io_module.bandwidth,
             pcb_module.compute_module.l2_bandwidth_per_cycle
             * pcb_module.compute_module.clock_freq,
@@ -145,7 +143,7 @@ class FusedLayerNorm(Operator):  # Residual + LayerNorm/RMSNorm
 
     def compile_and_simulate(self, pcb_module: Device):  # memory bound operator
         self.l2_status = L2CacheLayerNorm(
-            pcb_module.compute_module.l2_size, self.M, self.N, self.data_type
+            pcb_module.compute_module.l2_size, self.M, self.N, self.dtype
         )
         mem_access_size = self.l2_status.access(
             L2AccessType.ACTIVATION, (0, 0), (self.M, self.N)

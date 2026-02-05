@@ -2,8 +2,6 @@ from collections import OrderedDict
 from enum import Enum
 from typing import List, NamedTuple
 
-from utils import size
-
 
 class DataType:
     def __init__(self, name: str, word_size: int, scale_block_size: int = None) -> None:
@@ -24,10 +22,9 @@ data_type_dict = {
 
 
 class Tensor:
-    def __init__(self, shape: List, data_type) -> None:
+    def __init__(self, shape: List, dtype) -> None:
         self.shape = shape
-        self.size = size(shape)
-        self.data_type = data_type
+        self.dtype = dtype
 
 
 class DeviceType(Enum):
@@ -55,10 +52,6 @@ class L2Cache:
     class Tile(NamedTuple):  # squre tile with side length 32
         access_type: L2AccessType
         location_tuple: tuple[int, int]
-
-    class Tile3D(NamedTuple):
-        access_type: L2AccessType
-        location_tuple: tuple[int, int, int]
 
     def __init__(self, l2_size: int):
         assert l2_size > 0

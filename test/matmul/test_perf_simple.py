@@ -59,8 +59,8 @@ if __name__ == "__main__":
         device=args.device,
     )
     _ = model(
-        Tensor([M, K], data_type=activation_dtype),
-        Tensor([K, N], data_type=weight_dtype),
+        Tensor([M, K], dtype=activation_dtype),
+        Tensor([K, N], dtype=weight_dtype),
     )
 
     latency = model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency.matmul

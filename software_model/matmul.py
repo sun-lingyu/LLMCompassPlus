@@ -32,10 +32,10 @@ class L2CacheMatmul(L2Cache):
         L2Cache_previous: L2Cache = None,
     ):
         super().__init__(l2_size)
-        # change output to activation
         assert M > 0 and N > 0 and K > 0
-        scale_block_size = activation_dtype.scale_block_size
+        scale_block_size = weight_dtype.scale_block_size
 
+        # Calculate number of tiles required for each dimension
         self.m_tiles = ceil(M / L2Cache.TILE_LENGTH)
         self.n_tiles = ceil(N / L2Cache.TILE_LENGTH)
         self.k_tiles = ceil(K / L2Cache.TILE_LENGTH)
@@ -49,11 +49,14 @@ class L2CacheMatmul(L2Cache):
             if scale_block_size
             else None
         )
+
+        # Size of a single tile in bytes
         self.activation_tile_size = activation_dtype.word_size * self.TILE_LENGTH**2
         self.weight_tile_size = weight_dtype.word_size * self.TILE_LENGTH**2
         self.output_tile_size = output_dtype.word_size * self.TILE_LENGTH**2
         self.scale_tile_size = scale_dtype.word_size * self.TILE_LENGTH**2
 
+        # Convert resident output tiles to activation tiles
         if L2Cache_previous:
             assert L2Cache_previous.output_tile_size == self.activation_tile_size
             while L2Cache_previous.resident_tiles:
@@ -77,30 +80,27 @@ class L2CacheMatmul(L2Cache):
     ):
         height = (
             self.m_tiles
-            if access_type == L2AccessType.ACTIVATION
+            if access_type
+            in (
+                L2AccessType.ACTIVATION,
+                L2AccessType.ACTIVATION_SCALE,
+                L2AccessType.OUTPUT,
+                L2AccessType.OUTPUT_SCALE,
+            )
             else self.k_tiles
             if access_type == L2AccessType.WEIGHT
-            else self.m_tiles
-            if access_type == L2AccessType.OUTPUT
-            else self.m_tiles
-            if access_type == L2AccessType.ACTIVATION_SCALE
             else self.k_scale_tiles
             if access_type == L2AccessType.WEIGHT_SCALE
-            else self.m_tiles
-            if access_type == L2AccessType.OUTPUT_SCALE
             else None
         )
         width = (
             self.k_tiles
             if access_type == L2AccessType.ACTIVATION
             else self.n_tiles
-            if access_type == L2AccessType.WEIGHT
-            else self.n_tiles
-            if access_type == L2AccessType.OUTPUT
+            if access_type
+            in (L2AccessType.WEIGHT, L2AccessType.WEIGHT_SCALE, L2AccessType.OUTPUT)
             else self.k_scale_tiles
             if access_type == L2AccessType.ACTIVATION_SCALE
-            else self.n_tiles
-            if access_type == L2AccessType.WEIGHT_SCALE
             else self.n_scale_tiles
             if access_type == L2AccessType.OUTPUT_SCALE
             else None
@@ -229,14 +229,11 @@ class Matmul(Operator):
         output_dtype: DataType,
         device="Orin",
     ):
-        super().__init__(0, 0, 0, 0, None)
+        super().__init__()
         self.activation_dtype = activation_dtype
         self.weight_dtype = weight_dtype
         self.intermediate_dtype = intermediate_dtype
         self.output_dtype = output_dtype
-        self.input1_shape = None
-        self.input2_shape = None
-        self.output_shape = None
         self.look_up_table = None
         self.best_mapping = None
         self.l2_access_size = 0
@@ -252,53 +249,38 @@ class Matmul(Operator):
 
     def __call__(self, input1: Tensor, input2: Tensor) -> Tensor:
         # [bs, M, K] * [K, N] = [bs, M, N]
-        assert self.activation_dtype == input1.data_type
-        assert self.weight_dtype == input2.data_type
-        self.input1_shape = input1.shape
-        self.input2_shape = input2.shape
-        self.M = size(self.input1_shape[:-1])
-        self.K = self.input1_shape[-1]
-        assert self.input2_shape[-2] == self.K
-        self.N = self.input2_shape[-1]
-        if len(self.input1_shape) == 2:
-            self.output_shape = [self.M, self.N]
+        assert self.activation_dtype == input1.dtype
+        assert self.weight_dtype == input2.dtype
+        assert input2.shape[-2] == input1.shape[-1]
+
+        self.M = size(input1.shape[:-1])
+        self.K = input1.shape[-1]
+        self.N = input2.shape[-1]
+        if len(input1.shape) == 2:
+            output_shape = [self.M, self.N]
         else:
-            self.output_shape = self.input1_shape[:-1] + [self.N]
-        output = Tensor(self.output_shape, self.output_dtype)
-        self.flop_count = 2 * self.M * self.K * self.N
-        self.io_count = (
+            output_shape = input1.shape[:-1] + [self.N]
+        self.io_size = (
             self.M * self.K * self.activation_dtype.word_size
             + self.K * self.N * self.weight_dtype.word_size
             + self.M * self.N * self.output_dtype.word_size
         )
-        if self.activation_dtype.name == "fp4":
-            self.io_count += int(
+        if self.weight_dtype.name == "fp4":
+            assert self.activation_dtype.name == "fp4"
+            self.io_size += int(
                 data_type_dict["fp8"].word_size
-                * (self.M * self.K + self.K * self.N + self.M * self.N)
+                * (self.M * self.K + self.K * self.N)
                 / self.activation_dtype.scale_block_size
+            )
+        if self.output_dtype.name == "fp4":
+            self.io_size += int(
+                data_type_dict["fp8"].word_size
+                * (self.M * self.N)
+                / self.output_dtype.scale_block_size
             )
         self.fma_count = self.M * self.K * self.N
         self.mem_access_size = -1
-        return output
-
-    def roofline_model(self, pcb_module: Device):
-        self.roofline_latency = max(
-            self.flop_count
-            / (
-                pcb_module.compute_module.get_total_systolic_array_throughput_per_cycle(
-                    self.activation_dtype
-                )
-                * 2
-                * pcb_module.compute_module.clock_freq
-            ),
-            self.io_count
-            / min(
-                pcb_module.io_module.bandwidth,
-                pcb_module.compute_module.l2_bandwidth_per_cycle
-                * pcb_module.compute_module.clock_freq,
-            ),
-        )  # throughput in FMA = 2 flops
-        return self.roofline_latency
+        return Tensor(output_shape, self.output_dtype)
 
     @staticmethod
     def all_factor_pairs(m: int):
@@ -311,6 +293,24 @@ class Matmul(Operator):
                 b = m // a
                 res.append((a, b))
         return res
+
+    def roofline_model(self, pcb_module: Device):
+        self.roofline_latency = max(
+            self.fma_count
+            / (
+                pcb_module.compute_module.get_total_systolic_array_throughput_per_cycle(
+                    self.activation_dtype
+                )
+                * pcb_module.compute_module.clock_freq
+            ),
+            self.io_size
+            / min(
+                pcb_module.io_module.bandwidth,
+                pcb_module.compute_module.l2_bandwidth_per_cycle
+                * pcb_module.compute_module.clock_freq,
+            ),
+        )  # throughput in FMA
+        return self.roofline_latency
 
     def compile_and_simulate(
         self,
@@ -365,21 +365,18 @@ class Matmul(Operator):
                         weight_tile_size = int(
                             cta_n * cta_k * self.weight_dtype.word_size
                         )
-                        output_tile_size = int(
-                            cta_m * cta_n * self.output_dtype.word_size
-                        )
                         intermediate_tile_size = int(
                             cta_m * cta_n * self.intermediate_dtype.word_size
                         )
                         if self.device_type == DeviceType.ORIN:
                             is_2sm_mode = False
                         elif self.device_type == DeviceType.THOR:
-                            if self.activation_dtype.name == "fp8" and cta_m in (
+                            if self.weight_dtype.name == "fp8" and cta_m in (
                                 128,
                                 256,
                             ):
                                 is_2sm_mode = True
-                            elif self.activation_dtype.name == "fp4" and cta_m == 256:
+                            elif self.weight_dtype.name == "fp4" and cta_m == 256:
                                 is_2sm_mode = True
                             else:
                                 is_2sm_mode = False
@@ -509,17 +506,13 @@ class Matmul(Operator):
                             self.weight_dtype,
                             self.output_dtype,
                         )
+                        # The pending_write_cycle models certain cases where a ctas can reuse input tiles in L2 cache and does not access DRAM during start. In this case, the epilogue DRAM write of the previous CTA (i.e., pending_write_cycle) can be overlapped, until the cta access DRAM.
                         pending_write_cycle = 0
                         cycle_count, pending_write_cycle = self.simulate(
                             mapping, pcb_module, l2_status, pending_write_cycle
                         )
-                        drain_cycle = ceil(
-                            l2_status.drain()
-                            / (
-                                pcb_module.io_module.bandwidth
-                                * pcb_module.io_module.bandwidth_efficiency
-                                / pcb_module.compute_module.clock_freq
-                            )
+                        drain_cycle = self.get_io_cycle_count(
+                            l2_status.drain(), pcb_module
                         )
                         cycle_count += pending_write_cycle + drain_cycle  # clean up
                         # print(f"pending_write_cycle: {pending_write_cycle}")
@@ -538,7 +531,7 @@ class Matmul(Operator):
         pcb_module: Device,
         l2_status: L2CacheMatmul,
         pending_write_cycle: int,
-    ) -> int:
+    ):
         if self.look_up_table is None:
             self.look_up_table = pd.read_csv(
                 f"./systolic_array_model/look_up_table_{pcb_module.compute_module.core.systolic_array.array_width}_{pcb_module.compute_module.core.systolic_array.array_height}.csv",
@@ -575,7 +568,13 @@ class Matmul(Operator):
         cta_k = mapping.cta_k
         raster_order = mapping.raster_order
         swizzle_size = (
-            mapping.swizzle_size if mapping.swizzle_size > 1 else ceil(M / cta_m)
+            mapping.swizzle_size
+            if mapping.swizzle_size > 1
+            else ceil(M / cta_m)
+            if raster_order == Matmul.RasterOrder.ALONG_M
+            else ceil(N / cta_n)
+            if raster_order == Matmul.RasterOrder.ALONG_N
+            else None
         )  # 1 means no swizzle
         is_2sm_mode = mapping.is_2sm_mode
         dataflow = mapping.dataflow
@@ -609,14 +608,16 @@ class Matmul(Operator):
             is_2sm_mode,
             dataflow,
         )
-        if K // cta_k > 0:
-            normal_l1_tile = Matmul.L1TileSimulator(
-                cta_m, cta_n, cta_k, *shared_l1_simulator_args
-            )
-        if K % cta_k > 0:
-            tail_l1_tile = Matmul.L1TileSimulator(
-                cta_m, cta_n, K % cta_k, *shared_l1_simulator_args
-            )
+        normal_l1_tile = (
+            Matmul.L1TileSimulator(cta_m, cta_n, cta_k, *shared_l1_simulator_args)
+            if K // cta_k > 0
+            else None
+        )
+        tail_l1_tile = (
+            Matmul.L1TileSimulator(cta_m, cta_n, K % cta_k, *shared_l1_simulator_args)
+            if K % cta_k > 0
+            else None
+        )
         waves = []
         for i in range(0, total_ctas, active_ctas_per_wave):
             cta_chunk = cta_sequence[i : i + active_ctas_per_wave]
@@ -637,7 +638,8 @@ class Matmul(Operator):
                         tail_l1_tile if k_size < cta_k else normal_l1_tile,
                         ceil(len(cta_chunk) / execution_unit_num),
                         l2_status,
-                        self.activation_dtype,
+                        self.weight_dtype,
+                        self.output_dtype,
                         pcb_module,
                     )
                 )
@@ -692,13 +694,6 @@ class Matmul(Operator):
                     wait_ready_cycle = 0
 
             # Epilogue
-            total_cycle_count += (
-                l2_tiles[0].M
-                * l2_tiles[0].N
-                // pcb_module.compute_module.get_total_vector_throughput_per_cycle(
-                    self.output_dtype, "cvt"
-                )
-            )
             output_io_cycle_count = l2_tiles[-1].get_output_io_cycle_count()
             if self.device_type == DeviceType.ORIN:
                 offset_for_smem_reorganizing_etc = (
@@ -731,7 +726,8 @@ class Matmul(Operator):
             l1_tile: "Matmul.L1TileSimulator",
             active_ctas_per_core: int,
             l2_status: L2CacheMatmul,
-            activation_dtype: DataType,
+            weight_dtype: DataType,
+            output_dtype: DataType,
             pcb_module: Device,
         ):
             self.M = M
@@ -743,7 +739,8 @@ class Matmul(Operator):
             self.cta_chunk = cta_chunk
             self.l1_tile = l1_tile
             self.l2_status = l2_status
-            self.activation_dtype = activation_dtype
+            self.weight_dtype = weight_dtype
+            self.output_dtype = output_dtype
             self.pcb_module = pcb_module
 
             self.l1_input_io_cycle_count = self.l1_tile.input_io_cycle_count * len(
@@ -770,8 +767,8 @@ class Matmul(Operator):
                 (self.K, self.N),
                 self.pcb_module,
             )
-            if self.activation_dtype.name == "fp4":
-                scale_block_size = self.activation_dtype.scale_block_size
+            if self.weight_dtype.name == "fp4":
+                scale_block_size = self.weight_dtype.scale_block_size
                 M_K_io_cycle_count += self.simulate_l2_tile_io_cycle_count(
                     L2AccessType.ACTIVATION_SCALE,
                     (
@@ -815,8 +812,8 @@ class Matmul(Operator):
                     (self.l1_tile.M, self.l1_tile.N),
                     self.pcb_module,
                 )
-                if self.activation_dtype.name == "fp4":
-                    scale_block_size = self.activation_dtype.scale_block_size
+                if self.output_dtype.name == "fp4":
+                    scale_block_size = self.output_dtype.scale_block_size
                     M_N_io_cycle_count += self.simulate_l2_tile_io_cycle_count(
                         L2AccessType.OUTPUT_SCALE,
                         (
@@ -841,20 +838,13 @@ class Matmul(Operator):
             self,
             access_type: L2AccessType,
             coord_tuple: tuple[int, int],
-            size_tuple: tuple[int, int],
+            scope_tuple: tuple[int, int],
             pcb_module: Device,
         ):  # cycles to load the tile from DRAM to l2
             mem_access_size = self.l2_status.access(
-                access_type, coord_tuple, size_tuple
+                access_type, coord_tuple, scope_tuple
             )
-            mem_access_cycle = ceil(
-                mem_access_size
-                / (
-                    pcb_module.io_module.bandwidth
-                    * pcb_module.io_module.bandwidth_efficiency
-                    / pcb_module.compute_module.clock_freq
-                )
-            )
+            mem_access_cycle = Matmul.get_io_cycle_count(mem_access_size, pcb_module)
             return mem_access_cycle
 
     class L1TileSimulator:
@@ -917,12 +907,12 @@ class Matmul(Operator):
             )
 
         def simulate_l1_tile_io_cycle_count(
-            self, M: int, N: int, data_type: DataType, pcb_module: Device
+            self, M: int, N: int, dtype: DataType, pcb_module: Device
         ):  # cycles to load the tile from L2 to L1
             return ceil(
                 M
                 * N
-                * data_type.word_size
+                * dtype.word_size
                 / pcb_module.compute_module.l2_bandwidth_per_cycle
             )
 
