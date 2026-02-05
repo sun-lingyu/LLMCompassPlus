@@ -19,6 +19,165 @@ from software_model.utils import (
 )
 
 
+class L2CacheFlashAttention(L2Cache):
+    """
+    Simulates the L2 cache behavior specifically for FlashAttention.
+    Manages tile residence and eviction policies.
+    """
+
+    def __init__(
+        self,
+        l2_size: int,
+        batch_size: int,
+        num_heads_q: int,
+        num_heads_kv: int,
+        seq_len_q: int,
+        seq_len_kv: int,
+        head_dim: int,
+        qkv_data_type: DataType,
+        output_data_type: DataType,
+        L2Cache_previous: L2Cache = None,
+    ):
+        super().__init__(l2_size)
+        assert seq_len_q > 0 and seq_len_kv > 0 and head_dim > 0
+
+        self.batch_size = batch_size
+        self.num_heads_q = num_heads_q
+        self.num_heads_kv = num_heads_kv
+        # Calculate number of tiles required for each dimension
+        self.seq_len_q_tiles = ceil(seq_len_q / L2Cache.TILE_LENGTH)
+        self.seq_len_kv_tiles = ceil(seq_len_kv / L2Cache.TILE_LENGTH)
+        self.head_dim_tiles = ceil(head_dim / L2Cache.TILE_LENGTH)
+
+        # Size of a single tile in bytes
+        self.qkv_tile_size = qkv_data_type.word_size * L2Cache.TILE_LENGTH**2
+        self.output_tile_size = output_data_type.word_size * L2Cache.TILE_LENGTH**2
+        self.qkv_data_type = qkv_data_type
+        self.output_data_type = output_data_type
+
+        # Carry over resident tiles from a previous cache state if provided
+        if L2Cache_previous:
+            assert L2Cache_previous.output_tile_size == self.qkv_data_type
+            while L2Cache_previous.resident_tiles:
+                tile = L2Cache_previous.resident_tiles.popitem(last=False)
+                if tile.access_type == L2AccessType.OUTPUT:
+                    self.resident_tiles[
+                        L2Cache.Tile(L2AccessType.OUTPUT, tile.coord_tuple)
+                    ] = None
+                    self.occupied_size += L2Cache_previous.output_tile_size
+
+    def access(
+        self,
+        access_type: L2AccessType,
+        coord_tuple: tuple[int, int, int],
+        scope_tuple: tuple[int, int],
+    ):
+        """
+        Simulates an access to the L2 cache.
+
+        Args:
+            access_type (L2AccessType): Type of data being accessed (Q, K, V, OUTPUT).
+            coord_tuple (tuple): Coordinates (row, col, head_index) of the access.
+            scope_tuple (tuple): Dimensions (height, width) of the access region.
+
+        Returns:
+            int: Amount of data loaded from DRAM (misses) + written back to DRAM (evictions) in bytes.
+        """
+        height = (
+            self.seq_len_q_tiles
+            if access_type == L2AccessType.Q or access_type == L2AccessType.OUTPUT
+            else self.seq_len_kv_tiles
+            if access_type == L2AccessType.K or access_type == L2AccessType.V
+            else None
+        )
+        width = (
+            self.head_dim_tiles
+            if access_type == L2AccessType.Q or access_type == L2AccessType.OUTPUT
+            else self.head_dim_tiles
+            if access_type == L2AccessType.K or access_type == L2AccessType.V
+            else None
+        )
+        num_heads = (
+            self.num_heads_q
+            if access_type == L2AccessType.Q or access_type == L2AccessType.OUTPUT
+            else self.num_heads_kv
+        )
+        tile_size = (
+            self.qkv_tile_size
+            if access_type in [L2AccessType.Q, L2AccessType.K, L2AccessType.V]
+            else self.output_tile_size
+        )
+        assert height and width
+        assert (
+            coord_tuple[0] % L2Cache.TILE_LENGTH == 0
+            and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
+        )
+        assert (
+            scope_tuple[0] % L2Cache.TILE_LENGTH == 0
+            and scope_tuple[1] % L2Cache.TILE_LENGTH == 0
+        )
+        assert (
+            coord_tuple[0] >= 0
+            and coord_tuple[0] + scope_tuple[0] <= height * L2Cache.TILE_LENGTH
+        ), (
+            f"coord_tuple[0]: {coord_tuple[0]}, scope_tuple[0]: {scope_tuple[0]}, height * L2Cache.TILE_LENGTH: {height * L2Cache.TILE_LENGTH}"
+        )
+        assert (
+            coord_tuple[1] >= 0
+            and coord_tuple[1] + scope_tuple[1] <= width * L2Cache.TILE_LENGTH
+        ), (
+            f"coord_tuple[1]: {coord_tuple[1]}, scope_tuple[1]: {scope_tuple[1]}, width * L2Cache.TILE_LENGTH: {width * L2Cache.TILE_LENGTH}"
+        )
+        assert coord_tuple[2] >= 0 and coord_tuple[2] < self.batch_size * num_heads
+        mem_access_size = 0
+        for i in range(
+            coord_tuple[0], coord_tuple[0] + scope_tuple[0], L2Cache.TILE_LENGTH
+        ):
+            for j in range(
+                coord_tuple[1], coord_tuple[1] + scope_tuple[1], L2Cache.TILE_LENGTH
+            ):
+                tile = self.Tile3D(access_type, (i, j, coord_tuple[2]))
+                if tile in self.resident_tiles:  # HIT
+                    # assert access_type not in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE)
+                    self.resident_tiles.move_to_end(tile)  # update LRU
+                else:
+                    while self.occupied_size + tile_size > self.l2_size:  # EVICT
+                        mem_access_size += self.evict_oldest_tile()
+                    if access_type != L2AccessType.OUTPUT:  # load from DRAM
+                        mem_access_size += tile_size
+                    self.occupied_size += tile_size
+                    self.resident_tiles[
+                        self.Tile3D(access_type, (i, j, coord_tuple[2]))
+                    ] = None
+        self.total_mem_access_size += mem_access_size
+        return mem_access_size
+
+    def evict_oldest_tile(self):
+        """
+        Evicts the least recently used (LRU) tile from the cache.
+
+        Returns:
+            int: Size of the evicted tile in bytes (if it needs to be written back to DRAM).
+        """
+        assert self.resident_tiles
+
+        mem_access_size = 0
+        oldest_tile = self.resident_tiles.popitem(last=False)[0]
+        tile_size = (
+            self.qkv_tile_size
+            if oldest_tile.access_type
+            in (L2AccessType.Q, L2AccessType.K, L2AccessType.V)
+            else self.output_tile_size
+            if oldest_tile.access_type == L2AccessType.OUTPUT
+            else None
+        )
+        if oldest_tile.access_type == L2AccessType.OUTPUT:
+            mem_access_size += tile_size
+        self.occupied_size -= tile_size
+        self.total_mem_access_size += mem_access_size
+        return mem_access_size
+
+
 class FlashAttention(Operator):
     """Analytical FlashAttention simulator.
 
@@ -50,7 +209,7 @@ class FlashAttention(Operator):
 
         Args:
             qkv_data_type (DataType): Data type for activations (Q, K, V).
-            output_data_type (DataType): Data type for weights (not strictly used as weights here, but for consistency).
+            output_data_type (DataType): Data type for output.
             intermediate_data_type (DataType): Data type for intermediate calculations (e.g., accumulation).
             is_causal (bool, optional): Whether to apply causal masking. Defaults to True.
         """
@@ -194,183 +353,8 @@ class FlashAttention(Operator):
                 f"dataflow={self.dataflow})"
             )
 
-    class L2CacheFlashAttention(L2Cache):
-        """
-        Simulates the L2 cache behavior specifically for FlashAttention.
-        Manages tile residence and eviction policies.
-        """
-
-        def __init__(
-            self,
-            l2_size: int,
-            batch_size: int,
-            num_heads_q: int,
-            num_heads_kv: int,
-            seq_len_q: int,
-            seq_len_kv: int,
-            head_dim: int,
-            qkv_data_type: DataType,
-            output_data_type: DataType,
-            L2Cache_previous: L2Cache = None,
-        ):
-            super().__init__(l2_size)
-            assert seq_len_q > 0 and seq_len_kv > 0 and head_dim > 0
-
-            self.batch_size = batch_size
-            self.num_heads_q = num_heads_q
-            self.num_heads_kv = num_heads_kv
-            # Calculate number of tiles required for each dimension
-            self.seq_len_q_tiles = ceil(seq_len_q / L2Cache.TILE_LENGTH)
-            self.seq_len_kv_tiles = ceil(seq_len_kv / L2Cache.TILE_LENGTH)
-            self.head_dim_tiles = ceil(head_dim / L2Cache.TILE_LENGTH)
-
-            # Size of a single tile in bytes
-            self.qkv_tile_size = qkv_data_type.word_size * L2Cache.TILE_LENGTH**2
-            self.output_tile_size = output_data_type.word_size * L2Cache.TILE_LENGTH**2
-            self.qkv_data_type = qkv_data_type
-            self.output_data_type = output_data_type
-
-            # Carry over resident tiles from a previous cache state if provided
-            if L2Cache_previous:
-                assert L2Cache_previous.output_tile_size == self.qkv_data_type
-                while L2Cache_previous.resident_tiles:
-                    tile = L2Cache_previous.resident_tiles.popitem(last=False)
-                    if tile.access_type == L2AccessType.OUTPUT:
-                        self.resident_tiles[
-                            L2Cache.Tile(L2AccessType.OUTPUT, tile.coord_tuple)
-                        ] = None
-                        self.occupied_size += L2Cache_previous.output_tile_size
-
-        def access(
-            self,
-            access_type: L2AccessType,
-            coord_tuple: tuple[int, int, int],
-            scope_tuple: tuple[int, int],
-        ):
-            """
-            Simulates an access to the L2 cache.
-
-            Args:
-                access_type (L2AccessType): Type of data being accessed (Q, K, V, OUTPUT).
-                coord_tuple (tuple): Coordinates (row, col, head_index) of the access.
-                scope_tuple (tuple): Dimensions (height, width) of the access region.
-
-            Returns:
-                int: Amount of data loaded from DRAM (misses) + written back to DRAM (evictions) in bytes.
-            """
-            height = (
-                self.seq_len_q_tiles
-                if access_type == L2AccessType.Q or access_type == L2AccessType.OUTPUT
-                else self.seq_len_kv_tiles
-                if access_type == L2AccessType.K or access_type == L2AccessType.V
-                else None
-            )
-            width = (
-                self.head_dim_tiles
-                if access_type == L2AccessType.Q or access_type == L2AccessType.OUTPUT
-                else self.head_dim_tiles
-                if access_type == L2AccessType.K or access_type == L2AccessType.V
-                else None
-            )
-            num_heads = (
-                self.num_heads_q
-                if access_type == L2AccessType.Q or access_type == L2AccessType.OUTPUT
-                else self.num_heads_kv
-            )
-            tile_size = (
-                self.qkv_tile_size
-                if access_type in [L2AccessType.Q, L2AccessType.K, L2AccessType.V]
-                else self.output_tile_size
-            )
-            assert height and width
-            assert (
-                coord_tuple[0] % L2Cache.TILE_LENGTH == 0
-                and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
-            )
-            assert (
-                scope_tuple[0] % L2Cache.TILE_LENGTH == 0
-                and scope_tuple[1] % L2Cache.TILE_LENGTH == 0
-            )
-            assert (
-                coord_tuple[0] >= 0
-                and coord_tuple[0] + scope_tuple[0] <= height * L2Cache.TILE_LENGTH
-            ), (
-                f"coord_tuple[0]: {coord_tuple[0]}, scope_tuple[0]: {scope_tuple[0]}, height * L2Cache.TILE_LENGTH: {height * L2Cache.TILE_LENGTH}"
-            )
-            assert (
-                coord_tuple[1] >= 0
-                and coord_tuple[1] + scope_tuple[1] <= width * L2Cache.TILE_LENGTH
-            ), (
-                f"coord_tuple[1]: {coord_tuple[1]}, scope_tuple[1]: {scope_tuple[1]}, width * L2Cache.TILE_LENGTH: {width * L2Cache.TILE_LENGTH}"
-            )
-            assert coord_tuple[2] >= 0 and coord_tuple[2] < self.batch_size * num_heads
-            mem_access_size = 0
-            for i in range(
-                coord_tuple[0], coord_tuple[0] + scope_tuple[0], L2Cache.TILE_LENGTH
-            ):
-                for j in range(
-                    coord_tuple[1], coord_tuple[1] + scope_tuple[1], L2Cache.TILE_LENGTH
-                ):
-                    tile = self.Tile3D(access_type, (i, j, coord_tuple[2]))
-                    if tile in self.resident_tiles:  # HIT
-                        # assert access_type not in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE)
-                        self.resident_tiles.move_to_end(tile)  # update LRU
-                    else:
-                        while self.occupied_size + tile_size > self.l2_size:  # EVICT
-                            mem_access_size += self.evict_oldest_tile()
-                        if access_type not in (
-                            L2AccessType.OUTPUT,
-                            L2AccessType.OUTPUT_SCALE,
-                        ):  # load from DRAM
-                            mem_access_size += tile_size
-                        self.occupied_size += tile_size
-                        self.resident_tiles[
-                            self.Tile3D(access_type, (i, j, coord_tuple[2]))
-                        ] = None
-            self.total_mem_access_size += mem_access_size
-            return mem_access_size
-
-        def evict_oldest_tile(self):
-            """
-            Evicts the least recently used (LRU) tile from the cache.
-
-            Returns:
-                int: Size of the evicted tile in bytes (if it needs to be written back to DRAM).
-            """
-            assert self.resident_tiles
-
-            mem_access_size = 0
-            oldest_tile = self.resident_tiles.popitem(last=False)[0]
-            tile_size = (
-                self.qkv_tile_size
-                if oldest_tile.access_type
-                in (L2AccessType.Q, L2AccessType.K, L2AccessType.V)
-                else self.output_tile_size
-                if oldest_tile.access_type == L2AccessType.OUTPUT
-                else None
-            )
-            if oldest_tile.access_type == L2AccessType.OUTPUT:
-                mem_access_size += tile_size
-            self.occupied_size -= tile_size
-            self.total_mem_access_size += mem_access_size
-            return mem_access_size
-
-    @staticmethod
-    def find_permutations(n):
-        permutations = set()
-
-        for i in range(1, n + 1):
-            if n % i == 0:
-                for j in range(1, n + 1):
-                    if (n // i) % j == 0:
-                        k = n // (i * j)
-                        permutations.add((i, j, k))
-
-        return list(permutations)
-
     def compile_and_simulate(
         self,
-        compile_mode: str = "exhaustive",
     ):
         """
         Compiles the workload and simulates it to find the best mapping and latency.
@@ -378,121 +362,113 @@ class FlashAttention(Operator):
         This method iterates through possible tiling configurations (L2 and L1 tile sizes)
         and mapping strategies to minimize the cycle count.
 
-        Args:
-            compile_mode (str, optional): Compilation mode. Currently only "exhaustive" is supported. Defaults to "exhaustive".
-
         Returns:
             float: The best estimated latency in seconds.
         """
         min_cycle_count = 2**63 - 1
         best_mapping = None
 
-        if compile_mode == "exhaustive":
-            # Iterate over possible L2 tile sizes for Q (log2 scale)
-            for l2_tile_seq_len_q_log2 in range(
-                min(5, floor(log2(self.computational_graph.seq_len_q))),
-                ceil(log2(self.computational_graph.seq_len_q)) + 1,
+        # Iterate over possible L2 tile sizes for Q (log2 scale)
+        for l2_tile_seq_len_q_log2 in range(
+            min(5, floor(log2(self.computational_graph.seq_len_q))),
+            ceil(log2(self.computational_graph.seq_len_q)) + 1,
+        ):
+            l2_tile_seq_len_q = 2**l2_tile_seq_len_q_log2
+
+            # Determine L2 tile size for KV based on splits
+            l2_tile_seq_len_kv = ceil(
+                self.computational_graph.seq_len_kv / self.num_splits
+            )
+            l2_tile_seq_len_kv_log2 = floor(log2(l2_tile_seq_len_kv))
+
+            # Iterate over possible L1 tile sizes for Q
+            for l1_tile_seq_len_q_log2 in range(
+                min(5, l2_tile_seq_len_q_log2), l2_tile_seq_len_q_log2 + 1
             ):
-                l2_tile_seq_len_q = 2**l2_tile_seq_len_q_log2
+                l1_tile_seq_len_q = 2**l1_tile_seq_len_q_log2
+                if l1_tile_seq_len_q > l2_tile_seq_len_q:
+                    continue
 
-                # Determine L2 tile size for KV based on splits
-                l2_tile_seq_len_kv = ceil(
-                    self.computational_graph.seq_len_kv / self.num_splits
-                )
-                l2_tile_seq_len_kv_log2 = floor(log2(l2_tile_seq_len_kv))
-
-                # Iterate over possible L1 tile sizes for Q
-                for l1_tile_seq_len_q_log2 in range(
-                    min(5, l2_tile_seq_len_q_log2), l2_tile_seq_len_q_log2 + 1
+                # Iterate over possible L1 tile sizes for KV
+                for l1_tile_seq_len_kv_log2 in range(
+                    min(5, l2_tile_seq_len_kv_log2), l2_tile_seq_len_kv_log2 + 1
                 ):
-                    l1_tile_seq_len_q = 2**l1_tile_seq_len_q_log2
-                    if l1_tile_seq_len_q > l2_tile_seq_len_q:
+                    l1_tile_seq_len_kv = 2**l1_tile_seq_len_kv_log2
+                    if l1_tile_seq_len_kv > l2_tile_seq_len_kv:
                         continue
 
-                    # Iterate over possible L1 tile sizes for KV
-                    for l1_tile_seq_len_kv_log2 in range(
-                        min(5, l2_tile_seq_len_kv_log2), l2_tile_seq_len_kv_log2 + 1
+                    # Calculate working set size to check if it fits in L2 and L1 (SRAM)
+                    working_set_size_bytes = (
+                        l1_tile_seq_len_q
+                        * self.computational_graph.head_dim
+                        * max(
+                            self.pcb_module.compute_module.core_count
+                            / ceil(l2_tile_seq_len_q / l1_tile_seq_len_q),
+                            1,
+                        )
+                        * 2
+                        * self.qkv_data_type.word_size
+                        + l1_tile_seq_len_kv
+                        * self.computational_graph.head_dim
+                        * min(
+                            self.pcb_module.compute_module.core_count,
+                            ceil(l2_tile_seq_len_kv / l1_tile_seq_len_kv),
+                        )
+                        * 2
+                        * self.output_data_type.word_size
+                    )
+
+                    # Constraint: Working set must fit in L2 and be larger than SRAM (otherwise it's just L1 resident?)
+                    # The logic implies checking if L2 is overflowed, or if it's too small for SRAM (?) - actually checking bounds.
+                    if (
+                        working_set_size_bytes > self.pcb_module.compute_module.l2_size
+                        or working_set_size_bytes
+                        < self.pcb_module.compute_module.core.SRAM_size
                     ):
-                        l1_tile_seq_len_kv = 2**l1_tile_seq_len_kv_log2
-                        if l1_tile_seq_len_kv > l2_tile_seq_len_kv:
-                            continue
+                        continue
 
-                        # Calculate working set size to check if it fits in L2 and L1 (SRAM)
-                        working_set_size_bytes = (
-                            l1_tile_seq_len_q
-                            * self.computational_graph.head_dim
-                            * max(
-                                self.pcb_module.compute_module.core_count
-                                / ceil(l2_tile_seq_len_q / l1_tile_seq_len_q),
-                                1,
-                            )
-                            * 2
-                            * self.qkv_data_type.word_size
-                            + l1_tile_seq_len_kv
-                            * self.computational_graph.head_dim
-                            * min(
-                                self.pcb_module.compute_module.core_count,
-                                ceil(l2_tile_seq_len_kv / l1_tile_seq_len_kv),
-                            )
-                            * 2
-                            * self.output_data_type.word_size
-                        )
+                    # Constraint: Working set must fit in SRAM (L1)
+                    if (
+                        3
+                        * l1_tile_seq_len_q
+                        * self.computational_graph.head_dim
+                        * self.qkv_data_type.word_size
+                        + 4
+                        * l1_tile_seq_len_kv
+                        * self.computational_graph.head_dim
+                        * self.output_data_type.word_size
+                        + l1_tile_seq_len_q * l1_tile_seq_len_kv
+                    ) > self.pcb_module.compute_module.core.SRAM_size:
+                        continue
 
-                        # Constraint: Working set must fit in L2 and be larger than SRAM (otherwise it's just L1 resident?)
-                        # The logic implies checking if L2 is overflowed, or if it's too small for SRAM (?) - actually checking bounds.
-                        if (
-                            working_set_size_bytes
-                            > self.pcb_module.compute_module.l2_size
-                            or working_set_size_bytes
-                            < self.pcb_module.compute_module.core.SRAM_size
-                        ):
-                            continue
+                    # Two Matmuls in FlashAttention which requires two sets of L0 tiling factors
+                    # We use a fixed configuration for L0 tiling here for simplicity,
+                    # but one could iterate over permutations as commented out code suggests.
 
-                        # Constraint: Working set must fit in SRAM (L1)
-                        if (
-                            3
-                            * l1_tile_seq_len_q
-                            * self.computational_graph.head_dim
-                            * self.qkv_data_type.word_size
-                            + 4
-                            * l1_tile_seq_len_kv
-                            * self.computational_graph.head_dim
-                            * self.output_data_type.word_size
-                            + l1_tile_seq_len_q * l1_tile_seq_len_kv
-                        ) > self.pcb_module.compute_module.core.SRAM_size:
-                            continue
+                    mapping = self.Mapping(
+                        l2_tile_seq_q=l2_tile_seq_len_q,
+                        l2_tile_seq_kv=l2_tile_seq_len_kv,
+                        l1_tile_seq_q=l1_tile_seq_len_q,
+                        l1_tile_seq_kv=l1_tile_seq_len_kv,
+                        l0_M_tiling_factor_matmul1=4,
+                        l0_N_tiling_factor_matmul1=1,
+                        l0_K_tiling_factor_matmul1=1,
+                        l0_M_tiling_factor_matmul2=4,
+                        l0_N_tiling_factor_matmul2=1,
+                        l0_K_tiling_factor_matmul2=1,
+                    )
 
-                        # Two Matmuls in FlashAttention which requires two sets of L0 tiling factors
-                        # We use a fixed configuration for L0 tiling here for simplicity,
-                        # but one could iterate over permutations as commented out code suggests.
-
-                        mapping = self.Mapping(
-                            l2_tile_seq_q=l2_tile_seq_len_q,
-                            l2_tile_seq_kv=l2_tile_seq_len_kv,
-                            l1_tile_seq_q=l1_tile_seq_len_q,
-                            l1_tile_seq_kv=l1_tile_seq_len_kv,
-                            l0_M_tiling_factor_matmul1=4,
-                            l0_N_tiling_factor_matmul1=1,
-                            l0_K_tiling_factor_matmul1=1,
-                            l0_M_tiling_factor_matmul2=4,
-                            l0_N_tiling_factor_matmul2=1,
-                            l0_K_tiling_factor_matmul2=1,
-                        )
-
-                        # Simulate the performance with this mapping
-                        cycle_count = self.simulate(
-                            self.computational_graph,
-                            mapping,
-                            self.pcb_module,
-                        )
-                        # mapping.display()
-                        # print(f"Cycle Count: {cycle_count}")
-                        if cycle_count < min_cycle_count:
-                            min_cycle_count = cycle_count
-                            best_mapping = mapping
-
-        else:
-            raise NotImplementedError("Only exhaustive compile mode is implemented.")
+                    # Simulate the performance with this mapping
+                    cycle_count = self.simulate(
+                        self.computational_graph,
+                        mapping,
+                        self.pcb_module,
+                    )
+                    # mapping.display()
+                    # print(f"Cycle Count: {cycle_count}")
+                    if cycle_count < min_cycle_count:
+                        min_cycle_count = cycle_count
+                        best_mapping = mapping
 
         self.best_mapping = best_mapping
         if self.best_mapping is not None:
@@ -513,7 +489,7 @@ class FlashAttention(Operator):
         """
         Simulates the execution of the FlashAttention workload for a specific mapping.
 
-        This method models the cycle-accurate behavior of the hardware, considering
+        This method models the behavior of the hardware, considering
         L2 tiling, double buffering, and compute/IO overlap.
 
         Args:
@@ -605,7 +581,7 @@ class FlashAttention(Operator):
         previous_write_output_bytes = 0
 
         # Initialize L2 Cache model
-        l2cache = FlashAttention.L2CacheFlashAttention(
+        l2cache = L2CacheFlashAttention(
             pcb_module.compute_module.l2_size,
             batch_size,
             num_heads_q,

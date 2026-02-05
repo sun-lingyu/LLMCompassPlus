@@ -8,25 +8,13 @@ class VectorUnit:
     def get_throughput_per_cycle(self, data_type: DataType, operation: str):
         data_type_name = data_type.name
         # Validation
-        valid_types = ["int32", "fp16", "fp32", "fp64", "int8", "fp8", "fp4"]
-        valid_ops = ["exp2", "cvt", "reduction", "fma"]
+        valid_types = ["fp32"]
+        valid_ops = ["exp2"]
 
         assert data_type_name in valid_types, f"Datatype {data_type_name} not supported"
         assert operation in valid_ops, f"Operation {operation} not supported"
 
-        if operation == "exp2":
-            return self.throughput["exp2"]
-        if operation == "cvt":
-            if data_type_name in ["int32", "fp32"]:
-                return self.throughput["cvt_int32_fp32"]
-            if data_type_name == "fp16":
-                return self.throughput["cvt_fp32_fp16"]
-            if data_type_name == "int8":
-                return self.throughput["cvt_int32_int8"]
-        if operation == "reduction" and data_type_name == "int32":
-            return self.throughput["int32"] * 2
-
-        return self.throughput[data_type_name]
+        return self.throughput[operation][data_type_name]
 
 
 class SystolicArray:
