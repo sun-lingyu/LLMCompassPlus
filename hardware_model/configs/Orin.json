@@ -12,7 +12,7 @@
       "SRAM_size": 166912,
       "vector_unit": {
         "throughput": {
-          "exp2":{
+          "exp2": {
             "fp32": 4
           }
         }
@@ -25,7 +25,7 @@
     "launch_latency": {
       "matmul": 5e-06,
       "layernorm": 2e-06,
-      "flashattn": 6e-06
+      "flashattn": 2e-05
     }
   },
   "io_module": {

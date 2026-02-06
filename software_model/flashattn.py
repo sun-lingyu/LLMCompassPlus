@@ -24,11 +24,13 @@ class L2CacheFlashAttn(L2Cache):
         qkv_dtype: DataType,
         output_dtype: DataType,
         is_prefill: bool,
+        num_splits: int,
         scale_dtype: DataType = data_type_dict["fp8"],  # NVFP4 use fp8 (ue4m3) scale
         L2Cache_previous: L2Cache = None,
     ):
         super().__init__(l2_size)
         assert seq_len_q > 0 and seq_len_kv > 0 and head_dim > 0
+        self.num_splits = num_splits
         scale_block_size = output_dtype.scale_block_size
 
         # Calculate number of tiles required for each dimension
@@ -91,10 +93,12 @@ class L2CacheFlashAttn(L2Cache):
         )
         width = (
             self.head_q_tiles
-            if access_type in (L2AccessType.Q, L2AccessType.OUTPUT)
+            if access_type == L2AccessType.Q
             else self.head_kv_tiles
             if access_type in (L2AccessType.K, L2AccessType.V)
-            else self.head_q_scale_tiles
+            else self.head_q_tiles * self.num_splits
+            if access_type == L2AccessType.OUTPUT
+            else self.head_q_scale_tiles * self.num_splits
             if access_type == L2AccessType.OUTPUT_SCALE
             else None
         )
@@ -196,25 +200,23 @@ class FlashAttn(Operator):
         qkv_dtype: DataType,
         intermediate_dtype: DataType,
         output_dtype: DataType,
-        is_causal: bool = True,
-        num_splits: int = 0,
+        is_prefill: bool,
+        is_causal: bool,
+        num_splits: int = 1,
         device="Orin",
     ) -> None:
         super().__init__()
         self.qkv_dtype = qkv_dtype
         self.intermediate_dtype = intermediate_dtype
         self.output_dtype = output_dtype
+        self.is_prefill = is_prefill
         self.is_causal = is_causal
         self.num_splits = num_splits
 
-        if is_causal:
-            assert num_splits == 0, (
-                "num_splits is for decode and is_causal is for prefill"
-            )
-        if num_splits > 0:
-            assert not is_causal, (
-                "num_splits is for decode and is_causal is for prefill"
-            )
+        if is_prefill:
+            assert num_splits == 1, "num_splits is for decode only"
+        else:
+            assert not is_causal, "is_causal is for prefill only"
         assert device in ["Orin", "Thor"], "Only support Orin and Thor!"
         self.device_type = DeviceType.ORIN if device == "Orin" else DeviceType.THOR
         assert (
@@ -274,8 +276,15 @@ class FlashAttn(Operator):
             * self.qkv_dtype.word_size
             * 2  # K & V
         )
+        if self.output_dtype.name == "fp4":
+            self.io_size += int(
+                data_type_dict["fp8"].word_size
+                * (self.head_dim * self.num_heads_q * self.seq_len_q)
+                / self.output_dtype.scale_block_size
+            )
+
         if self.num_splits > 1:
-            self.io_count += (
+            self.io_size += (
                 self.num_heads_q
                 * self.seq_len_q
                 * self.head_dim
@@ -315,7 +324,6 @@ class FlashAttn(Operator):
     def compile_and_simulate(
         self,
         pcb_module: Device,
-        is_prefill: bool = True,
     ):
         min_cycle_count = inf
         seq_len_q = self.seq_len_q
@@ -326,20 +334,24 @@ class FlashAttn(Operator):
 
         if self.device_type == DeviceType.ORIN:
             # Tile size for Ampere sm80/87
-            # See https://github.com/Dao-AILab/flash-attention.git flash-attention/hopper/tile_size.h for reference
+            # See https://github.com/Dao-AILab/flash-attention.git flash-attention/hopper/tile_size.h tile_size_fwd_sm8x() for reference
+
+            cta_seq_len_q = 128 if self.is_prefill else 64
+
             # In our targeted case:
-            # is_local == 0, varlen_and_split == 0, paged_kv == 0, sm86_or_89 == 0
-            cta_seq_len_q = 128
+            # is_local == 0, paged_kv == 0, sm86_or_89 == 0
+            # Prefill: varlen_and_split == 0
+            # Decode: varlen_and_split == 1, append_kv = 1
             if head_dim <= 64:
-                cta_seq_len_kv_list = [112]
+                cta_seq_len_kv_list = [112] if self.is_prefill else [80]
             elif head_dim <= 96:
-                cta_seq_len_kv_list = [64]
+                cta_seq_len_kv_list = [64] if self.is_prefill else [48]
             elif head_dim <= 128:
-                cta_seq_len_kv_list = [64]
+                cta_seq_len_kv_list = [64] if self.is_prefill else [128]
             elif head_dim <= 192:
-                cta_seq_len_kv_list = [96] if is_prefill else [64]  # append_kv
+                cta_seq_len_kv_list = [96] if self.is_prefill else [64]  # append_kv
             else:
-                cta_seq_len_kv_list = [96] if is_prefill else [48]  # append_kv
+                cta_seq_len_kv_list = [96] if self.is_prefill else [48]  # append_kv
         else:
             assert False, "not implemented yet"
 
@@ -348,16 +360,11 @@ class FlashAttn(Operator):
         gqa_packing_size_list = self.get_all_factors(gqa_group_size)
         swizzle_size_list = [1, 2, 4]
 
-        gqa_packing_size_list = [1]
-        swizzle_size_list = [2]
         for cta_seq_len_kv in cta_seq_len_kv_list:
             for gqa_packing_size in gqa_packing_size_list:
                 for swizzle_size in swizzle_size_list:
                     if swizzle_size > num_heads_q // gqa_packing_size:
                         continue
-                    assert seq_len_q % cta_seq_len_q == 0, (
-                        "To make cta_seq_len_q exactly divide seq_len_q, it can be reduced 64 with accurate results. We keep it as 128 to align with FA3."
-                    )
                     q_tile_size = int(
                         gqa_packing_size
                         * cta_seq_len_q
@@ -435,11 +442,13 @@ class FlashAttn(Operator):
                         head_dim,
                         self.qkv_dtype,
                         self.output_dtype,
-                        is_prefill=is_prefill,
+                        self.is_prefill,
+                        self.num_splits,
                     )
                     # Unlike matmul, pending_write_cycle is not neccessary. Since each cta reads different Q, every cta must access DRAM during start. Furthermore, we have modeled epilogue overlap explicitly in CTASimulator.execute_next_kv_tile().
                     cycle_count = self.simulate(mapping, pcb_module, l2_status)
                     drain_cycle = self.get_io_cycle_count(l2_status.drain(), pcb_module)
+                    # print(f"drain_cycle: {drain_cycle}")
                     cycle_count += drain_cycle  # clean up
                     if cycle_count < min_cycle_count:
                         min_cycle_count = cycle_count
@@ -456,7 +465,7 @@ class FlashAttn(Operator):
         l2_status: L2CacheFlashAttn,
     ):
         seq_len_q = self.seq_len_q
-        seq_len_kv = self.seq_len_kv
+        seq_len_kv = ceil(self.seq_len_kv / self.num_splits)
         num_heads_q = self.num_heads_q
         num_heads_kv = self.num_heads_kv
         head_dim = self.head_dim
@@ -468,7 +477,12 @@ class FlashAttn(Operator):
         swizzle_size = (
             mapping.swizzle_size if mapping.swizzle_size > 1 else num_heads_q
         )  # 1 means no swizzle
-        total_ctas = num_heads_q // gqa_packing_size * ceil(seq_len_q / cta_seq_len_q)
+        total_ctas = (
+            self.num_splits
+            * num_heads_q
+            // gqa_packing_size
+            * ceil(seq_len_q / cta_seq_len_q)
+        )
         assert num_heads_q % num_heads_kv == 0
         assert (num_heads_q // num_heads_kv) % gqa_packing_size == 0
 
@@ -481,51 +495,73 @@ class FlashAttn(Operator):
             self.output_dtype,
             pcb_module,
         )
-        normal_l1_tile = (
-            FlashAttn.L1TileSimulator(
+        possible_l1_tiles = {
+            "normal": FlashAttn.L1TileSimulator(
                 cta_seq_len_q,
                 cta_seq_len_kv,
                 *shared_l1_simulator_args,
-            )
-            if seq_len_kv // cta_seq_len_kv > 0
-            else None
-        )
-        tail_l1_tile = (
-            FlashAttn.L1TileSimulator(
+            ),
+            "tail_kv": FlashAttn.L1TileSimulator(
                 cta_seq_len_q,
                 seq_len_kv % cta_seq_len_kv,
                 *shared_l1_simulator_args,
             )
             if seq_len_kv % cta_seq_len_kv > 0
-            else None
-        )
+            else None,
+            "tail_q": FlashAttn.L1TileSimulator(
+                seq_len_q % cta_seq_len_q,
+                cta_seq_len_kv,
+                *shared_l1_simulator_args,
+            ),
+            "tail_qkv": FlashAttn.L1TileSimulator(
+                seq_len_q % cta_seq_len_q,
+                seq_len_kv % cta_seq_len_kv,
+                *shared_l1_simulator_args,
+            )
+            if seq_len_kv % cta_seq_len_kv > 0 and seq_len_q % cta_seq_len_q > 0
+            else None,
+        }
 
         cta_sequence = []
         # longest-processing-time-first scheduling of swizzled CTAs
-        for head_q_base in range(0, num_heads_q // gqa_packing_size, swizzle_size):
-            for seq_len_q_start in range(
-                (ceil(seq_len_q / cta_seq_len_q) - 1) * cta_seq_len_q,
-                -1,
-                -cta_seq_len_q,
-            ):  # longest-processing-time-first during causal attention
-                for head_q_offset in range(swizzle_size):
-                    head_q_start = (head_q_base + head_q_offset) * gqa_packing_size
-                    head_kv = head_q_start // gqa_group_size
-                    if head_q_start < num_heads_q:
-                        cta_sequence.append(
-                            FlashAttn.CTASimulator(
-                                seq_len_kv,
-                                head_q_start,
-                                head_kv,
-                                seq_len_q_start,
-                                normal_l1_tile,
-                                tail_l1_tile,
-                                self.is_causal,
-                                l2_status,
-                                self.output_dtype,
-                                pcb_module,
-                            )
+        for split in range(self.num_splits):
+            for head_q_base in range(0, num_heads_q // gqa_packing_size, swizzle_size):
+                for seq_len_q_start in range(
+                    (ceil(seq_len_q / cta_seq_len_q) - 1) * cta_seq_len_q,
+                    -1,
+                    -cta_seq_len_q,
+                ):  # longest-processing-time-first during causal attention
+                    if seq_len_q - seq_len_q_start >= cta_seq_len_q:
+                        normal_l1_tile, tail_l1_tile = (
+                            possible_l1_tiles["normal"],
+                            possible_l1_tiles["tail_kv"],
                         )
+                    else:
+                        normal_l1_tile, tail_l1_tile = (
+                            possible_l1_tiles["tail_q"],
+                            possible_l1_tiles["tail_qkv"],
+                        )
+
+                    for head_q_offset in range(swizzle_size):
+                        head_q_start = (head_q_base + head_q_offset) * gqa_packing_size
+                        head_kv = head_q_start // gqa_group_size
+                        if head_q_start < num_heads_q:
+                            cta_sequence.append(
+                                FlashAttn.CTASimulator(
+                                    num_heads_q,
+                                    seq_len_kv,
+                                    head_q_start,
+                                    head_kv,
+                                    seq_len_q_start,
+                                    normal_l1_tile,
+                                    tail_l1_tile,
+                                    self.is_causal,
+                                    split,
+                                    l2_status,
+                                    self.output_dtype,
+                                    pcb_module,
+                                )
+                            )
         assert len(cta_sequence) == total_ctas
 
         # print(f"Total ctas: {total_ctas}")
@@ -552,9 +588,13 @@ class FlashAttn(Operator):
             )
             mem_cycle_count += cta.get_Q_io_cycle_count() + cta.get_KV_io_cycle_count(0)
         total_cycle_count += max(l2_cycle_count, mem_cycle_count)
+        total_cycle_count += (
+            pcb_module.compute_module.l2_latency_cycles
+            + pcb_module.io_module.latency_cycles
+        )
 
         final_cta_list = []  # The last ctas executed on any core. Maintained for epilogue
-        while not all(cta is None for cta in active_cta_list):
+        while final_cta_list or not all(cta is None for cta in active_cta_list):
             # Main loop: all cores process one KV tile in lockstep
             l2_cycle_count = 0
             mem_cycle_count = 0
@@ -600,6 +640,7 @@ class FlashAttn(Operator):
     class CTASimulator:
         def __init__(
             self,
+            num_heads_q,
             seq_len_kv: int,
             head_q_start: int,
             head_kv: int,
@@ -607,15 +648,18 @@ class FlashAttn(Operator):
             normal_l1_tile: "FlashAttn.L1TileSimulator",
             tail_l1_tile: "FlashAttn.L1TileSimulator",
             is_causal: bool,
+            split: int,
             l2_status: L2CacheFlashAttn,
             output_dtype: DataType,
             pcb_module: Device,
         ):
+            self.num_heads_q = num_heads_q
             self.head_q_start = head_q_start
             self.head_kv = head_kv
             self.seq_len_q_start = seq_len_q_start
             self.normal_l1_tile = normal_l1_tile
             self.tail_l1_tile = tail_l1_tile
+            self.split = split
             self.l2_status = l2_status
             self.output_dtype = output_dtype
             self.pcb_module = pcb_module
@@ -713,7 +757,8 @@ class FlashAttn(Operator):
                 L2AccessType.OUTPUT,
                 (
                     self.seq_len_q_start,
-                    self.head_q_start * l1_tile.head_dim,
+                    self.head_q_start * l1_tile.head_dim
+                    + self.split * self.num_heads_q * l1_tile.head_dim,
                 ),
                 (
                     l1_tile.seq_len_q,
@@ -800,9 +845,10 @@ class FlashAttn(Operator):
             intermediate_dtype: DataType,
             pcb_module: Device,
         ):
-            assert seq_len_q > pcb_module.compute_module.core.systolic_array.array_width
-            assert head_dim > pcb_module.compute_module.core.systolic_array.array_height
-            assert head_dim >= 32
+            seq_len_q = max(
+                pcb_module.compute_module.core.systolic_array.array_width, seq_len_q
+            )
+            assert head_dim >= 64
             vector_unit = pcb_module.compute_module.core.vector_unit
             sublane_count = pcb_module.compute_module.core.sublane_count
             array_height = pcb_module.compute_module.core.systolic_array.array_height
@@ -837,4 +883,4 @@ class FlashAttn(Operator):
 
             return (
                 gemm_cycle_count * 2 + sfu_cycle_count
-            ) / offset_for_compute_utilization  # FA2 without GEMM-softmax overlap
+            ) // offset_for_compute_utilization  # FA2 without GEMM-softmax overlap

@@ -647,6 +647,10 @@ class Matmul(Operator):
 
         # ----------------Begin Counting cycles-------------------
         total_cycle_count = 0
+        total_cycle_count += (
+            pcb_module.compute_module.l2_latency_cycles
+            + pcb_module.io_module.latency_cycles
+        )
         for l2_tiles in waves:
             # Prologue
             input_io_cycle_count = l2_tiles[0].get_input_io_cycle_count()

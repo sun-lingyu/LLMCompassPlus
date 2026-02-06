@@ -42,8 +42,9 @@ if __name__ == "__main__":
         qkv_dtype=qkv_dtype,
         intermediate_dtype=intermediate_dtype,
         output_dtype=output_dtype,
-        is_causal=True,
-        num_splits=0,
+        is_prefill=False,
+        is_causal=False,
+        num_splits=1,
         device=args.device,
     )
     _ = model(
@@ -53,8 +54,7 @@ if __name__ == "__main__":
     )
 
     latency = (
-        model.compile_and_simulate(pcb, is_prefill=True)
-        + pcb.compute_module.launch_latency.flashattn
+        model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency.flashattn
     )
 
     roofline_latency = model.roofline_model(pcb)

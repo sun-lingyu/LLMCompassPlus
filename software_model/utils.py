@@ -47,7 +47,7 @@ class L2AccessType(Enum):
 
 
 class L2Cache:
-    TILE_LENGTH = 32
+    TILE_LENGTH = 16
 
     class Tile(NamedTuple):  # squre tile with side length 32
         access_type: L2AccessType
