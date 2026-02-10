@@ -113,8 +113,10 @@ class L2CacheMatmul(L2Cache):
             else self.output_tile_size
             if access_type == L2AccessType.OUTPUT
             else self.scale_tile_size
+            if access_type == L2AccessType.OUTPUT_SCALE
+            else None
         )
-        assert height and width
+        assert height and width and tile_size
         assert (
             coord_tuple[0] % L2Cache.TILE_LENGTH == 0
             and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
@@ -312,10 +314,7 @@ class Matmul(Operator):
         )  # throughput in FMA
         return self.roofline_latency
 
-    def compile_and_simulate(
-        self,
-        pcb_module: Device,
-    ):
+    def compile_and_simulate(self, pcb_module: Device, drain_l2: bool = True):
         min_cycle_count = inf
         M = self.M
         N = self.N
@@ -511,10 +510,11 @@ class Matmul(Operator):
                         cycle_count, pending_write_cycle = self.simulate(
                             mapping, pcb_module, l2_status, pending_write_cycle
                         )
-                        drain_cycle = self.get_io_cycle_count(
-                            l2_status.drain(), pcb_module
-                        )
-                        cycle_count += pending_write_cycle + drain_cycle  # clean up
+                        if drain_l2:
+                            drain_cycle = self.get_io_cycle_count(
+                                l2_status.drain(), pcb_module
+                            )
+                            cycle_count += pending_write_cycle + drain_cycle  # clean up
                         # print(f"pending_write_cycle: {pending_write_cycle}")
                         # print(f"drain_cycle: {drain_cycle}")
                         if cycle_count < min_cycle_count:

@@ -108,8 +108,10 @@ class L2CacheFlashAttn(L2Cache):
             else self.output_tile_size
             if access_type == L2AccessType.OUTPUT
             else self.scale_tile_size
+            if access_type == L2AccessType.OUTPUT_SCALE
+            else None
         )
-        assert height and width
+        assert height and width and tile_size
         assert (
             coord_tuple[0] % L2Cache.TILE_LENGTH == 0
             and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
@@ -321,10 +323,7 @@ class FlashAttn(Operator):
             {j for i in range(1, int(m**0.5) + 1) if m % i == 0 for j in (i, m // i)}
         )
 
-    def compile_and_simulate(
-        self,
-        pcb_module: Device,
-    ):
+    def compile_and_simulate(self, pcb_module: Device, drain_l2: bool = True):
         min_cycle_count = inf
         seq_len_q = self.seq_len_q
         seq_len_kv = self.seq_len_kv
@@ -358,7 +357,7 @@ class FlashAttn(Operator):
         gqa_group_size = num_heads_q // num_heads_kv
         assert num_heads_q % num_heads_kv == 0
         gqa_packing_size_list = self.get_all_factors(gqa_group_size)
-        swizzle_size_list = [1, 2, 4]
+        swizzle_size_list = [1, 2, 4, num_heads_q]
 
         for cta_seq_len_kv in cta_seq_len_kv_list:
             for gqa_packing_size in gqa_packing_size_list:
@@ -447,9 +446,12 @@ class FlashAttn(Operator):
                     )
                     # Unlike matmul, pending_write_cycle is not neccessary. Since each cta reads different Q, every cta must access DRAM during start. Furthermore, we have modeled epilogue overlap explicitly in CTASimulator.execute_next_kv_tile().
                     cycle_count = self.simulate(mapping, pcb_module, l2_status)
-                    drain_cycle = self.get_io_cycle_count(l2_status.drain(), pcb_module)
-                    # print(f"drain_cycle: {drain_cycle}")
-                    cycle_count += drain_cycle  # clean up
+                    if drain_l2:
+                        drain_cycle = self.get_io_cycle_count(
+                            l2_status.drain(), pcb_module
+                        )
+                        # print(f"drain_cycle: {drain_cycle}")
+                        cycle_count += drain_cycle  # clean up
                     if cycle_count < min_cycle_count:
                         min_cycle_count = cycle_count
                         self.best_mapping = mapping
@@ -475,8 +477,8 @@ class FlashAttn(Operator):
         gqa_group_size = num_heads_q // num_heads_kv
         assert num_heads_q % num_heads_kv == 0
         swizzle_size = (
-            mapping.swizzle_size if mapping.swizzle_size > 1 else num_heads_q
-        )  # 1 means no swizzle
+            mapping.swizzle_size
+        )  # different from matmul: swizzle_size = num_heads_q means no swizzle
         total_ctas = (
             self.num_splits
             * num_heads_q
@@ -654,6 +656,7 @@ class FlashAttn(Operator):
             pcb_module: Device,
         ):
             self.num_heads_q = num_heads_q
+            self.seq_len_kv = seq_len_kv
             self.head_q_start = head_q_start
             self.head_kv = head_kv
             self.seq_len_q_start = seq_len_q_start
@@ -739,7 +742,8 @@ class FlashAttn(Operator):
             )
             shared_kv_io_args = (
                 (
-                    tile_idx * self.normal_l1_tile.seq_len_kv,
+                    tile_idx * self.normal_l1_tile.seq_len_kv
+                    + self.split * self.seq_len_kv,
                     self.head_kv * l1_tile.head_dim,
                 ),
                 (

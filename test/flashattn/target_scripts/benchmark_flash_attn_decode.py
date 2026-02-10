@@ -16,9 +16,14 @@ def benchmark_flash_attn_decode_append(
     hq,
     hkv,
     d,
+    pack_gqa=False,
     num_splits=0,
     duration=1000,
 ):
+    extra_kwargs = {}
+    if flash_attn_with_kvcache == flash_attn_with_kvcache_fa3:
+        extra_kwargs["pack_gqa"] = pack_gqa
+
     total_cache_capacity = seq_kv_history + seq_new
 
     print("--- Benchmarking FA3 Decode with Append (KV Cache Update) ---")
@@ -58,6 +63,7 @@ def benchmark_flash_attn_decode_append(
     else:
         nodes_per_graph = int(target_flush_bytes / one_call_bytes) + 1
 
+    total_mem_mb = (nodes_per_graph * one_call_bytes) / (1024**2)
     print(f"Graph Nodes (Pool Size): {nodes_per_graph}")
     print(f"Single Call Est. IO: {one_call_bytes / 1024 / 1024:.2f} MB")
 
@@ -67,6 +73,8 @@ def benchmark_flash_attn_decode_append(
             torch.randn((b, seq_new, hq, d), dtype=dtype, device=dev)
             for _ in range(nodes_per_graph)
         ]
+
+        # New K/V: [Batch, Seq_New, Heads_KV, Dim]
         k_new_pool = [
             torch.randn((b, seq_new, hkv, d), dtype=dtype, device=dev)
             for _ in range(nodes_per_graph)
@@ -75,6 +83,8 @@ def benchmark_flash_attn_decode_append(
             torch.randn((b, seq_new, hkv, d), dtype=dtype, device=dev)
             for _ in range(nodes_per_graph)
         ]
+
+        # Cache Buffer: [Batch, Total_Capacity, Heads_KV, Dim]
         k_cache_pool = [
             torch.randn((b, total_cache_capacity, hkv, d), dtype=dtype, device=dev)
             for _ in range(nodes_per_graph)
@@ -106,12 +116,14 @@ def benchmark_flash_attn_decode_append(
                 cache_seqlens=cache_seqlens,
                 causal=True,
                 num_splits=num_splits,
+                **extra_kwargs,
             )
     torch.cuda.synchronize()
 
     print("Capturing Randomized Graph...")
     g = torch.cuda.CUDAGraph()
 
+    # Capture
     with torch.cuda.graph(g):
         with torch.inference_mode():
             for idx in access_order:
@@ -124,6 +136,7 @@ def benchmark_flash_attn_decode_append(
                     cache_seqlens=cache_seqlens,
                     causal=True,
                     num_splits=num_splits,
+                    **extra_kwargs,
                 )
 
     print(f"Replaying Graph ({duration} ms)...")
@@ -177,6 +190,9 @@ if __name__ == "__main__":
     )
     parser.add_argument("-d", "--dim", type=int, default=128, help="Head dimension")
     parser.add_argument(
+        "--pack_gqa", action="store_true", help="Enable pack_gqa for FA3"
+    )
+    parser.add_argument(
         "--num_splits", type=int, default=0, help="Split-KV factor. 0=Auto"
     )
     parser.add_argument(
@@ -197,6 +213,7 @@ if __name__ == "__main__":
         args.heads,
         args.kv_heads,
         args.dim,
+        pack_gqa=args.pack_gqa,
         num_splits=args.num_splits,
         duration=args.duration,
     )
@@ -209,6 +226,7 @@ if __name__ == "__main__":
         args.heads,
         args.kv_heads,
         args.dim,
+        pack_gqa=args.pack_gqa,
         num_splits=args.num_splits,
         duration=args.duration,
     )

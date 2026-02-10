@@ -2,29 +2,40 @@ from math import ceil
 
 from hardware_model.device import Device
 from software_model.operators import Operator
-from software_model.utils import DataType, L2AccessType, L2Cache, Tensor
-from utils import size
+from software_model.utils import DataType, L2AccessType, L2Cache, Tensor, data_type_dict
 
 
-class L2CacheLayerNorm(L2Cache):
+class L2CacheFlashAttnCombine(L2Cache):
     def __init__(
         self,
         l2_size: int,
         M: int,
         N: int,
-        dtype: DataType,
+        num_splits: int,
+        activation_dtype: DataType,
+        output_dtype: DataType,
+        scale_dtype: DataType = data_type_dict["fp8"],  # NVFP4 use fp8 (ue4m3) scale
         L2Cache_previous: L2Cache = None,
     ):
         super().__init__(l2_size)
         # change output to activation
         assert M > 0 and N > 0
+        self.num_splits = num_splits
+        scale_block_size = output_dtype.scale_block_size
+
         self.m_tiles = ceil(M / L2Cache.TILE_LENGTH)
         self.n_tiles = ceil(N / L2Cache.TILE_LENGTH)
-        self.tile_size = dtype.word_size * self.TILE_LENGTH**2
-        self.output_tile_size = self.tile_size
+        self.n_scale_tiles = (
+            ceil(N / L2Cache.TILE_LENGTH / scale_block_size)
+            if scale_block_size
+            else None
+        )
+        self.activation_tile_size = activation_dtype.word_size * self.TILE_LENGTH**2
+        self.output_tile_size = output_dtype.word_size * self.TILE_LENGTH**2
+        self.scale_tile_size = scale_dtype.word_size * self.TILE_LENGTH**2
 
         if L2Cache_previous:
-            assert L2Cache_previous.output_tile_size == self.tile_size
+            assert L2Cache_previous.output_tile_size == self.activation_tile_size
             while L2Cache_previous.resident_tiles:
                 tile = L2Cache_previous.resident_tiles.popitem(last=False)[0]
                 if tile.access_type == L2AccessType.OUTPUT:
@@ -41,9 +52,25 @@ class L2CacheLayerNorm(L2Cache):
         scope_tuple: tuple[int, int],
     ):
         height = self.m_tiles
-        width = self.n_tiles
-        tile_size = self.tile_size
-        assert height and width
+        width = (
+            self.n_tiles * self.num_splits
+            if access_type == L2AccessType.ACTIVATION
+            else self.n_tiles
+            if access_type == L2AccessType.OUTPUT
+            else self.n_scale_tiles
+            if access_type == L2AccessType.OUTPUT_SCALE
+            else None
+        )
+        tile_size = (
+            self.activation_tile_size
+            if access_type == L2AccessType.ACTIVATION
+            else self.output_tile_size
+            if access_type == L2AccessType.OUTPUT
+            else self.scale_tile_size
+            if access_type == L2AccessType.OUTPUT_SCALE
+            else None
+        )
+        assert height and width and tile_size
         assert (
             coord_tuple[0] % L2Cache.TILE_LENGTH == 0
             and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
@@ -80,7 +107,7 @@ class L2CacheLayerNorm(L2Cache):
                         mem_access_size += self.evict_oldest_tile()
                     if access_type not in (
                         L2AccessType.OUTPUT,
-                        L2AccessType.RESIDUAL_OUTPUT,
+                        L2AccessType.OUTPUT_SCALE,
                     ):  # load from DRAM
                         mem_access_size += tile_size
                     self.occupied_size += tile_size
@@ -93,10 +120,18 @@ class L2CacheLayerNorm(L2Cache):
 
         mem_access_size = 0
         oldest_tile = self.resident_tiles.popitem(last=False)[0]
-        tile_size = self.tile_size
+        tile_size = (
+            self.activation_tile_size
+            if oldest_tile.access_type == L2AccessType.ACTIVATION
+            else self.output_tile_size
+            if oldest_tile.access_type == L2AccessType.OUTPUT
+            else self.scale_tile_size
+            if oldest_tile.access_type == L2AccessType.OUTPUT_SCALE
+            else None
+        )
         if oldest_tile.access_type in (
             L2AccessType.OUTPUT,
-            L2AccessType.RESIDUAL_OUTPUT,
+            L2AccessType.OUTPUT_SCALE,
         ):
             mem_access_size += tile_size
         self.occupied_size -= tile_size
@@ -104,19 +139,39 @@ class L2CacheLayerNorm(L2Cache):
         return mem_access_size
 
 
-class FusedLayerNorm(Operator):  # Residual + LayerNorm/RMSNorm
-    def __init__(self, dtype: DataType):
+class FlashAttentionCombine(Operator):
+    def __init__(
+        self,
+        activation_dtype: DataType,
+        output_dtype: DataType,
+    ):
         super().__init__()
-        self.dtype = dtype
+        self.activation_dtype = activation_dtype
+        self.output_dtype = output_dtype
 
-    def __call__(self, input1: Tensor, input2: Tensor) -> Tensor:
-        assert self.dtype == input1.dtype
-        assert input1.dtype == input2.dtype
-        assert input1.shape == input2.shape
-        self.M = size(input1.shape[:-1])
-        self.N = input1.shape[-1]
-        self.io_size = self.M * self.N * self.dtype.word_size * 4  # 2 input + 2 output
-        return input1, input2
+    def __call__(self, input1: Tensor) -> Tensor:
+        assert self.activation_dtype == input1.dtype
+        assert len(input1.shape) == 3
+        self.M = input1.shape[0]
+        self.N = input1.shape[1]
+        self.num_splits = input1.shape[2]
+        self.io_size = (
+            self.M
+            * self.N
+            * (
+                self.num_splits * self.activation_dtype.word_size
+                + self.output_dtype.word_size
+            )
+        )
+        if self.output_dtype.name == "fp4":
+            self.io_size += int(
+                data_type_dict["fp8"].word_size
+                * self.M
+                * self.N
+                / self.output_dtype.scale_block_size
+            )
+
+        return Tensor((self.M, self.N), self.output_dtype)
 
     def roofline_model(self, pcb_module: Device):
         self.roofline_latency = self.io_size / min(
@@ -129,21 +184,26 @@ class FusedLayerNorm(Operator):  # Residual + LayerNorm/RMSNorm
     def compile_and_simulate(
         self, pcb_module: Device, drain_l2: bool = True
     ):  # memory bound operator
-        self.l2_status = L2CacheLayerNorm(
-            pcb_module.compute_module.l2_size, self.M, self.N, self.dtype
+        self.l2_status = L2CacheFlashAttnCombine(
+            pcb_module.compute_module.l2_size,
+            self.M,
+            self.N,
+            self.num_splits,
+            self.activation_dtype,
+            self.output_dtype,
         )
         mem_access_size = self.l2_status.access(
-            L2AccessType.ACTIVATION, (0, 0), (self.M, self.N)
-        )
-        mem_access_size += self.l2_status.access(
-            L2AccessType.RESIDUAL_INPUT, (0, 0), (self.M, self.N)
-        )
-        mem_access_size += self.l2_status.access(
-            L2AccessType.RESIDUAL_OUTPUT, (0, 0), (self.M, self.N)
+            L2AccessType.ACTIVATION, (0, 0), (self.M, self.N * self.num_splits)
         )
         mem_access_size += self.l2_status.access(
             L2AccessType.OUTPUT, (0, 0), (self.M, self.N)
         )
+        if self.output_dtype.name == "fp4":
+            mem_access_size += self.l2_status.access(
+                L2AccessType.OUTPUT_SCALE,
+                (0, 0),
+                (self.M, self.N / self.output_dtype.scale_block_size),
+            )
         if drain_l2:
             mem_access_size += self.l2_status.drain()
         mem_access_cycle = ceil(

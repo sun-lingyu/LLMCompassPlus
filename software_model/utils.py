@@ -77,7 +77,11 @@ class L2Cache:
         mem_access_size = 0
         while self.resident_tiles:
             oldest_tile = self.resident_tiles.popitem(last=False)[0]
-            if oldest_tile.access_type == L2AccessType.OUTPUT:
+            if oldest_tile.access_type in (
+                L2AccessType.OUTPUT,
+                L2AccessType.OUTPUT_SCALE,
+                L2AccessType.RESIDUAL_OUTPUT,
+            ):  # All possible output dtypes
                 mem_access_size += self.output_tile_size
         self.occupied_size = 0
         self.total_mem_access_size += mem_access_size
