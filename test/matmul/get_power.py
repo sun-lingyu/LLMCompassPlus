@@ -64,7 +64,16 @@ def measure_power_remote(
     else:  # CUTLASS
         output_dtype = get_output_dtype(data_type_dict[precision], op_name, True)
         _, best_op_name = cutlass_gemm_min_latency_remote(
-            M, N, K, precision, output_dtype, port, host, user, profiler_path
+            M,
+            N,
+            K,
+            precision,
+            output_dtype,
+            f"{file_dir}/temp/cutlass_perf_log.{device}.json",
+            port,
+            host,
+            user,
+            profiler_path,
         )
         full_cmd = (
             f"{profiler_path} --m={M} --n={N} --k={K} --kernels={best_op_name} "

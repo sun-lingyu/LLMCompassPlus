@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 from typing import Optional, Tuple, Union
@@ -70,35 +71,44 @@ def cutlass_gemm_min_latency_remote(
     K: int,
     precision: str,
     output_dtype: DataType,
+    cutlass_perf_log,
     port: int,
     host: str = "202.120.39.3",
     user: Optional[str] = "sly",
     profiler_path: str = "/home/sly/cutlass/build/tools/profiler/cutlass_profiler",
-    cutlass_perf_log: str = f"{file_dir}/temp/cutlass_perf_log.json",
 ) -> Tuple[float, str, Optional[int]]:
     """
     Returns:
         (min_runtime, best_operation)
     """
-    existing_data = []
-    if os.path.exists(cutlass_perf_log):
-        with open(cutlass_perf_log, "r") as f:
-            content = f.read().strip()
-            if content:
-                data = json.loads(content)
-                if isinstance(data, list):
-                    existing_data = data
-                else:
-                    assert False, "cutlass_perf_log.json format error"
-
-    for record in existing_data:
-        if (
-            record.get("M") == M
-            and record.get("N") == N
-            and record.get("K") == K
-            and record.get("precision") == precision
-        ):
-            return record["min_runtime"], record["best_operation"]
+    func = cutlass_gemm_min_latency_remote
+    if not hasattr(func, "_cache_dict"):
+        func._all_records = []
+        func._cache_dict = {}
+        if os.path.exists(cutlass_perf_log):
+            try:
+                with open(cutlass_perf_log, "r") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        func._all_records = data
+                        for r in data:
+                            key = (
+                                r["M"],
+                                r["N"],
+                                r["K"],
+                                r["precision"],
+                                r["output_dtype"],
+                            )
+                            func._cache_dict[key] = (
+                                r["min_runtime"],
+                                r["best_operation"],
+                            )
+            except (json.JSONDecodeError, KeyError):
+                func._all_records = []
+                func._cache_dict = {}
+    search_key = (M, N, K, precision, output_dtype.name)
+    if search_key in func._cache_dict:
+        return func._cache_dict[search_key]
 
     if precision == "fp16":
         cutlass_cmd = [
@@ -167,7 +177,7 @@ def cutlass_gemm_min_latency_remote(
         "--llc-capacity=524288"
     ]  # llc-capacity set to very large 512MB to avoid any L2 residency
 
-    # cutlass_cmd += ["--enable-best-kernel-for-fixed-shape"] # Takes very long time but gives similar results
+    # cutlass_cmd += ["--enable-best-kernel-for-fixed-shape"] # Takes very long time
 
     # 1. Fast scanning, might be inaccurate
     remote_cmd_str = " ".join(shlex.quote(arg) for arg in cutlass_cmd)
@@ -206,20 +216,21 @@ def cutlass_gemm_min_latency_remote(
             "No valid performance data found in profiler output.\n"
             f"Output snippet:\n{output[:1000]}"
         )
-    best_runtime_temp, best_op_name = min(results, key=lambda x: x[0])
+    top_results = sorted(results, key=lambda x: x[0])[:30]  # take top 30
+    best_op_names = [r[1] for r in top_results]
 
-    # 2. Check best_op again
+    # 2. Check top best_op candidates again
     cutlass_cmd = [
         profiler_path,
         f"--m={M}",
         f"--n={N}",
         f"--k={K}",
-        f"--kernels={best_op_name}",
+        f"--kernels={','.join(best_op_names)}",
         "--llc-capacity=524288",
         "--profiling-duration=100",
         "--profiling-iterations=0",  # Run for 100ms
         "--warmup-iterations=100",
-        "--enable-best-kernel-for-fixed-shape",
+        "--enable-best-kernel-for-fixed-shape",  # explore all configurations of the top candidates
     ]
     remote_cmd_str = " ".join(shlex.quote(arg) for arg in cutlass_cmd)
     print(remote_cmd_str)
@@ -243,11 +254,20 @@ def cutlass_gemm_min_latency_remote(
     for line in output.splitlines():
         line = line.strip()
 
+        if line.startswith("Operation:"):
+            current_op = line.split(":", 1)[1].strip()
+
         if "Runtime:" in line and current_op:
             match = re.search(r"Runtime:\s*([0-9]+(?:\.[0-9]+)?)", line)
             if match:
-                results.append(float(match.group(1)))
-    best_runtime = min(results)
+                runtime_ms = float(match.group(1))
+                results.append((runtime_ms, current_op))
+    if not results:
+        raise RuntimeError(
+            "No valid performance data found in profiler output.\n"
+            f"Output snippet:\n{output[:1000]}"
+        )
+    best_runtime, best_op_name = min(results, key=lambda x: x[0])
     if not best_runtime:
         raise RuntimeError(
             "No valid performance data found in profiler output.\n"
@@ -259,14 +279,15 @@ def cutlass_gemm_min_latency_remote(
         "N": N,
         "K": K,
         "precision": precision,
+        "output_dtype": output_dtype.name,
         "min_runtime": best_runtime,
         "best_operation": best_op_name,
     }
 
-    existing_data.append(new_record)
-
+    func._all_records.append(new_record)
+    func._cache_dict[search_key] = (best_runtime, best_op_name)
     with open(cutlass_perf_log, "w") as f:
-        json.dump(existing_data, f, indent=4, ensure_ascii=False)
+        json.dump(func._all_records, f, indent=4, ensure_ascii=False)
 
     return best_runtime, best_op_name
 
@@ -275,6 +296,7 @@ def marlin_gemm_latency_remote(
     M: int,
     N: int,
     K: int,
+    output_dtype: DataType,
     host: str = "202.120.39.3",
     port: int = 9129,
     user: Optional[str] = "sly",
@@ -282,20 +304,30 @@ def marlin_gemm_latency_remote(
     python_path: str = "/home/sly/anaconda3/envs/llmcompass/bin/python",
     marlin_perf_log: str = f"{file_dir}/temp/marlin_perf_log.json",
 ) -> float:
-    existing_data = []
-    if os.path.exists(marlin_perf_log):
-        with open(marlin_perf_log, "r") as f:
-            content = f.read().strip()
-            if content:
-                data = json.loads(content)
-                if isinstance(data, list):
-                    existing_data = data
-                else:
-                    assert False, "marlin_perf_log.json format error"
-
-    for record in existing_data:
-        if record.get("M") == M and record.get("N") == N and record.get("K") == K:
-            return record["min_runtime"]
+    func = marlin_gemm_latency_remote
+    if not hasattr(func, "_cache_dict"):
+        func._all_records = []
+        func._cache_dict = {}
+        if os.path.exists(marlin_perf_log):
+            try:
+                with open(marlin_perf_log, "r") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        func._all_records = data
+                        for r in data:
+                            key = (
+                                r["M"],
+                                r["N"],
+                                r["K"],
+                                r["output_dtype"],
+                            )
+                            func._cache_dict[key] = r["min_runtime"]
+            except (json.JSONDecodeError, KeyError):
+                func._all_records = []
+                func._cache_dict = {}
+    search_key = (M, N, K, output_dtype.name)
+    if search_key in func._cache_dict:
+        return func._cache_dict[search_key]
 
     python_cmd = [python_path, "test_simple.py", str(M), str(N), str(K)]
 
@@ -342,13 +374,14 @@ def marlin_gemm_latency_remote(
         "M": M,
         "N": N,
         "K": K,
+        "output_dtype": output_dtype.name,
         "min_runtime": best_runtime,
     }
 
-    existing_data.append(new_record)
-
+    func._all_records.append(new_record)
+    func._cache_dict[search_key] = best_runtime
     with open(marlin_perf_log, "w") as f:
-        json.dump(existing_data, f, indent=4, ensure_ascii=False)
+        json.dump(func._all_records, f, indent=4, ensure_ascii=False)
 
     return best_runtime
 
@@ -358,13 +391,8 @@ def test_and_save_latency(
     file_name: str,
     precision: str,
     op_name: str,
-    update_ours_only: bool,
     device: str,
 ):
-    if update_ours_only:
-        df = pd.read_csv(file_name)
-        assert len(test_problems) == df.shape[0]
-
     if precision == "fp16":
         activation_dtype = data_type_dict["fp16"]
         weight_dtype = data_type_dict["fp16"]
@@ -405,37 +433,42 @@ def test_and_save_latency(
         latency = 1000 * (
             model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency.matmul
         )
-        if update_ours_only:
-            baseline_latency = (
-                float(df["Baseline"].iloc[idx]) if precision != "int4" else -1
-            )
-            roofline_latency = float(df["Roofline"].iloc[idx])
-            cutlass_latency = float(df["CUTLASS"].iloc[idx])
-        else:
-            baseline_latency = (
-                get_baseline_latency(M, N, K, args.precision)
-                if precision in ("int8", "fp16")
-                else -1
-            )
-            roofline_latency = 1000 * model.roofline_model(pcb)
-            port = 9129 if args.device == "Orin" else 9147
-            cutlass_latency = (
-                cutlass_gemm_min_latency_remote(M, N, K, precision, output_dtype, port)[
-                    0
-                ]
-                if precision != "int4"
-                else marlin_gemm_latency_remote(M, N, K)
-            )
+        baseline_latency = (
+            get_baseline_latency(M, N, K, args.precision)
+            if precision in ("int8", "fp16")
+            else -1
+        )
+        roofline_latency = 1000 * model.roofline_model(pcb)
+        port = 9129 if args.device == "Orin" else 9147
+        measurement_latency = (
+            cutlass_gemm_min_latency_remote(
+                M,
+                N,
+                K,
+                precision,
+                output_dtype,
+                f"{file_dir}/temp/cutlass_perf_log.{args.device}.json",
+                port=port,
+            )[0]
+            if precision != "int4"
+            else marlin_gemm_latency_remote(M, N, K, output_dtype, port=port)
+        )
         print(
-            f"latency {latency:.3f}, baseline_latency {baseline_latency:.3f}, roofline_latency {roofline_latency:.3f}, cutlass_latency {cutlass_latency:.3f}"
+            f"latency {latency:.3f}, baseline_latency {baseline_latency:.3f}, roofline_latency {roofline_latency:.3f}, measurement_latency {measurement_latency:.3f}"
         )
         print()
         latency_list.append(
-            (latency, baseline_latency, roofline_latency, cutlass_latency)
+            (latency, baseline_latency, roofline_latency, measurement_latency)
         )
 
-    df = pd.DataFrame(latency_list, columns=["Ours", "Baseline", "Roofline", "CUTLASS"])
-    df.to_csv(file_name, index=False)
+    df = pd.DataFrame(
+        latency_list, columns=["Ours", "Baseline", "Roofline", "Measurement"]
+    )
+    if file_name:
+        file_exists = os.path.exists(file_name)
+        df.to_csv(file_name, mode="a", index=False, header=not file_exists)
+    else:
+        raise ValueError("file_name is required to save results")
 
 
 if __name__ == "__main__":
@@ -447,11 +480,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--mode", type=str, choices=["prefill", "decode"])
     parser.add_argument(
-        "--op_name",
-        type=str,
-        choices=["qkv_proj", "o_proj", "up_proj", "down_proj", "all"],
-    )
-    parser.add_argument(
         "--model",
         type=str,
         choices=["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"],
@@ -459,49 +487,55 @@ if __name__ == "__main__":
     parser.add_argument(
         "--precision", type=str, choices=["fp16", "int8", "int4", "fp8", "fp4"]
     )
-    parser.add_argument("--update_ours_only", action="store_true")
     args = parser.parse_args()
 
     pcb = device_dict[args.device]
     K_shapes, N_shapes = get_model_shape(args.model)
-    M = 1024 if args.mode == "prefill" else 64
-    assert M % 4 == 0
-    if args.precision == "fp4" and args.mode == "decode":
-        M = 128  # at least 128
+    if args.mode == "prefill":
+        M_list = [512, 768, 1024, 1280, 1536]
+        if args.model == "InternVision":
+            M_list = [576, 1024]  # 336x336/448x448 with patch 14x14
+    elif args.mode == "decode":
+        if args.device == "Orin":
+            M_list = [64, 128]
+        elif args.device == "Thor":
+            M_list = [64, 128] if args.precision != "fp4" else [128]
+        else:
+            raise ValueError("Unsupported device")
 
+    target_dir = f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}"
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir)
     os.makedirs(
-        f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}",
+        target_dir,
         exist_ok=True,
     )
-    for op_name in ["qkv_proj", "o_proj", "up_proj", "down_proj"]:
-        if args.op_name != "all" and args.op_name != op_name:
-            continue
 
-        K, N = K_shapes[op_name], N_shapes[op_name]
-        assert N % 4 == 0 and K % 4 == 0
+    for M in M_list:
+        assert M % 4 == 0
+        for op_name in ["qkv_proj", "o_proj", "up_proj", "down_proj"]:
+            K, N = K_shapes[op_name], N_shapes[op_name]
+            assert N % 4 == 0 and K % 4 == 0
 
-        if args.mode == "prefill":
-            # test Context Parallelism
-            test_problems = [(M, N, K), (M // 2, N, K), (M // 4, N, K)]
+            if args.mode == "prefill":  # test Context Parallelism for prefill only
+                test_problems = [(M, N, K), (M // 2, N, K), (M // 4, N, K)]
+                test_and_save_latency(
+                    test_problems,
+                    f"{target_dir}/{op_name}_CP.csv",
+                    args.precision,
+                    op_name,
+                    args.device,
+                )
+
+            # test Tensor Parallelism
+            if op_name == "qkv_proj" or op_name == "up_proj":
+                test_problems = [(M, N, K), (M, N // 2, K), (M, N // 4, K)]
+            else:  # o_proj or down_proj
+                test_problems = [(M, N, K), (M, N, K // 2), (M, N, K // 4)]
             test_and_save_latency(
                 test_problems,
-                f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}/{op_name}_CP.csv",
+                f"{target_dir}/{op_name}_TP.csv",
                 args.precision,
                 op_name,
-                args.update_ours_only,
                 args.device,
             )
-
-        # test Tensor Parallelism
-        if op_name == "qkv_proj" or op_name == "up_proj":
-            test_problems = [(M, N, K), (M, N // 2, K), (M, N // 4, K)]
-        else:  # o_proj or down_proj
-            test_problems = [(M, N, K), (M, N, K // 2), (M, N, K // 4)]
-        test_and_save_latency(
-            test_problems,
-            f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}/{op_name}_TP.csv",
-            args.precision,
-            op_name,
-            args.update_ours_only,
-            args.device,
-        )

@@ -113,7 +113,12 @@ class L2CacheMatmul(L2Cache):
             else self.output_tile_size
             if access_type == L2AccessType.OUTPUT
             else self.scale_tile_size
-            if access_type == L2AccessType.OUTPUT_SCALE
+            if access_type
+            in (
+                L2AccessType.OUTPUT_SCALE,
+                L2AccessType.ACTIVATION_SCALE,
+                L2AccessType.WEIGHT_SCALE,
+            )
             else None
         )
         assert height and width and tile_size
@@ -344,8 +349,9 @@ class Matmul(Operator):
             cta_n_list = [
                 64,
                 128,
+                192,
                 256,
-            ]  # discard 192 since it may not be divisible by N
+            ]
             cta_k_list = [256]
         else:
             assert False
@@ -355,9 +361,9 @@ class Matmul(Operator):
                 for cta_k in cta_k_list:
                     for swizzle_size in [1, 2, 4, 8]:
                         # for cta_m in [256]:
-                        #     for cta_n in [256]:
-                        #         for cta_k in [256]:
-                        # for swizzle_size in [1]:
+                        #     for cta_n in [128]:
+                        #         for cta_k in [64]:
+                        #             for swizzle_size in [1, 2, 4, 8]:
                         activation_tile_size = int(
                             cta_m * cta_k * self.activation_dtype.word_size
                         )
@@ -498,9 +504,9 @@ class Matmul(Operator):
                         )
                         l2_status = L2CacheMatmul(
                             pcb_module.compute_module.l2_size,
-                            M,
-                            N,
-                            K,
+                            ceil(M / cta_m) * cta_m,
+                            ceil(N / cta_n) * cta_n,
+                            ceil(K / cta_k) * cta_k,
                             self.activation_dtype,
                             self.weight_dtype,
                             self.output_dtype,
@@ -699,13 +705,19 @@ class Matmul(Operator):
 
             # Epilogue
             output_io_cycle_count = l2_tiles[-1].get_output_io_cycle_count()
-            if self.device_type == DeviceType.ORIN:
-                offset_for_smem_reorganizing_etc = (
-                    0.015  # obtained by fitting real machine cycles
-                )
-                total_cycle_count += (
-                    l2_tiles[-1].M * l2_tiles[-1].N * offset_for_smem_reorganizing_etc
-                )  # offset, mainly models data reorganizing through smem before write to DRAM. For Blackwell, smem data reorganizing is taken over asynchronously by TMA hardware.
+            offset_for_epilogue = (
+                0.01
+                if self.device_type == DeviceType.ORIN
+                else 0
+                if self.device_type == DeviceType.THOR
+                else None
+            )  # obtained by fitting real machine cycles
+            total_cycle_count += (
+                l2_tiles[-1].M
+                * l2_tiles[-1].N
+                * offset_for_epilogue
+                * self.activation_dtype.word_size
+            )
             pending_write_cycle += output_io_cycle_count
             # print(f"total_cycle_count: {total_cycle_count}")
             self.l2_access_size += (

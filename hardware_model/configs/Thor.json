@@ -12,16 +12,9 @@
       "SRAM_size": 232448,
       "vector_unit": {
         "throughput": {
-          "int32": 16,
-          "fp4": 256,
-          "fp8": 128,
-          "fp16": 64,
-          "fp32": 32,
-          "fp64": 0.5,
-          "exp2": 4,
-          "cvt_int32_fp32": 16,
-          "cvt_fp32_fp16": 16,
-          "cvt_int32_int8": 16
+          "exp2": {
+            "fp32": 4
+          }
         }
       },
       "systolic_array": {
