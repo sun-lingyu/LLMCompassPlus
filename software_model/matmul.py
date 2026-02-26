@@ -156,12 +156,10 @@ class L2CacheMatmul(L2Cache):
                     self.resident_tiles.move_to_end(tile)  # update LRU
                 else:
                     while self.occupied_size + tile_size > self.l2_size:  # EVICT
-                        mem_access_size += self.evict_oldest_tile()
-                    if access_type not in (
-                        L2AccessType.OUTPUT,
-                        L2AccessType.OUTPUT_SCALE,
-                    ):  # load from DRAM
-                        mem_access_size += tile_size
+                        self.evict_oldest_tile()
+                    mem_access_size += (
+                        tile_size  # read activation & weight, or *write through* output
+                    )
                     self.occupied_size += tile_size
                     self.resident_tiles[self.Tile(access_type, (i, j))] = None
         self.total_mem_access_size += mem_access_size
@@ -170,7 +168,6 @@ class L2CacheMatmul(L2Cache):
     def evict_oldest_tile(self):
         assert self.resident_tiles
 
-        mem_access_size = 0
         oldest_tile = self.resident_tiles.popitem(last=False)[0]
         tile_size = (
             self.activation_tile_size
@@ -181,11 +178,7 @@ class L2CacheMatmul(L2Cache):
             if oldest_tile.access_type == L2AccessType.OUTPUT
             else self.scale_tile_size
         )
-        if oldest_tile.access_type in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE):
-            mem_access_size += tile_size
         self.occupied_size -= tile_size
-        self.total_mem_access_size += mem_access_size
-        return mem_access_size
 
 
 class Matmul(Operator):
@@ -319,7 +312,7 @@ class Matmul(Operator):
         )  # throughput in FMA
         return self.roofline_latency
 
-    def compile_and_simulate(self, pcb_module: Device, drain_l2: bool = True):
+    def compile_and_simulate(self, pcb_module: Device):
         min_cycle_count = inf
         M = self.M
         N = self.N
@@ -361,9 +354,9 @@ class Matmul(Operator):
                 for cta_k in cta_k_list:
                     for swizzle_size in [1, 2, 4, 8]:
                         # for cta_m in [256]:
-                        #     for cta_n in [128]:
-                        #         for cta_k in [64]:
-                        #             for swizzle_size in [1, 2, 4, 8]:
+                        #     for cta_n in [256]:
+                        #         for cta_k in [128]:
+                        #             for swizzle_size in [1]:
                         activation_tile_size = int(
                             cta_m * cta_k * self.activation_dtype.word_size
                         )
@@ -511,18 +504,7 @@ class Matmul(Operator):
                             self.weight_dtype,
                             self.output_dtype,
                         )
-                        # The pending_write_cycle models certain cases where a ctas can reuse input tiles in L2 cache and does not access DRAM during start. In this case, the epilogue DRAM write of the previous CTA (i.e., pending_write_cycle) can be overlapped, until the cta access DRAM.
-                        pending_write_cycle = 0
-                        cycle_count, pending_write_cycle = self.simulate(
-                            mapping, pcb_module, l2_status, pending_write_cycle
-                        )
-                        if drain_l2:
-                            drain_cycle = self.get_io_cycle_count(
-                                l2_status.drain(), pcb_module
-                            )
-                            cycle_count += pending_write_cycle + drain_cycle  # clean up
-                        # print(f"pending_write_cycle: {pending_write_cycle}")
-                        # print(f"drain_cycle: {drain_cycle}")
+                        cycle_count = self.simulate(mapping, pcb_module, l2_status)
                         if cycle_count < min_cycle_count:
                             min_cycle_count = cycle_count
                             self.best_mapping = mapping
@@ -536,7 +518,6 @@ class Matmul(Operator):
         mapping: Mapping,
         pcb_module: Device,
         l2_status: L2CacheMatmul,
-        pending_write_cycle: int,
     ):
         if self.look_up_table is None:
             self.look_up_table = pd.read_csv(
@@ -656,69 +637,69 @@ class Matmul(Operator):
         total_cycle_count += (
             pcb_module.compute_module.l2_latency_cycles
             + pcb_module.io_module.latency_cycles
-        )
-        for l2_tiles in waves:
+        )  # Very small value
+        pending_epilogue_cycle = 0  # For blackwell epilogue overlap
+        wait_ready_cycle = 0
+        for wave_id, l2_tiles in enumerate(waves):
             # Prologue
-            input_io_cycle_count = l2_tiles[0].get_input_io_cycle_count()
-            total_cycle_count += input_io_cycle_count
-            if (
-                input_io_cycle_count == l2_tiles[0].l1_input_io_cycle_count
-            ):  # Not accessing DRAM
-                pending_write_cycle = max(0, pending_write_cycle - input_io_cycle_count)
-            else:
-                total_cycle_count += pending_write_cycle
-                pending_write_cycle = 0
+            if wave_id == 0 or self.device_type == DeviceType.ORIN:
+                input_io_cycle_count = max(l2_tiles[0].get_input_io_cycle_count())
+                total_cycle_count += input_io_cycle_count
             if self.weight_dtype.name == "int4":
+                assert self.device_type == DeviceType.ORIN
                 offset_for_w4a16 = 0.03  # obtained by fitting real machine cycles
                 total_cycle_count += (
                     l2_tiles[0].K * l2_tiles[0].N * offset_for_w4a16
                 )  # mainly models non-overlapped dequant overhead
 
             # Loop K: double buffering
-            wait_ready_cycle = 0
             for iter in range(ceil(K / cta_k)):
                 # current tile compute latency
                 curr_iter_cycle_count = (
                     wait_ready_cycle + l2_tiles[iter].compute_cycle_count
                 )
                 total_cycle_count += curr_iter_cycle_count
-                if (
-                    input_io_cycle_count == l2_tiles[iter].l1_input_io_cycle_count
-                ):  # Not accessing DRAM
-                    pending_write_cycle = max(
-                        0, pending_write_cycle - curr_iter_cycle_count
-                    )
-                else:
-                    total_cycle_count += pending_write_cycle
-                    pending_write_cycle = 0
-
-                # print(f"wait_ready_cycle {wait_ready_cycle}, l2_tiles[iter].compute_cycle_count {l2_tiles[iter].compute_cycle_count}")
 
                 # update wait_ready_cycle
-                if iter + 1 < ceil(K / cta_k):
-                    input_io_cycle_count = l2_tiles[iter + 1].get_input_io_cycle_count()
-                    wait_ready_cycle = max(
-                        0, input_io_cycle_count - l2_tiles[iter].compute_cycle_count
+                input_io_cycle_count_tuple = (
+                    l2_tiles[iter + 1].get_input_io_cycle_count()
+                    if iter + 1 < ceil(K / cta_k)
+                    else (0, 0)
+                )
+                if self.device_type == DeviceType.THOR:
+                    # overlap next wave's prologue and previous wave's epilogue with compute for Blackwell
+                    if iter + 1 == ceil(K / cta_k) and wave_id + 1 < len(waves):
+                        input_io_cycle_count_tuple = waves[wave_id + 1][
+                            0
+                        ].get_input_io_cycle_count()
+                    pending_epilogue_cycle -= max(
+                        0,
+                        l2_tiles[iter].compute_cycle_count
+                        - input_io_cycle_count_tuple[0],
                     )
-                else:
-                    wait_ready_cycle = 0
+                input_io_cycle_count = max(input_io_cycle_count_tuple)
+                wait_ready_cycle = max(
+                    0, input_io_cycle_count - l2_tiles[iter].compute_cycle_count
+                )
+                # print(
+                #     f"l2_tiles[iter].compute_cycle_count {l2_tiles[iter].compute_cycle_count}, input_io_cycle_count {input_io_cycle_count}"
+                # )
 
             # Epilogue
-            output_io_cycle_count = l2_tiles[-1].get_output_io_cycle_count()
-            offset_for_epilogue = (
-                0.01
-                if self.device_type == DeviceType.ORIN
-                else 0
-                if self.device_type == DeviceType.THOR
-                else None
-            )  # obtained by fitting real machine cycles
-            total_cycle_count += (
-                l2_tiles[-1].M
-                * l2_tiles[-1].N
-                * offset_for_epilogue
-                * self.activation_dtype.word_size
-            )
-            pending_write_cycle += output_io_cycle_count
+            if self.device_type == DeviceType.ORIN:
+                offset_for_epilogue = 0.01  # obtained by fitting real machine cycles
+                total_cycle_count += (
+                    l2_tiles[-1].M
+                    * l2_tiles[-1].N
+                    * offset_for_epilogue
+                    * self.activation_dtype.word_size
+                )
+            total_cycle_count += max(
+                0, pending_epilogue_cycle
+            )  # remaining epilogue cycles of previous wave
+            output_io_cycle_count = max(l2_tiles[-1].get_output_io_cycle_count())
+            pending_epilogue_cycle = output_io_cycle_count
+            # print(f"pending_epilogue_cycle: {pending_epilogue_cycle}")
             # print(f"total_cycle_count: {total_cycle_count}")
             self.l2_access_size += (
                 sum(
@@ -727,7 +708,7 @@ class Matmul(Operator):
                 )
                 * pcb_module.compute_module.l2_bandwidth_per_cycle
             )
-        return total_cycle_count, pending_write_cycle
+        return total_cycle_count
 
     class L2TileSimulator:
         def __init__(
@@ -815,8 +796,9 @@ class Matmul(Operator):
                     ),
                     self.pcb_module,
                 )
-            return max(
-                M_K_io_cycle_count + K_N_io_cycle_count, self.l1_input_io_cycle_count
+            return (
+                M_K_io_cycle_count + K_N_io_cycle_count,
+                self.l1_input_io_cycle_count,
             )
 
         def get_output_io_cycle_count(self):
@@ -848,7 +830,7 @@ class Matmul(Operator):
                         ),
                         self.pcb_module,
                     )  # Round access granularity to L2Cache.TILE_LENGTH. This may result in OUTPUT_SCALE HIT in L2, which is ok.
-            return max(M_N_io_cycle_count, self.l1_output_io_cycle_count)
+            return (M_N_io_cycle_count, self.l1_output_io_cycle_count)
 
         def simulate_l2_tile_io_cycle_count(
             self,

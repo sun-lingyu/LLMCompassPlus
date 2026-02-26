@@ -2,199 +2,463 @@
     {
         "M": 64,
         "N": 6144,
-        "K": 2560,
-        "min_runtime": 0.0768
-    },
-    {
-        "M": 64,
-        "N": 3072,
-        "K": 2560,
-        "min_runtime": 0.0462
-    },
-    {
-        "M": 64,
-        "N": 1536,
-        "K": 2560,
-        "min_runtime": 0.031
-    },
-    {
-        "M": 64,
-        "N": 2560,
         "K": 4096,
-        "min_runtime": 0.0562
-    },
-    {
-        "M": 64,
-        "N": 2560,
-        "K": 2048,
-        "min_runtime": 0.0359
-    },
-    {
-        "M": 64,
-        "N": 2560,
-        "K": 1024,
-        "min_runtime": 0.0256
-    },
-    {
-        "M": 64,
-        "N": 19456,
-        "K": 2560,
-        "min_runtime": 0.2233
-    },
-    {
-        "M": 64,
-        "N": 9728,
-        "K": 2560,
-        "min_runtime": 0.12
-    },
-    {
-        "M": 64,
-        "N": 4864,
-        "K": 2560,
-        "min_runtime": 0.064
-    },
-    {
-        "M": 64,
-        "N": 2560,
-        "K": 9728,
-        "min_runtime": 0.1119
-    },
-    {
-        "M": 64,
-        "N": 2560,
-        "K": 4864,
-        "min_runtime": 0.0652
-    },
-    {
-        "M": 64,
-        "N": 2560,
-        "K": 2432,
-        "min_runtime": 0.0404
-    },
-    {
-        "M": 64,
-        "N": 4096,
-        "K": 2048,
-        "min_runtime": 0.0425
-    },
-    {
-        "M": 64,
-        "N": 2048,
-        "K": 2048,
-        "min_runtime": 0.0284
-    },
-    {
-        "M": 64,
-        "N": 1024,
-        "K": 2048,
-        "min_runtime": 0.0241
-    },
-    {
-        "M": 64,
-        "N": 2048,
-        "K": 1024,
-        "min_runtime": 0.0205
-    },
-    {
-        "M": 64,
-        "N": 2048,
-        "K": 512,
-        "min_runtime": 0.0162
-    },
-    {
-        "M": 64,
-        "N": 12288,
-        "K": 2048,
-        "min_runtime": 0.1199
-    },
-    {
-        "M": 64,
-        "N": 6144,
-        "K": 2048,
-        "min_runtime": 0.0648
-    },
-    {
-        "M": 64,
-        "N": 3072,
-        "K": 2048,
-        "min_runtime": 0.0402
-    },
-    {
-        "M": 64,
-        "N": 2048,
-        "K": 6144,
-        "min_runtime": 0.0603
-    },
-    {
-        "M": 64,
-        "N": 2048,
-        "K": 3072,
-        "min_runtime": 0.0366
-    },
-    {
-        "M": 64,
-        "N": 2048,
-        "K": 1536,
-        "min_runtime": 0.0246
-    },
-    {
-        "M": 64,
-        "N": 6144,
-        "K": 4096,
-        "min_runtime": 0.1127
+        "output_dtype": "fp16",
+        "min_runtime": 0.1106
     },
     {
         "M": 64,
         "N": 3072,
         "K": 4096,
-        "min_runtime": 0.064
+        "output_dtype": "fp16",
+        "min_runtime": 0.0638
     },
     {
         "M": 64,
         "N": 1536,
         "K": 4096,
-        "min_runtime": 0.0404
+        "output_dtype": "fp16",
+        "min_runtime": 0.041
     },
     {
         "M": 64,
         "N": 4096,
         "K": 4096,
-        "min_runtime": 0.0742
+        "output_dtype": "fp16",
+        "min_runtime": 0.0728
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.043
     },
     {
         "M": 64,
         "N": 4096,
         "K": 1024,
-        "min_runtime": 0.0267
+        "output_dtype": "fp16",
+        "min_runtime": 0.0263
     },
     {
         "M": 64,
         "N": 24576,
         "K": 4096,
-        "min_runtime": 0.4212
+        "output_dtype": "fp16",
+        "min_runtime": 0.417
     },
     {
         "M": 64,
         "N": 12288,
         "K": 4096,
-        "min_runtime": 0.2148
+        "output_dtype": "fp16",
+        "min_runtime": 0.2109
     },
     {
         "M": 64,
         "N": 4096,
         "K": 12288,
-        "min_runtime": 0.1997
+        "output_dtype": "fp16",
+        "min_runtime": 0.1989
     },
     {
         "M": 64,
         "N": 4096,
         "K": 6144,
-        "min_runtime": 0.1061
+        "output_dtype": "fp16",
+        "min_runtime": 0.1053
     },
     {
         "M": 64,
         "N": 4096,
         "K": 3072,
-        "min_runtime": 0.0582
+        "output_dtype": "fp16",
+        "min_runtime": 0.0574
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 4096,
+        "output_dtype": "fp16",
+        "min_runtime": 0.2078
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 4096,
+        "output_dtype": "fp16",
+        "min_runtime": 0.1088
+    },
+    {
+        "M": 128,
+        "N": 1536,
+        "K": 4096,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0628
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 4096,
+        "output_dtype": "fp16",
+        "min_runtime": 0.1408
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0785
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 1024,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0488
+    },
+    {
+        "M": 128,
+        "N": 24576,
+        "K": 4096,
+        "output_dtype": "fp16",
+        "min_runtime": 0.8126
+    },
+    {
+        "M": 128,
+        "N": 12288,
+        "K": 4096,
+        "output_dtype": "fp16",
+        "min_runtime": 0.4077
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 12288,
+        "output_dtype": "fp16",
+        "min_runtime": 0.3864
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 6144,
+        "output_dtype": "fp16",
+        "min_runtime": 0.2025
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 3072,
+        "output_dtype": "fp16",
+        "min_runtime": 0.111
+    },
+    {
+        "M": 64,
+        "N": 6144,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0754
+    },
+    {
+        "M": 64,
+        "N": 3072,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0455
+    },
+    {
+        "M": 64,
+        "N": 1536,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0307
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 4096,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0555
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0353
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 1024,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0254
+    },
+    {
+        "M": 64,
+        "N": 19456,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.2218
+    },
+    {
+        "M": 64,
+        "N": 9728,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.1177
+    },
+    {
+        "M": 64,
+        "N": 4864,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0631
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 9728,
+        "output_dtype": "fp16",
+        "min_runtime": 0.1103
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 4864,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0644
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 2432,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0411
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.1394
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0747
+    },
+    {
+        "M": 128,
+        "N": 1536,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0453
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 4096,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0933
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.056
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 1024,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0351
+    },
+    {
+        "M": 128,
+        "N": 19456,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.427
+    },
+    {
+        "M": 128,
+        "N": 9728,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.2203
+    },
+    {
+        "M": 128,
+        "N": 4864,
+        "K": 2560,
+        "output_dtype": "fp16",
+        "min_runtime": 0.1177
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 9728,
+        "output_dtype": "fp16",
+        "min_runtime": 0.2019
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 4864,
+        "output_dtype": "fp16",
+        "min_runtime": 0.1089
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 2432,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0672
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0281
+    },
+    {
+        "M": 64,
+        "N": 1024,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0238
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 1024,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0199
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 512,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0171
+    },
+    {
+        "M": 64,
+        "N": 12288,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.1173
+    },
+    {
+        "M": 64,
+        "N": 6144,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0639
+    },
+    {
+        "M": 64,
+        "N": 3072,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0396
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 6144,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0594
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 3072,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0362
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 1536,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0243
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0416
+    },
+    {
+        "M": 128,
+        "N": 1024,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0293
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 1024,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0262
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 512,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0181
+    },
+    {
+        "M": 128,
+        "N": 12288,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.2263
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.1167
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 2048,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0642
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 6144,
+        "output_dtype": "fp16",
+        "min_runtime": 0.1041
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 3072,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0574
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 1536,
+        "output_dtype": "fp16",
+        "min_runtime": 0.0348
     }
 ]
