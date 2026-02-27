@@ -2,9 +2,9 @@ import argparse
 import base64
 import json
 import os
-import shlex
-import subprocess
 from typing import Optional
+
+from LLM.LLMCompassPlus.test.utils import run_remote_command
 
 from test.layernorm.utils import get_model_shape
 
@@ -15,13 +15,13 @@ def measure_power_remote(
     M: int,
     N: int,
     device: str,
+    power_log: str,
     total_duration: int = 10,
     valid_duration: int = 1,
     host: str = "202.120.39.3",
     port: int = 9129,
     user: Optional[str] = "sly",
     python_path: str = "/home/sly/anaconda3/envs/llmcompass/bin/python",  # for marlin
-    power_log: str = f"{file_dir}/temp/power_log.json",
     ignore_cache: bool = False,
 ) -> float:
     existing_data = []
@@ -42,7 +42,7 @@ def measure_power_remote(
                 and record.get("N") == N
                 and record.get("device") == device
             ):
-                return record["power_VDD_GPU_SOC"], record["power_VDDQ_VDD2_1V8AO"]
+                return record["power_GPU"], record["power_MEM"]
 
     print(
         f"Measuring power for {total_duration}s and take {valid_duration}s in the middle..."
@@ -57,13 +57,15 @@ def measure_power_remote(
         f"--duration={total_duration * 1000}",
     ]
 
-    full_cmd = " ".join(shlex.quote(arg) for arg in python_cmd)
+    full_cmd = " ".join(python_cmd)
 
-    remote_script_path = os.path.join(os.path.dirname(file_dir), "power_monitor.py")
-    if not os.path.exists(remote_script_path):
-        raise FileNotFoundError(f"Cannot find remote script at {remote_script_path}")
+    power_monitor_path = os.path.abspath(
+        os.path.join(file_dir, "..", "power_monitor.py")
+    )
+    if not os.path.exists(power_monitor_path):
+        raise FileNotFoundError(f"Cannot find power_monitor at {power_monitor_path}")
 
-    with open(remote_script_path, "r", encoding="utf-8") as f:
+    with open(power_monitor_path, "r", encoding="utf-8") as f:
         script_body = f.read()
 
     variables_header = f"""
@@ -73,37 +75,14 @@ VALID_DURATION = {valid_duration}
 DEVICE = "{device}"
 """
     remote_script_source = variables_header + "\n" + script_body
-
     b64_script = base64.b64encode(remote_script_source.encode("utf-8")).decode("utf-8")
-
-    port = 9129 if device == "Orin" else 9147
-    target = f"{user}@{host}" if user is not None else host
-    ssh_cmd = [
-        "ssh",
-        "-p",
-        str(port),
-        target,
-        f"echo {b64_script} | base64 -d | python3",
-    ]
-
-    proc = subprocess.run(
-        ssh_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        check=False,
-    )
-
-    output = proc.stdout.strip()
-
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"Power measurement failed (code {proc.returncode}).\nOutput:\n{output}"
-        )
+    shell_pipeline = f"echo {b64_script} | base64 -d | python3"
+    remote_cmd = ["bash", "-c", shell_pipeline]
+    output = run_remote_command(user, host, port, remote_cmd).strip()
 
     try:
-        avg_power_VDD_GPU_SOC = float(output.splitlines()[-2])
-        avg_power_VDDQ_VDD2_1V8AO = float(output.splitlines()[-1])
+        avg_power_GPU = float(output.splitlines()[-2])
+        avg_power_MEM = float(output.splitlines()[-1])
     except ValueError:
         raise RuntimeError(f"Could not parse power output. Received:\n{output}")
 
@@ -112,8 +91,8 @@ DEVICE = "{device}"
             "M": M,
             "N": N,
             "device": device,
-            "power_VDD_GPU_SOC": avg_power_VDD_GPU_SOC,
-            "power_VDDQ_VDD2_1V8AO": avg_power_VDDQ_VDD2_1V8AO,
+            "power_GPU": avg_power_GPU,
+            "power_MEM": avg_power_MEM,
         }
 
         existing_data.append(new_record)
@@ -121,7 +100,7 @@ DEVICE = "{device}"
         with open(power_log, "w") as f:
             json.dump(existing_data, f, indent=4, ensure_ascii=False)
 
-    return avg_power_VDD_GPU_SOC, avg_power_VDDQ_VDD2_1V8AO
+    return avg_power_GPU, avg_power_MEM
 
 
 if __name__ == "__main__":
@@ -148,7 +127,7 @@ if __name__ == "__main__":
         test_problems.append((M, N))
 
     for problem in test_problems:
-        p1, p2 = measure_power_remote(*problem, args.device)
-        print(
-            f"M N {problem}, Power VDD_GPU_SOC {p1:.2f}W Power VDDQ_VDD2_1V8AO {p2:.2f}W"
+        p1, p2 = measure_power_remote(
+            *problem, args.device, f"{file_dir}/temp/power_log.{args.device}.json"
         )
+        print(f"M N {problem}, Power GPU {p1:.2f}W Power MEM {p2:.2f}W")

@@ -23,10 +23,11 @@ if __name__ == "__main__":
         args.k,
         args.op_name,
         args.precision,
-        device=args.device,
+        args.device,
+        f"{file_dir}/temp/power_log.{args.device}.json",
         ignore_cache=True,
         total_duration=10,
     )
     print(
-        f"M N K {args.m} {args.n} {args.k} precision {args.precision} Power VDD_GPU_SOC {p1:.2f}W Power VDDQ_VDD2_1V8AO {p2:.2f}W"
+        f"M N K {args.m} {args.n} {args.k} precision {args.precision} Power GPU {p1:.2f}W Power Mem {p2:.2f}W"
     )

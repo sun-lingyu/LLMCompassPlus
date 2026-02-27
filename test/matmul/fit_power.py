@@ -202,12 +202,12 @@ def load_or_generate_data(args):
 
         X_features_raw.append([model.fma_count, model.mem_access_size])
         X_features.append(features)
-        y_soc_list.append(record["power_VDD_GPU_SOC"])
-        y_mem_list.append(record["power_VDDQ_VDD2_1V8AO"])
+        y_soc_list.append(record["power_GPU"])
+        y_mem_list.append(record["power_MEM"])
         M_list.append(M)
 
         print(
-            f"M={M}, N={N}, K={K} | Latency={latency_ms:.2f}ms | SOC={record['power_VDD_GPU_SOC']}W, MEM={record['power_VDDQ_VDD2_1V8AO']}W"
+            f"M={M}, N={N}, K={K} | Latency={latency_ms:.2f}ms | SOC={record['power_GPU']}W, MEM={record['power_MEM']}W"
         )
         print(f"  Features_raw: FMA={model.fma_count}, DRAM={model.mem_access_size}")
 
@@ -292,13 +292,13 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
         }
 
     res_soc = fit_single_rail(
-        X_raw, y_soc, soc_features_to_use, "Rail 1: VDD_GPU_SOC", enforce_positive=True
+        X_raw, y_soc, soc_features_to_use, "Rail 1: GPU", enforce_positive=True
     )
     res_mem = fit_single_rail(
         X_raw,
         y_mem - intercept_dict[args.device]["mem"],
         mem_features_to_use,
-        "Rail 2: VDDQ_VDD2_1V8AO",
+        "Rail 2: MEM",
         enforce_positive=True,
         fit_intercept=False,
     )

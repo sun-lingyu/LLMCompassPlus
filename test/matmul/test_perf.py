@@ -2,7 +2,6 @@ import argparse
 import json
 import os
 import re
-import shlex
 import shutil
 import subprocess
 import sys
@@ -14,6 +13,7 @@ from hardware_model.device import device_dict
 from software_model.matmul import Matmul
 from software_model.utils import DataType, Tensor, data_type_dict
 from test.matmul.utils import get_model_shape, get_output_dtype
+from test.utils import run_remote_command
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -168,7 +168,7 @@ def cutlass_gemm_min_latency_remote(
             f"--m={M}",
             f"--n={N}",
             f"--k={K}",
-            f"--kernels={kernel_prefix}*",
+            f"--kernels={kernel_prefix}*_tnt*",
         ]
     else:
         assert False, "Precision not supported"
@@ -180,24 +180,7 @@ def cutlass_gemm_min_latency_remote(
     # cutlass_cmd += ["--enable-best-kernel-for-fixed-shape"] # Takes very long time
 
     # 1. Fast scanning, might be inaccurate
-    remote_cmd_str = " ".join(shlex.quote(arg) for arg in cutlass_cmd)
-    print(remote_cmd_str)
-    target = f"{user}@{host}" if user is not None else host
-    ssh_cmd = ["ssh", "-p", str(port), target, remote_cmd_str]
-    proc = subprocess.run(
-        ssh_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        check=False,
-    )
-    output = proc.stdout
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"ssh/cutlass_profiler exited with code {proc.returncode}\n"
-            f"SSH Command: {' '.join(ssh_cmd)}\n"
-            f"Output:\n{output}"
-        )
+    output = run_remote_command(user, host, port, cutlass_cmd)
     results = []
     current_op = None
     for line in output.splitlines():
@@ -232,23 +215,7 @@ def cutlass_gemm_min_latency_remote(
         "--warmup-iterations=100",
         "--enable-best-kernel-for-fixed-shape",  # explore all configurations of the top candidates
     ]
-    remote_cmd_str = " ".join(shlex.quote(arg) for arg in cutlass_cmd)
-    print(remote_cmd_str)
-    ssh_cmd = ["ssh", "-p", str(port), target, remote_cmd_str]
-    proc = subprocess.run(
-        ssh_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        check=False,
-    )
-    output = proc.stdout
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"ssh/cutlass_profiler exited with code {proc.returncode}\n"
-            f"SSH Command: {' '.join(ssh_cmd)}\n"
-            f"Output:\n{output}"
-        )
+    output = run_remote_command(user, host, port, cutlass_cmd)
     best_runtime = None
     results = []
     for line in output.splitlines():
@@ -330,35 +297,7 @@ def marlin_gemm_latency_remote(
         return func._cache_dict[search_key]
 
     python_cmd = [python_path, "test_simple.py", str(M), str(N), str(K)]
-
-    cmd_part = " ".join(shlex.quote(arg) for arg in python_cmd)
-    remote_cmd_str = f"cd {work_dir} && {cmd_part}"
-
-    target = f"{user}@{host}" if user is not None else host
-    ssh_cmd = [
-        "ssh",
-        "-p",
-        str(port),
-        target,
-        remote_cmd_str,
-    ]
-
-    proc = subprocess.run(
-        ssh_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        check=False,
-    )
-
-    output = proc.stdout
-
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"ssh/marlin exited with code {proc.returncode}\n"
-            f"SSH Command: {' '.join(ssh_cmd)}\n"
-            f"Output:\n{output}"
-        )
+    output = run_remote_command(user, host, port, python_cmd, work_dir=work_dir)
 
     pattern = re.compile(r"average latency:\s*([0-9]+(?:\.[0-9]+)?)\s*ms")
     match = pattern.search(output)
@@ -366,7 +305,7 @@ def marlin_gemm_latency_remote(
     if not match:
         raise RuntimeError(
             "No 'average latency: xxx ms' found in remote output.\n"
-            f"SSH Command: {' '.join(ssh_cmd)}\n"
+            f"Python Command: {' '.join(python_cmd)}\n"
             f"Output:\n{output}"
         )
     best_runtime = float(match.group(1))

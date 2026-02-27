@@ -631,6 +631,7 @@ class Matmul(Operator):
                     )
                 )
             waves.append(curr_wave)
+        # print("total waves: ", len(waves))
 
         # ----------------Begin Counting cycles-------------------
         total_cycle_count = 0
@@ -638,7 +639,8 @@ class Matmul(Operator):
             pcb_module.compute_module.l2_latency_cycles
             + pcb_module.io_module.latency_cycles
         )  # Very small value
-        pending_epilogue_cycle = 0  # For blackwell epilogue overlap
+        pending_epilogue_io_cycle = 0  # For Blackwell output write overlap
+        pending_epilogue_compute_cycle = 0  # For Blackwell fp4 conversion overlap
         wait_ready_cycle = 0
         for wave_id, l2_tiles in enumerate(waves):
             # Prologue
@@ -672,10 +674,15 @@ class Matmul(Operator):
                         input_io_cycle_count_tuple = waves[wave_id + 1][
                             0
                         ].get_input_io_cycle_count()
-                    pending_epilogue_cycle -= max(
+                    pending_epilogue_io_cycle -= max(
                         0,
                         l2_tiles[iter].compute_cycle_count
                         - input_io_cycle_count_tuple[0],
+                    )
+                    pending_epilogue_io_cycle -= max(
+                        0,
+                        input_io_cycle_count_tuple[0]
+                        - l2_tiles[iter].compute_cycle_count,
                     )
                 input_io_cycle_count = max(input_io_cycle_count_tuple)
                 wait_ready_cycle = max(
@@ -686,6 +693,12 @@ class Matmul(Operator):
                 # )
 
             # Epilogue
+            total_cycle_count += max(
+                0, pending_epilogue_io_cycle
+            )  # remaining output write cycles of previous wave
+            total_cycle_count += max(
+                0, pending_epilogue_compute_cycle
+            )  # remaining fp4 conversion cycles of previous wave
             if self.device_type == DeviceType.ORIN:
                 offset_for_epilogue = 0.01  # obtained by fitting real machine cycles
                 total_cycle_count += (
@@ -694,12 +707,17 @@ class Matmul(Operator):
                     * offset_for_epilogue
                     * self.activation_dtype.word_size
                 )
-            total_cycle_count += max(
-                0, pending_epilogue_cycle
-            )  # remaining epilogue cycles of previous wave
+            if self.device_type == DeviceType.THOR:
+                if self.output_dtype.name == "fp4":
+                    offset_for_f4_output = (
+                        0.006  # obtained by fitting real machine cycles
+                    )
+                    pending_epilogue_compute_cycle = (
+                        l2_tiles[-1].M * l2_tiles[-1].N * offset_for_f4_output
+                    )
             output_io_cycle_count = max(l2_tiles[-1].get_output_io_cycle_count())
-            pending_epilogue_cycle = output_io_cycle_count
-            # print(f"pending_epilogue_cycle: {pending_epilogue_cycle}")
+            pending_epilogue_io_cycle = output_io_cycle_count
+            # print(f"pending_epilogue_io_cycle: {pending_epilogue_io_cycle}")
             # print(f"total_cycle_count: {total_cycle_count}")
             self.l2_access_size += (
                 sum(

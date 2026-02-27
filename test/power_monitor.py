@@ -13,13 +13,13 @@ assert DEVICE in ("Orin", "Thor")
 if DEVICE == "Orin":
     VOLT_PATH_GPU = "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon1/in1_input"
     CURR_PATH_GPU = "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon1/curr1_input"
-    VOLT_PATH_VDDQ = "/sys/bus/i2c/drivers/ina3221/1-0041/hwmon/hwmon2/in2_input"
-    CURR_PATH_VDDQ = "/sys/bus/i2c/drivers/ina3221/1-0041/hwmon/hwmon2/curr2_input"
+    VOLT_PATH_MEM = "/sys/bus/i2c/drivers/ina3221/1-0041/hwmon/hwmon2/in2_input"
+    CURR_PATH_MEM = "/sys/bus/i2c/drivers/ina3221/1-0041/hwmon/hwmon2/curr2_input"
 elif DEVICE == "Thor":
     VOLT_PATH_GPU = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/in1_input"
     CURR_PATH_GPU = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/curr1_input"
-    VOLT_PATH_VDDQ = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/in3_input"
-    CURR_PATH_VDDQ = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/curr3_input"
+    VOLT_PATH_MEM = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/in3_input"
+    CURR_PATH_MEM = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/curr3_input"
 else:
     assert False, f"illegal {DEVICE}"
 
@@ -35,19 +35,17 @@ try:
         try:
             now = time.time()
             with open(VOLT_PATH_GPU, "r") as fv:
-                mV_VDD_GPU_SOC = int(fv.read().strip())
+                mV_GPU = int(fv.read().strip())
             with open(CURR_PATH_GPU, "r") as fc:
-                mA_VDD_GPU_SOC = int(fc.read().strip())
-            with open(VOLT_PATH_VDDQ, "r") as fv:
-                mV_VDDQ_VDD2_1V8AO = int(fv.read().strip())
-            with open(CURR_PATH_VDDQ, "r") as fc:
-                mA_VDDQ_VDD2_1V8AO = int(fc.read().strip())
+                mA_GPU = int(fc.read().strip())
+            with open(VOLT_PATH_MEM, "r") as fv:
+                mV_MEM = int(fv.read().strip())
+            with open(CURR_PATH_MEM, "r") as fc:
+                mA_MEM = int(fc.read().strip())
 
-            power_VDD_GPU_SOC = (mV_VDD_GPU_SOC / 1000.0) * (mA_VDD_GPU_SOC / 1000.0)
-            power_VDDQ_VDD2_1V8AO = (mV_VDDQ_VDD2_1V8AO / 1000.0) * (
-                mA_VDDQ_VDD2_1V8AO / 1000.0
-            )
-            samples.append((now, power_VDD_GPU_SOC, power_VDDQ_VDD2_1V8AO))
+            power_GPU = (mV_GPU / 1000.0) * (mA_GPU / 1000.0)
+            power_MEM = (mV_MEM / 1000.0) * (mA_MEM / 1000.0)
+            samples.append((now, power_GPU, power_MEM))
         except Exception:
             pass  # ignore temporary read errors
 
@@ -73,10 +71,10 @@ valid_samples = [
 ]
 
 if valid_samples:
-    avg_power_VDD_GPU_SOC = sum([p[0] for p in valid_samples]) / len(valid_samples)
-    avg_power_VDDQ_VDD2_1V8AO = sum([p[1] for p in valid_samples]) / len(valid_samples)
-    print(avg_power_VDD_GPU_SOC)
-    print(avg_power_VDDQ_VDD2_1V8AO)
+    avg_power_GPU = sum([p[0] for p in valid_samples]) / len(valid_samples)
+    avg_power_MEM = sum([p[1] for p in valid_samples]) / len(valid_samples)
+    print(avg_power_GPU)
+    print(avg_power_MEM)
 else:
     print(0.0)
     print(0.0)

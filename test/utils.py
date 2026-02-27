@@ -1,3 +1,6 @@
+import shlex
+import subprocess
+
 test_model_dict = {
     "InternVision": {
         "head_dim": 64,
@@ -40,3 +43,26 @@ test_model_dict = {
         "hidden_act": "silu",
     },
 }
+
+
+def run_remote_command(user, host, port, remote_cmd, work_dir=None):
+    remote_cmd_str = " ".join(shlex.quote(arg) for arg in remote_cmd)
+    if work_dir is not None:
+        remote_cmd_str = f"cd {work_dir} && {remote_cmd_str}"
+    target = f"{user}@{host}" if user is not None else host
+    ssh_cmd = ["ssh", "-p", str(port), target, remote_cmd_str]
+    proc = subprocess.run(
+        ssh_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    output = proc.stdout
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"ssh/remote_cmd exited with code {proc.returncode}\n"
+            f"SSH Command: {' '.join(ssh_cmd)}\n"
+            f"Output:\n{output}"
+        )
+    return output
