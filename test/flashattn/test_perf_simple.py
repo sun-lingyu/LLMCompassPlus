@@ -64,8 +64,7 @@ if __name__ == "__main__":
     )
 
     latency = (
-        model.compile_and_simulate(pcb, drain_l2=(args.num_splits == 1))
-        + pcb.compute_module.launch_latency.flashattn
+        model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency.flashattn
     )
     roofline_latency = model.roofline_model(pcb)
 

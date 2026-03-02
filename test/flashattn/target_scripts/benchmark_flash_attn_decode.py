@@ -2,6 +2,7 @@ import argparse
 import random
 import sys
 import time
+from math import inf
 
 import torch
 from flash_attn import flash_attn_with_kvcache as flash_attn_with_kvcache_fa2
@@ -195,6 +196,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_splits", type=int, default=0, help="Split-KV factor. 0=Auto"
     )
+    parser.add_argument("--fa2_only", action="store_true")
+    parser.add_argument("--fa3_only", action="store_true")
     parser.add_argument(
         "--duration", type=float, default=1000.0, help="Benchmark duration in ms"
     )
@@ -205,31 +208,37 @@ if __name__ == "__main__":
         print("Error: HeadDim > 256 is not supported by FlashAttention.")
         sys.exit(1)
 
-    avg_latency_ms_fa2 = benchmark_flash_attn_decode_append(
-        flash_attn_with_kvcache_fa2,
-        args.batch,
-        args.seqlen_kv,
-        args.seqlen_q,
-        args.heads,
-        args.kv_heads,
-        args.dim,
-        pack_gqa=args.pack_gqa,
-        num_splits=args.num_splits,
-        duration=args.duration,
-    )
+    if not args.fa3_only:
+        avg_latency_ms_fa2 = benchmark_flash_attn_decode_append(
+            flash_attn_with_kvcache_fa2,
+            args.batch,
+            args.seqlen_kv,
+            args.seqlen_q,
+            args.heads,
+            args.kv_heads,
+            args.dim,
+            pack_gqa=args.pack_gqa,
+            num_splits=args.num_splits,
+            duration=args.duration,
+        )
+    else:
+        avg_latency_ms_fa2 = inf
 
-    avg_latency_ms_fa3 = benchmark_flash_attn_decode_append(
-        flash_attn_with_kvcache_fa3,
-        args.batch,
-        args.seqlen_kv,
-        args.seqlen_q,
-        args.heads,
-        args.kv_heads,
-        args.dim,
-        pack_gqa=args.pack_gqa,
-        num_splits=args.num_splits,
-        duration=args.duration,
-    )
+    if not args.fa2_only:
+        avg_latency_ms_fa3 = benchmark_flash_attn_decode_append(
+            flash_attn_with_kvcache_fa3,
+            args.batch,
+            args.seqlen_kv,
+            args.seqlen_q,
+            args.heads,
+            args.kv_heads,
+            args.dim,
+            pack_gqa=args.pack_gqa,
+            num_splits=args.num_splits,
+            duration=args.duration,
+        )
+    else:
+        avg_latency_ms_fa3 = inf
 
     print(f"FA2: {avg_latency_ms_fa2}ms")
     print(f"FA3: {avg_latency_ms_fa3}ms")

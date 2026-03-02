@@ -289,7 +289,7 @@ class FlashAttn(Operator):
             # Tile size for Ampere sm80/87
             # See https://github.com/Dao-AILab/flash-attention.git flash-attention/hopper/tile_size.h tile_size_fwd_sm8x() for reference
 
-            cta_seq_len_q = 128 if self.is_prefill else 64
+            cta_seq_len_q = 128
 
             # In our targeted case:
             # is_local == 0, paged_kv == 0, sm86_or_89 == 0
@@ -830,7 +830,7 @@ class FlashAttn(Operator):
             # return max(
             #     gemm_cycle_count * 2, sfu_cycle_count, alu_cycle_count
             # )  # FA3 GEMM-softmax overlap
-            offset_for_compute_utilization = 0.83  # offset for imperfect compute resource utilization, obtained by fitting real machine
+            offset_for_compute_utilization = 0.9  # offset for imperfect compute resource utilization, obtained by fitting real machine
 
             return (
                 gemm_cycle_count * 2 + sfu_cycle_count
