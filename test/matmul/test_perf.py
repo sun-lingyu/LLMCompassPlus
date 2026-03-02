@@ -71,7 +71,7 @@ def cutlass_gemm_min_latency_remote(
     K: int,
     precision: str,
     output_dtype: DataType,
-    cutlass_perf_log,
+    cutlass_perf_log: str,
     port: int,
     host: str = "202.120.39.3",
     user: Optional[str] = "sly",

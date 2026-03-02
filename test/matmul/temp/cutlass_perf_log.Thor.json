@@ -2221,5 +2221,3245 @@
         "output_dtype": "fp16",
         "min_runtime": 0.050161,
         "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_256x256x128_2x1x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0700638,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 256,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0611947,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x64x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0571785,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 512,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0394413,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 512,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0248317,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0494255,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 256,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0431861,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x64x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0390352,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x256x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0310364,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0211756,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.251858,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_2x1x1_0_tnt_align32_stream_k_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 256,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.233701,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x64x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 128,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.225722,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 512,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.127918,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x192x256_4x1x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 512,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0637865,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x192x256_4x1x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.155128,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 256,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.115955,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x64x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.107532,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x64x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0683576,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0408831,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0853931,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x256x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 384,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0659639,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 192,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0592457,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 768,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0467963,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0296186,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0575852,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 384,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0468568,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 192,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0418801,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0374343,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0252452,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.304888,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 384,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.259225,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 192,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.231242,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x64x256_2x1x1_0_tnt_align32_o_vs16_1sm_epiVs32t"
+    },
+    {
+        "M": 768,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.143935,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 768,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0731318,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.151239,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 384,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.126289,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 192,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.112129,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0782626,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0476444,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0967372,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0608659,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0342326,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0655923,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0423816,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0299,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.363502,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 1024,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.189935,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1024,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0947757,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.217002,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0932526,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0556851,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.121388,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 640,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0850716,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 320,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0637728,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0638451,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0379302,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0792452,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 640,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0547947,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 320,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0454497,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0493732,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0345036,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.468799,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 640,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.283932,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x256x256_1x1x1_0_tnt_align32_o_vs16_1sm_epiVs16t"
+    },
+    {
+        "M": 320,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.246026,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_0x0x1_0_tnt_align32_stream_k_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 1280,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.240583,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1280,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.113665,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.268571,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 640,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.149812,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 320,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.122226,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.11547,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0755762,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.140204,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0803286,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0448023,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0946987,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0529306,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0390079,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.546555,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1536,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.277999,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x192x256_0x0x1_0_tnt_align32_stream_k_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 1536,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.135622,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.285759,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.148863,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0738372,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0506491,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 256,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0421436,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0385707,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x64x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 512,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0292545,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 512,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0185118,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0348709,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 256,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0287721,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0267417,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x192x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0221911,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0146719,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.136214,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm_epiVs32t"
+    },
+    {
+        "M": 256,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.116308,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x64x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 128,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.106077,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x64x256_1x1x1_0_tnt_align32_o_vs16_1sm_epiVs32t"
+    },
+    {
+        "M": 512,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0667042,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 512,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0370039,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0744071,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 256,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0639989,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x64x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0608528,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x64x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.040746,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0246969,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0597437,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 384,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0472402,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 192,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0403715,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 768,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0343732,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0225397,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0403464,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 384,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0326288,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 192,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0282971,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0261097,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0182094,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.153496,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 384,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.12776,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x128x256_1x1x1_0_tnt_align32_o_vs16_1sm_epiVs32t"
+    },
+    {
+        "M": 192,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.111621,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x64x256_0x0x1_0_tnt_align32_stream_k_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 768,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0759553,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 768,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0428471,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0857417,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 384,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0701728,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 192,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0626573,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x64x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0477808,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0296833,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0678441,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0397228,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.025692,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0462313,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0303696,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0211412,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x192x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 1024,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.193249,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_stream_k_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1024,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0944616,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 1024,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.04929,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0988914,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0555322,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0340506,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0810096,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 640,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0557415,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 320,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0452885,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0462265,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0286197,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0526699,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 640,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0384208,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 320,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0315418,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0352351,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0240725,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x192x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 1280,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.236876,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 640,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.147358,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 320,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.12385,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x192x256_4x1x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1280,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.117443,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1280,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0607727,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_2x1x1_0_tnt_align32_stream_k_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.12276,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 640,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.104681,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 320,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0684808,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0628458,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0399866,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.10749,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0506676,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.032729,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0610422,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0385338,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0271758,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x192x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 1536,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.270765,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1536,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.14015,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1536,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0699361,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.149142,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0915059,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0444991,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 256,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0258203,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0240671,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0195636,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0133839,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 256,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0164045,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x256x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0144982,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x192x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0141223,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.010426,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x64x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 512,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0682976,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 256,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0601822,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x64x256_2x1x1_0_tnt_align32_o_vs16_1sm_epiVs16t"
+    },
+    {
+        "M": 128,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0562292,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm_epiVs16t"
+    },
+    {
+        "M": 512,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0378133,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 512,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0226079,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0402915,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 256,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0338418,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0311368,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0248833,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.016855,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 384,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0288042,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 192,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0248576,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0223437,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0157115,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 384,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0183235,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 192,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0154093,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0155968,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0124325,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 768,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0778148,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_2x1x1_0_tnt_align32_stream_k_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 384,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0647316,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 192,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0584763,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 768,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0433561,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 768,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0264073,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.048763,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 384,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0380127,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 192,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0333739,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x64x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0300923,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0187737,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.025606,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0178303,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0178479,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0146644,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 1024,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0957143,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1024,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0494488,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 1024,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0304857,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0554172,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0342472,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0225857,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 640,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.034905,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 320,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0282571,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0297974,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.020162,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 640,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0220335,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x256x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 320,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0177967,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_4x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0200125,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0171491,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 1280,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.119383,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 640,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0749195,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_stream_k_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 320,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0633331,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x192x256_2x1x1_0_tnt_align32_o_vs16_1sm_epiVs32t"
+    },
+    {
+        "M": 1280,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0602735,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1280,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0340685,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0617907,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 640,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0465002,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 320,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0360703,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0381797,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.025128,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0331705,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0227803,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0229055,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0192912,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.143331,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 1536,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0720943,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 1536,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0387915,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.071763,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0440847,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_0x0x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.027529,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x192x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 576,
+        "N": 3072,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0265894,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_1x2x1_0_tnt_align16_1sm"
+    },
+    {
+        "M": 288,
+        "N": 3072,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0217985,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_64x128x128_1x2x1_0_tnt_align16_1sm"
+    },
+    {
+        "M": 144,
+        "N": 3072,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0194436,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 576,
+        "N": 1536,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0170814,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_1x2x1_0_tnt_align16_1sm"
+    },
+    {
+        "M": 576,
+        "N": 768,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0124799,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x256x128_2x1x1_0_tnt_align16_1sm"
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0153319,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x256x128_2x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 288,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0123847,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_256x128x128_4x1x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 144,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0108993,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x1x1_0_tnt_align16_1sm"
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 512,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0123477,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x2x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 256,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0105685,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x2x1_0_tnt_align16_stream_k_2sm_epi_tma"
+    },
+    {
+        "M": 576,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0330384,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_256x128x128_2x2x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 288,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0271344,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 144,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0252804,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 576,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.02044,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x256x128_2x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0154596,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0358298,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x256x128_1x2x1_0_tnt_align16_1sm"
+    },
+    {
+        "M": 288,
+        "N": 1024,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0282551,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_256x128x128_2x2x1_0_tnn_align16_2sm"
+    },
+    {
+        "M": 144,
+        "N": 1024,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0245097,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x2x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0228202,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_0x0x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 1024,
+        "N": 3072,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.03377,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_256x256x128_0x0x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 3072,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0254909,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x256x128_4x1x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 256,
+        "N": 3072,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0211528,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x256x128_2x2x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 1024,
+        "N": 1536,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0218441,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_256x128x128_2x2x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 768,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0157245,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x256x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0202105,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_256x256x128_4x1x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0145892,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_256x128x128_4x1x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 256,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0116886,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "K": 512,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0157438,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x256x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "K": 256,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0139675,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_1x4x1_0_tnt_align16_1sm"
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0415347,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_256x128x128_0x0x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0314033,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x2x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 256,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0259285,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x256x128_2x2x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.025944,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_256x128x128_2x2x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0175793,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_256x128x128_2x2x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0480038,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_256x256x128_4x1x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 512,
+        "N": 1024,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0335964,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_256x128x128_2x2x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 256,
+        "N": 1024,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0273777,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x1x1_0_tnt_align16_stream_k_2sm_epi_tma"
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0300653,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_256x256x128_4x1x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 64,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.101962,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0539996,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.030271,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0712074,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0393031,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0232543,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_64x128x128_1x2x1_0_tnn_align16_1sm"
+    },
+    {
+        "M": 64,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.389669,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.1967,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.203318,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.103501,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0553576,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.055732,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_256x128x128_2x4x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 128,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0313464,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0418825,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.025513,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.201836,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.107545,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0583015,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0662602,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0362904,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0210474,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0467959,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0281031,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0175498,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.197022,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.101494,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0539899,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.107317,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0588929,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0323851,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_256x128x128_4x1x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0382632,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_256x128x128_2x4x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 128,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0222245,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0291512,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_256x128x128_2x2x1_0_tnn_align16_2sm"
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0193334,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.10489,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_4x1x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0560337,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_4x1x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0612944,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0331828,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0382626,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0219812,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x2x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0135051,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_64x128x128_1x2x1_0_tnt_align16_1sm"
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0226724,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x2x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0148044,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_256x128x128_2x4x1_0_tnt_align16_2sm"
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0108584,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x2x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.1025,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0540696,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0300737,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x2x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0564584,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x256x128_2x4x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0308319,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0187033,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnn_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0230689,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x2x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0145275,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_4x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0153007,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x1x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0113707,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0565181,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0313273,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_e4m3_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0325431,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x4x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "min_runtime": 0.0199638,
+        "best_operation": "cutlass3x_sm100_tensorop_gemm_f8_f8_f32_void_bf16_128x128x128_2x2x1_0_tnt_align16_2sm_epi_tma"
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.03213,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 128,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0190508,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0144102,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.104917,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_0x0x1_0_tnt_align32_o_vs16_2sm_epiVs32t"
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0555062,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm_epiVs32t"
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0570389,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x256x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0318894,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x64x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0221744,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x64x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0139488,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0169042,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0103533,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x64x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0556301,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_256x128x256_2x1x1_0_tnt_align32_o_vs16_2sm_epiVs16t"
+    },
+    {
+        "M": 128,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0310071,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x64x256_1x1x1_0_tnt_align32_o_vs16_1sm_epiVs16t"
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0327008,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x64x256_0x0x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.018933,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x64x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.00977485,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x64x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0105368,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_256x256x256_2x1x1_0_tnt_align32_o_vs16_2sm"
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.00822151,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0315846,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x128x256_2x1x1_0_tnt_align32_o_vs16_1sm_epiVs16t"
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "min_runtime": 0.0185278,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_ue8m0xe2m1_128x128x256_1x1x1_0_tnt_align32_o_vs16_1sm_epiVs16t"
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0187411,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x192x256_1x1x1_0_tnt_align32_o_vs16_1sm"
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "min_runtime": 0.0115826,
+        "best_operation": "cutlass3x_sm100_bstensorop_gemm_ue4m3xe2m1_ue4m3xe2m1_f32_void_e5m2_128x128x256_1x1x1_0_tnt_align32_o_vs16_1sm"
     }
 ]

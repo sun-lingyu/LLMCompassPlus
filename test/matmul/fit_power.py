@@ -11,7 +11,6 @@ from sklearn.preprocessing import StandardScaler
 from hardware_model.device import device_dict
 from software_model.matmul import Matmul
 from software_model.utils import Tensor, data_type_dict
-from test.matmul.utils import get_model_shape, get_output_dtype
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE_TEMPLATE = f"{file_dir}/temp/power_features_cache"
@@ -93,7 +92,7 @@ def load_or_generate_data(args):
     pcb = device_dict[args.device]
     existing_data = []
 
-    json_path = f"{file_dir}/temp/power_log.json"
+    json_path = f"{file_dir}/temp/power_log.{args.device}.json"
     if os.path.exists(json_path):
         with open(json_path, "r") as f:
             content = f.read().strip()
@@ -108,39 +107,14 @@ def load_or_generate_data(args):
     y_mem_list = []
     M_list = []
 
-    shape_to_op = {}
-    for model in ["InternVision", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"]:
-        K_shapes, N_shapes = get_model_shape(model)
-        for op_name in K_shapes.keys():
-            k = K_shapes[op_name]
-            n = N_shapes[op_name]
-            shape_to_op[(1024, n, k)] = (op_name, model)
-            shape_to_op[(512, n, k)] = (op_name, model)
-            shape_to_op[(256, n, k)] = (op_name, model)
-            shape_to_op[(128, n, k)] = (op_name, model)
-            shape_to_op[(64, n, k)] = (op_name, model)
-            shape_to_op[(32, n, k)] = (op_name, model)
-            if op_name == "qkv_proj" or op_name == "up_proj":
-                shape_to_op[(1024, n // 2, k)] = (op_name, model)
-                shape_to_op[(1024, n // 4, k)] = (op_name, model)
-                shape_to_op[(128, n // 2, k)] = (op_name, model)
-                shape_to_op[(128, n // 4, k)] = (op_name, model)
-                shape_to_op[(64, n // 2, k)] = (op_name, model)
-                shape_to_op[(64, n // 4, k)] = (op_name, model)
-                shape_to_op[(32, n // 2, k)] = (op_name, model)
-                shape_to_op[(32, n // 4, k)] = (op_name, model)
-            else:  # o_proj or down_proj
-                shape_to_op[(1024, n, k // 2)] = (op_name, model)
-                shape_to_op[(1024, n, k // 4)] = (op_name, model)
-                shape_to_op[(128, n, k // 2)] = (op_name, model)
-                shape_to_op[(128, n, k // 4)] = (op_name, model)
-                shape_to_op[(64, n, k // 2)] = (op_name, model)
-                shape_to_op[(64, n, k // 4)] = (op_name, model)
-                shape_to_op[(32, n, k // 2)] = (op_name, model)
-                shape_to_op[(32, n, k // 4)] = (op_name, model)
-
     for record in existing_data:
-        M, N, K, precision = record["M"], record["N"], record["K"], record["precision"]
+        M, N, K, precision, output_dtype_name = (
+            record["M"],
+            record["N"],
+            record["K"],
+            record["precision"],
+            record["output_dtype"],
+        )
         if precision == "fp16":
             act_dt, wei_dt, int_dt = (
                 data_type_dict["fp16"],
@@ -173,10 +147,7 @@ def load_or_generate_data(args):
             )
         else:
             continue
-        op_name, model = shape_to_op[(M, N, K)]
-        if model == "Qwen3_0_6B":
-            continue
-        o_dt = get_output_dtype(act_dt, op_name, True)
+        o_dt = data_type_dict[output_dtype_name]
 
         if precision != args.precision:
             continue

@@ -121,49 +121,10 @@ class L2CacheMatmul(L2Cache):
             )
             else None
         )
-        assert height and width and tile_size
-        assert (
-            coord_tuple[0] % L2Cache.TILE_LENGTH == 0
-            and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
-        )
-        assert (
-            scope_tuple[0] % L2Cache.TILE_LENGTH == 0
-            and scope_tuple[1] % L2Cache.TILE_LENGTH == 0
-        )
-        assert (
-            coord_tuple[0] >= 0
-            and coord_tuple[0] + scope_tuple[0] <= height * L2Cache.TILE_LENGTH
-        ), (
-            f"coord_tuple[0]: {coord_tuple[0]}, scope_tuple[0]: {scope_tuple[0]}, height * L2Cache.TILE_LENGTH: {height * L2Cache.TILE_LENGTH}"
-        )
-        assert (
-            coord_tuple[1] >= 0
-            and coord_tuple[1] + scope_tuple[1] <= width * L2Cache.TILE_LENGTH
-        ), (
-            f"coord_tuple[1]: {coord_tuple[1]}, scope_tuple[1]: {scope_tuple[1]}, width * L2Cache.TILE_LENGTH: {width * L2Cache.TILE_LENGTH}"
-        )
 
-        mem_access_size = 0
-        for i in range(
-            coord_tuple[0], coord_tuple[0] + scope_tuple[0], L2Cache.TILE_LENGTH
-        ):
-            for j in range(
-                coord_tuple[1], coord_tuple[1] + scope_tuple[1], L2Cache.TILE_LENGTH
-            ):
-                tile = self.Tile(access_type, (i, j))
-                if tile in self.resident_tiles:  # HIT
-                    # assert access_type not in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE)
-                    self.resident_tiles.move_to_end(tile)  # update LRU
-                else:
-                    while self.occupied_size + tile_size > self.l2_size:  # EVICT
-                        self.evict_oldest_tile()
-                    mem_access_size += (
-                        tile_size  # read activation & weight, or *write through* output
-                    )
-                    self.occupied_size += tile_size
-                    self.resident_tiles[self.Tile(access_type, (i, j))] = None
-        self.total_mem_access_size += mem_access_size
-        return mem_access_size
+        return self._access(
+            coord_tuple, scope_tuple, access_type, height, width, tile_size
+        )
 
     def evict_oldest_tile(self):
         assert self.resident_tiles
@@ -355,7 +316,7 @@ class Matmul(Operator):
                     for swizzle_size in [1, 2, 4, 8]:
                         # for cta_m in [256]:
                         #     for cta_n in [256]:
-                        #         for cta_k in [128]:
+                        #         for cta_k in [256]:
                         #             for swizzle_size in [1]:
                         activation_tile_size = int(
                             cta_m * cta_k * self.activation_dtype.word_size
@@ -663,31 +624,28 @@ class Matmul(Operator):
                 total_cycle_count += curr_iter_cycle_count
 
                 # update wait_ready_cycle
-                input_io_cycle_count_tuple = (
+                input_io_cycle_count = max(
                     l2_tiles[iter + 1].get_input_io_cycle_count()
                     if iter + 1 < ceil(K / cta_k)
                     else (0, 0)
                 )
-                if self.device_type == DeviceType.THOR:
-                    # overlap next wave's prologue and previous wave's epilogue with compute for Blackwell
-                    if iter + 1 == ceil(K / cta_k) and wave_id + 1 < len(waves):
-                        input_io_cycle_count_tuple = waves[wave_id + 1][
-                            0
-                        ].get_input_io_cycle_count()
-                    pending_epilogue_io_cycle -= max(
-                        0,
-                        l2_tiles[iter].compute_cycle_count
-                        - input_io_cycle_count_tuple[0],
-                    )
-                    pending_epilogue_io_cycle -= max(
-                        0,
-                        input_io_cycle_count_tuple[0]
-                        - l2_tiles[iter].compute_cycle_count,
-                    )
-                input_io_cycle_count = max(input_io_cycle_count_tuple)
                 wait_ready_cycle = max(
                     0, input_io_cycle_count - l2_tiles[iter].compute_cycle_count
                 )
+                if self.device_type == DeviceType.THOR:
+                    # overlap next wave's prologue and previous wave's epilogue with compute for Blackwell
+                    if iter + 1 == ceil(K / cta_k) and wave_id + 1 < len(waves):
+                        input_io_cycle_count = max(
+                            waves[wave_id + 1][0].get_input_io_cycle_count()
+                        )
+                        wait_ready_cycle = max(
+                            0, input_io_cycle_count - l2_tiles[iter].compute_cycle_count
+                        )
+                    pending_epilogue_io_cycle -= max(
+                        0,
+                        l2_tiles[iter].compute_cycle_count - input_io_cycle_count,
+                    )
+                    pending_epilogue_compute_cycle -= wait_ready_cycle
                 # print(
                 #     f"l2_tiles[iter].compute_cycle_count {l2_tiles[iter].compute_cycle_count}, input_io_cycle_count {input_io_cycle_count}"
                 # )
@@ -702,19 +660,23 @@ class Matmul(Operator):
             if self.device_type == DeviceType.ORIN:
                 offset_for_epilogue = 0.01  # obtained by fitting real machine cycles
                 total_cycle_count += (
-                    l2_tiles[-1].M
-                    * l2_tiles[-1].N
+                    l2_tiles[-1].l1_tile.M
+                    * l2_tiles[-1].l1_tile.N
+                    * len(l2_tiles[-1].cta_chunk)
                     * offset_for_epilogue
                     * self.activation_dtype.word_size
-                )
+                )  # L2 tile output may not be a rectangle
             if self.device_type == DeviceType.THOR:
                 if self.output_dtype.name == "fp4":
                     offset_for_f4_output = (
-                        0.006  # obtained by fitting real machine cycles
+                        0.0045  # obtained by fitting real machine cycles
                     )
                     pending_epilogue_compute_cycle = (
-                        l2_tiles[-1].M * l2_tiles[-1].N * offset_for_f4_output
-                    )
+                        l2_tiles[-1].l1_tile.M
+                        * l2_tiles[-1].l1_tile.N
+                        * len(l2_tiles[-1].cta_chunk)
+                        * offset_for_f4_output
+                    )  # L2 tile output may not be a rectangle
             output_io_cycle_count = max(l2_tiles[-1].get_output_io_cycle_count())
             pending_epilogue_io_cycle = output_io_cycle_count
             # print(f"pending_epilogue_io_cycle: {pending_epilogue_io_cycle}")

@@ -111,56 +111,14 @@ class L2CacheFlashAttn(L2Cache):
             if access_type == L2AccessType.OUTPUT_SCALE
             else None
         )
-        assert height and width and tile_size
-        assert (
-            coord_tuple[0] % L2Cache.TILE_LENGTH == 0
-            and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
-        )
-        assert (
-            scope_tuple[0] % L2Cache.TILE_LENGTH == 0
-            and scope_tuple[1] % L2Cache.TILE_LENGTH == 0
-        )
-        assert (
-            coord_tuple[0] >= 0
-            and coord_tuple[0] + scope_tuple[0] <= height * L2Cache.TILE_LENGTH
-        ), (
-            f"coord_tuple[0]: {coord_tuple[0]}, scope_tuple[0]: {scope_tuple[0]}, height * L2Cache.TILE_LENGTH: {height * L2Cache.TILE_LENGTH}"
-        )
-        assert (
-            coord_tuple[1] >= 0
-            and coord_tuple[1] + scope_tuple[1] <= width * L2Cache.TILE_LENGTH
-        ), (
-            f"coord_tuple[1]: {coord_tuple[1]}, scope_tuple[1]: {scope_tuple[1]}, width * L2Cache.TILE_LENGTH: {width * L2Cache.TILE_LENGTH}"
-        )
 
-        mem_access_size = 0
-        for i in range(
-            coord_tuple[0], coord_tuple[0] + scope_tuple[0], L2Cache.TILE_LENGTH
-        ):
-            for j in range(
-                coord_tuple[1], coord_tuple[1] + scope_tuple[1], L2Cache.TILE_LENGTH
-            ):
-                tile = self.Tile(access_type, (i, j))
-                if tile in self.resident_tiles:  # HIT
-                    # assert access_type not in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE)
-                    self.resident_tiles.move_to_end(tile)  # update LRU
-                else:
-                    while self.occupied_size + tile_size > self.l2_size:  # EVICT
-                        mem_access_size += self.evict_oldest_tile()
-                    if access_type not in (
-                        L2AccessType.OUTPUT,
-                        L2AccessType.OUTPUT_SCALE,
-                    ):  # load from DRAM
-                        mem_access_size += tile_size
-                    self.occupied_size += tile_size
-                    self.resident_tiles[self.Tile(access_type, (i, j))] = None
-        self.total_mem_access_size += mem_access_size
-        return mem_access_size
+        return self._access(
+            coord_tuple, scope_tuple, access_type, height, width, tile_size
+        )
 
     def evict_oldest_tile(self):
         assert self.resident_tiles
 
-        mem_access_size = 0
         oldest_tile = self.resident_tiles.popitem(last=False)[0]
         tile_size = (
             self.qkv_tile_size
@@ -170,11 +128,7 @@ class L2CacheFlashAttn(L2Cache):
             if oldest_tile.access_type == L2AccessType.OUTPUT
             else self.scale_tile_size
         )
-        if oldest_tile.access_type in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE):
-            mem_access_size += tile_size
         self.occupied_size -= tile_size
-        self.total_mem_access_size += mem_access_size
-        return mem_access_size
 
 
 class FlashAttn(Operator):
@@ -323,7 +277,7 @@ class FlashAttn(Operator):
             {j for i in range(1, int(m**0.5) + 1) if m % i == 0 for j in (i, m // i)}
         )
 
-    def compile_and_simulate(self, pcb_module: Device, drain_l2: bool = True):
+    def compile_and_simulate(self, pcb_module: Device):
         min_cycle_count = inf
         seq_len_q = self.seq_len_q
         seq_len_kv = self.seq_len_kv
@@ -444,14 +398,7 @@ class FlashAttn(Operator):
                         self.is_prefill,
                         self.num_splits,
                     )
-                    # Unlike matmul, pending_write_cycle is not neccessary. Since each cta reads different Q, every cta must access DRAM during start. Furthermore, we have modeled epilogue overlap explicitly in CTASimulator.execute_next_kv_tile().
                     cycle_count = self.simulate(mapping, pcb_module, l2_status)
-                    if drain_l2:
-                        drain_cycle = self.get_io_cycle_count(
-                            l2_status.drain(), pcb_module
-                        )
-                        # print(f"drain_cycle: {drain_cycle}")
-                        cycle_count += drain_cycle  # clean up
                     if cycle_count < min_cycle_count:
                         min_cycle_count = cycle_count
                         self.best_mapping = mapping
@@ -593,7 +540,7 @@ class FlashAttn(Operator):
         total_cycle_count += (
             pcb_module.compute_module.l2_latency_cycles
             + pcb_module.io_module.latency_cycles
-        )
+        )  # Very small value
 
         final_cta_list = []  # The last ctas executed on any core. Maintained for epilogue
         while final_cta_list or not all(cta is None for cta in active_cta_list):

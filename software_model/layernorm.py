@@ -43,65 +43,17 @@ class L2CacheLayerNorm(L2Cache):
         height = self.m_tiles
         width = self.n_tiles
         tile_size = self.tile_size
-        assert height and width
-        assert (
-            coord_tuple[0] % L2Cache.TILE_LENGTH == 0
-            and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
-        )
-        assert (
-            scope_tuple[0] % L2Cache.TILE_LENGTH == 0
-            and scope_tuple[1] % L2Cache.TILE_LENGTH == 0
-        )
-        assert (
-            coord_tuple[0] >= 0
-            and coord_tuple[0] + scope_tuple[0] <= height * L2Cache.TILE_LENGTH
-        ), (
-            f"coord_tuple[0]: {coord_tuple[0]}, scope_tuple[0]: {scope_tuple[0]}, height * L2Cache.TILE_LENGTH: {height * L2Cache.TILE_LENGTH}"
-        )
-        assert (
-            coord_tuple[1] >= 0
-            and coord_tuple[1] + scope_tuple[1] <= width * L2Cache.TILE_LENGTH
-        ), (
-            f"coord_tuple[1]: {coord_tuple[1]}, scope_tuple[1]: {scope_tuple[1]}, width * L2Cache.TILE_LENGTH: {width * L2Cache.TILE_LENGTH}"
-        )
 
-        mem_access_size = 0
-        for i in range(
-            coord_tuple[0], coord_tuple[0] + scope_tuple[0], L2Cache.TILE_LENGTH
-        ):
-            for j in range(
-                coord_tuple[1], coord_tuple[1] + scope_tuple[1], L2Cache.TILE_LENGTH
-            ):
-                tile = self.Tile(access_type, (i, j))
-                if tile in self.resident_tiles:  # HIT
-                    self.resident_tiles.move_to_end(tile)  # update LRU
-                else:
-                    while self.occupied_size + tile_size > self.l2_size:  # EVICT
-                        mem_access_size += self.evict_oldest_tile()
-                    if access_type not in (
-                        L2AccessType.OUTPUT,
-                        L2AccessType.RESIDUAL_OUTPUT,
-                    ):  # load from DRAM
-                        mem_access_size += tile_size
-                    self.occupied_size += tile_size
-                    self.resident_tiles[self.Tile(access_type, (i, j))] = None
-        self.total_mem_access_size += mem_access_size
-        return mem_access_size
+        return self._access(
+            coord_tuple, scope_tuple, access_type, height, width, tile_size
+        )
 
     def evict_oldest_tile(self):
         assert self.resident_tiles
 
-        mem_access_size = 0
         oldest_tile = self.resident_tiles.popitem(last=False)[0]
         tile_size = self.tile_size
-        if oldest_tile.access_type in (
-            L2AccessType.OUTPUT,
-            L2AccessType.RESIDUAL_OUTPUT,
-        ):
-            mem_access_size += tile_size
         self.occupied_size -= tile_size
-        self.total_mem_access_size += mem_access_size
-        return mem_access_size
 
 
 class FusedLayerNorm(Operator):  # Residual + LayerNorm/RMSNorm
@@ -126,9 +78,7 @@ class FusedLayerNorm(Operator):  # Residual + LayerNorm/RMSNorm
         )  # must be io_bound
         return self.roofline_latency
 
-    def compile_and_simulate(
-        self, pcb_module: Device, drain_l2: bool = True
-    ):  # memory bound operator
+    def compile_and_simulate(self, pcb_module: Device):  # memory bound operator
         self.l2_status = L2CacheLayerNorm(
             pcb_module.compute_module.l2_size, self.M, self.N, self.dtype
         )
@@ -144,8 +94,6 @@ class FusedLayerNorm(Operator):  # Residual + LayerNorm/RMSNorm
         mem_access_size += self.l2_status.access(
             L2AccessType.OUTPUT, (0, 0), (self.M, self.N)
         )
-        if drain_l2:
-            mem_access_size += self.l2_status.drain()
         mem_access_cycle = ceil(
             mem_access_size
             / (

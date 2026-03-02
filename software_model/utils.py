@@ -70,6 +70,50 @@ class L2Cache:
     ):
         raise NotImplementedError()
 
+    def _access(self, coord_tuple, scope_tuple, access_type, height, width, tile_size):
+        assert height and width and tile_size
+        assert (
+            coord_tuple[0] % L2Cache.TILE_LENGTH == 0
+            and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
+        )
+        assert (
+            scope_tuple[0] % L2Cache.TILE_LENGTH == 0
+            and scope_tuple[1] % L2Cache.TILE_LENGTH == 0
+        )
+        assert (
+            coord_tuple[0] >= 0
+            and coord_tuple[0] + scope_tuple[0] <= height * L2Cache.TILE_LENGTH
+        ), (
+            f"coord_tuple[0]: {coord_tuple[0]}, scope_tuple[0]: {scope_tuple[0]}, height * L2Cache.TILE_LENGTH: {height * L2Cache.TILE_LENGTH}"
+        )
+        assert (
+            coord_tuple[1] >= 0
+            and coord_tuple[1] + scope_tuple[1] <= width * L2Cache.TILE_LENGTH
+        ), (
+            f"coord_tuple[1]: {coord_tuple[1]}, scope_tuple[1]: {scope_tuple[1]}, width * L2Cache.TILE_LENGTH: {width * L2Cache.TILE_LENGTH}"
+        )
+
+        mem_access_size = 0
+        for i in range(
+            coord_tuple[0], coord_tuple[0] + scope_tuple[0], L2Cache.TILE_LENGTH
+        ):
+            for j in range(
+                coord_tuple[1], coord_tuple[1] + scope_tuple[1], L2Cache.TILE_LENGTH
+            ):
+                tile = self.Tile(access_type, (i, j))
+                if tile in self.resident_tiles:  # HIT
+                    self.resident_tiles.move_to_end(tile)  # update LRU
+                else:
+                    while self.occupied_size + tile_size > self.l2_size:  # EVICT
+                        self.evict_oldest_tile()
+                    mem_access_size += (
+                        tile_size  # read activation & weight, or *write through* output
+                    )
+                    self.occupied_size += tile_size
+                    self.resident_tiles[self.Tile(access_type, (i, j))] = None
+        self.total_mem_access_size += mem_access_size
+        return mem_access_size
+
     def evict_oldest_tile(self):
         raise NotImplementedError()
 
