@@ -35,7 +35,8 @@ def plot_fitting_results(
         [min_val, max_val], [min_val, max_val], "r--", linewidth=2, label="Ideal (y=x)"
     )
     ax1.set_title(
-        f"Physical Power Model (NNLS)\n$R^2={r2:.4f}, MAPE={mape:.4f}$", fontsize=14
+        f"Physical Power Model (NNLS)\n$R^2={r2:.4f}, MAPE={mape * 100:.2f}\\%$",
+        fontsize=14,
     )
     ax1.set_xlabel("Measured Power (W)", fontsize=12)
     ax1.set_ylabel("Predicted Power (W)", fontsize=12)

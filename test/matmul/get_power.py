@@ -91,30 +91,38 @@ def measure_power_remote(
     profiler_path: str = "/home/sly/cutlass/build/tools/profiler/cutlass_profiler",  # for cutlass
     ignore_cache: bool = False,
 ) -> float:
-    existing_data = []
-    if os.path.exists(power_log):
-        with open(power_log, "r") as f:
-            content = f.read().strip()
-            if content:
-                data = json.loads(content)
-                if isinstance(data, list):
-                    existing_data = data
-                else:
-                    assert False, "power_log.json format error"
-
-    if not ignore_cache:
-        for record in existing_data:
-            if (
-                record.get("M") == M
-                and record.get("N") == N
-                and record.get("K") == K
-                and record.get("precision") == precision
-            ):
-                return record["power_GPU"], record["power_MEM"]
+    output_dtype = get_output_dtype(data_type_dict[precision], op_name, True)
+    func = measure_power_remote
+    if not hasattr(func, "_cache_dict"):
+        func._all_records = []
+        func._cache_dict = {}
+        if os.path.exists(power_log):
+            try:
+                with open(power_log, "r") as f:
+                    content = f.read().strip()
+                    if content:
+                        data = json.loads(content)
+                        if isinstance(data, list):
+                            func._all_records = data
+                            for r in data:
+                                key = (
+                                    r["M"],
+                                    r["N"],
+                                    r["K"],
+                                    r["precision"],
+                                    r["output_dtype"],
+                                )
+                                func._cache_dict[key] = (r["power_GPU"], r["power_MEM"])
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"Warning: Load power_log failed: {e}")
+                func._all_records = []
+                func._cache_dict = {}
+    search_key = (M, N, K, precision, output_dtype.name)
+    if not ignore_cache and search_key in func._cache_dict:
+        return func._cache_dict[search_key]
 
     port = 9129 if device == "Orin" else 9147
 
-    output_dtype = get_output_dtype(data_type_dict[precision], op_name, True)
     if precision == "int4":  # marlin
         cmd_parts = [
             python_path,
@@ -183,10 +191,10 @@ DEVICE = "{device}"
             "power_MEM": avg_power_MEM,
         }
 
-        existing_data.append(new_record)
-
+        func._all_records.append(new_record)
+        func._cache_dict[search_key] = (avg_power_GPU, avg_power_MEM)
         with open(power_log, "w") as f:
-            json.dump(existing_data, f, indent=4, ensure_ascii=False)
+            json.dump(func._all_records, f, indent=4, ensure_ascii=False)
 
     return avg_power_GPU, avg_power_MEM
 
@@ -214,18 +222,43 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     K_shapes, N_shapes = get_model_shape(args.model)
-    M = 1024 if args.mode == "prefill" else 64
-    assert M % 4 == 0
-    if args.precision == "fp4" and args.mode == "decode":
-        M = 128  # at least 128
+    if args.mode == "prefill":
+        M_list = [512, 768, 1024, 1280, 1536]
+        if args.model == "InternVision":
+            M_list = [576, 1024]  # 336x336/448x448 with patch 14x14
+    elif args.mode == "decode":
+        if args.device == "Orin":
+            M_list = [64, 128]
+        elif args.device == "Thor":
+            M_list = [64, 128] if args.precision != "fp4" else [128]
+        else:
+            raise ValueError("Unsupported device")
 
-    for op_name in ["qkv_proj", "o_proj", "up_proj", "down_proj"]:
-        K, N = K_shapes[op_name], N_shapes[op_name]
-        assert N % 4 == 0 and K % 4 == 0
+    for M in M_list:
+        assert M % 4 == 0
+        for op_name in ["qkv_proj", "o_proj", "up_proj", "down_proj"]:
+            K, N = K_shapes[op_name], N_shapes[op_name]
+            assert N % 4 == 0 and K % 4 == 0
 
-        if args.mode == "prefill":
-            # op_name Context Parallelism
-            test_problems = [(M, N, K), (M // 2, N, K), (M // 4, N, K)]
+            if args.mode == "prefill":  # test Context Parallelism for prefill only
+                test_problems = [(M, N, K), (M // 2, N, K), (M // 4, N, K)]
+                for problem in test_problems:
+                    p1, p2 = measure_power_remote(
+                        *problem,
+                        op_name,
+                        args.precision,
+                        args.device,
+                        f"{file_dir}/temp/power_log.{args.device}.json",
+                    )
+                    print(
+                        f"M N K {problem}, precision {args.precision} Power GPU {p1:.2f}W Power MEM {p2:.2f}W"
+                    )
+
+            # test Tensor Parallelism
+            if op_name == "qkv_proj" or op_name == "up_proj":
+                test_problems = [(M, N, K), (M, N // 2, K), (M, N // 4, K)]
+            else:  # o_proj or down_proj
+                test_problems = [(M, N, K), (M, N, K // 2), (M, N, K // 4)]
             for problem in test_problems:
                 p1, p2 = measure_power_remote(
                     *problem,
@@ -237,20 +270,3 @@ if __name__ == "__main__":
                 print(
                     f"M N K {problem}, precision {args.precision} Power GPU {p1:.2f}W Power MEM {p2:.2f}W"
                 )
-
-        # test Tensor Parallelism
-        if op_name == "qkv_proj" or op_name == "up_proj":
-            test_problems = [(M, N, K), (M, N // 2, K), (M, N // 4, K)]
-        else:  # o_proj or down_proj
-            test_problems = [(M, N, K), (M, N, K // 2), (M, N, K // 4)]
-        for problem in test_problems:
-            p1, p2 = measure_power_remote(
-                *problem,
-                op_name,
-                args.precision,
-                args.device,
-                f"{file_dir}/temp/power_log.{args.device}.json",
-            )
-            print(
-                f"M N K {problem}, precision {args.precision} Power GPU {p1:.2f}W Power MEM {p2:.2f}W"
-            )
