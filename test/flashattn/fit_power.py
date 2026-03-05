@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+from math import inf
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,8 +10,10 @@ from sklearn.metrics import mean_absolute_percentage_error, r2_score
 from sklearn.preprocessing import StandardScaler
 
 from hardware_model.device import device_dict
-from software_model.matmul import Matmul
+from software_model.flashattn import FlashAttn
+from software_model.flashattn_combine import FlashAttentionCombine
 from software_model.utils import Tensor, data_type_dict
+from test.flashattn.utils import get_output_dtype
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE_TEMPLATE = f"{file_dir}/temp/power_features_cache"
@@ -108,67 +111,98 @@ def load_or_generate_data(args):
     y_mem_list = []
 
     for record in existing_data:
-        M, N, K, precision, output_dtype_name = (
-            record["M"],
-            record["N"],
-            record["K"],
+        (
+            seq_len_q,
+            seq_len_kv,
+            num_heads_q,
+            num_heads_kv,
+            head_dim,
+            is_causal,
+            precision,
+            output_dtype_name,
+        ) = (
+            record["seq_len_q"],
+            record["seq_len_kv"],
+            record["num_heads_q"],
+            record["num_heads_kv"],
+            record["head_dim"],
+            record["is_causal"],
             record["precision"],
             record["output_dtype"],
         )
-        if precision == "fp16":
-            act_dt, wei_dt, int_dt = (
-                data_type_dict["fp16"],
-                data_type_dict["fp16"],
-                data_type_dict["fp32"],
-            )
-        elif precision == "int8":
-            act_dt, wei_dt, int_dt = (
-                data_type_dict["int8"],
-                data_type_dict["int8"],
-                data_type_dict["int32"],
-            )
-        elif precision == "int4":
-            act_dt, wei_dt, int_dt = (
-                data_type_dict["fp16"],
-                data_type_dict["int4"],
-                data_type_dict["fp32"],
-            )
-        elif precision == "fp8":
-            act_dt, wei_dt, int_dt = (
-                data_type_dict["fp8"],
-                data_type_dict["fp8"],
-                data_type_dict["fp32"],
-            )
-        elif precision == "fp4":
-            act_dt, wei_dt, int_dt = (
-                data_type_dict["fp4"],
-                data_type_dict["fp4"],
-                data_type_dict["fp32"],
-            )
-        else:
-            continue
-        o_dt = data_type_dict[output_dtype_name]
-
+        is_prefill = seq_len_q == seq_len_kv
         if precision != args.precision:
             continue
-        model = Matmul(act_dt, wei_dt, int_dt, o_dt, device=args.device)
-        _ = model(Tensor([M, K], act_dt), Tensor([K, N], wei_dt))
+        assert precision == output_dtype_name
+        if precision == "fp16":
+            qkv_dtype = data_type_dict["fp16"]
+            intermediate_dtype = data_type_dict["fp32"]
+            assert args.device == "Orin", "fp16 precision is for Orin only"
+        elif precision == "fp8":
+            qkv_dtype = data_type_dict["fp8"]
+            intermediate_dtype = data_type_dict["fp32"]
+            assert args.device == "Thor", "fp8 precision is for Thor only"
+        else:
+            raise ValueError("Unsupported precision")
+        output_dtype = get_output_dtype(data_type_dict[precision], True)
 
-        latency_ms = 1000 * (
-            model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency.matmul
-        )
-        runtime_s = latency_ms / 1000.0
+        best_latency = inf
+        best_model = None
+        best_model1 = None
+        num_splits_list = [1] if is_prefill else [1, 2, 4]
+        for num_splits in num_splits_list:
+            model = FlashAttn(
+                qkv_dtype,
+                intermediate_dtype,
+                output_dtype,
+                is_prefill,
+                is_causal,
+                num_splits,
+                args.device,
+            )
+            _ = model(
+                Tensor([seq_len_q, num_heads_q, head_dim], dtype=qkv_dtype),
+                Tensor([seq_len_kv, num_heads_kv, head_dim], dtype=qkv_dtype),
+                Tensor([seq_len_kv, num_heads_kv, head_dim], dtype=qkv_dtype),
+            )
+            latency_this = 1000 * (
+                model.compile_and_simulate(pcb)
+                + pcb.compute_module.launch_latency.flashattn
+            )
+            if num_splits > 1:
+                model1 = FlashAttentionCombine(intermediate_dtype, output_dtype)
+                _ = model1(
+                    Tensor(
+                        [seq_len_q, num_heads_q * head_dim, num_splits],
+                        dtype=intermediate_dtype,
+                    )
+                )
+                latency_this += 1000 * (
+                    model1.compile_and_simulate(pcb)
+                    + pcb.compute_module.launch_latency.flashattn_combine
+                )
+            best_latency = min(best_latency, latency_this)
+            best_model = model
+            if num_splits > 1:
+                best_model1 = model1
+
+        runtime_s = best_latency / 1000.0
 
         features = [
-            model.fma_count / runtime_s,  # 0: FMA
-            (
-                model.M * model.K * model.activation_dtype.word_size
-                + model.K * model.N * model.weight_dtype.word_size
+            best_model.fma_count / runtime_s,  # 0: FMA
+            best_model.head_dim
+            * (
+                best_model.num_heads_q * best_model.seq_len_q  # Q
+                + best_model.num_heads_kv * best_model.seq_len_kv * 2  # K & V
             )
+            * best_model.qkv_dtype.word_size
             / runtime_s,  # 1: Input
-            model.M * model.N * model.output_dtype.word_size / runtime_s,  # 2. Output
-            model.l2_access_size / runtime_s,  # 3. l2 cache access size
-            model.mem_access_size / runtime_s,  # 4: DRAM
+            best_model.head_dim
+            * best_model.num_heads_q
+            * best_model.seq_len_q
+            * best_model.output_dtype.word_size
+            / runtime_s,  # 2. Output
+            best_model.mem_access_size / runtime_s,  # 3: DRAM
         ]
 
         X_features_raw.append([model.fma_count, model.mem_access_size])
@@ -177,7 +211,7 @@ def load_or_generate_data(args):
         y_mem_list.append(record["power_MEM"])
 
         print(
-            f"M={M}, N={N}, K={K} | Latency={latency_ms:.2f}ms | SOC={record['power_GPU']}W, MEM={record['power_MEM']}W"
+            f"seq_len_q: {seq_len_q}, seq_len_kv: {seq_len_kv}, num_heads_q: {num_heads_q}, num_heads_kv: {num_heads_kv}, head_dim: {head_dim} | Latency={best_latency:.2f}ms | SOC={record['power_GPU']}W, MEM={record['power_MEM']}W"
         )
         print(f"  Features_raw: FMA={model.fma_count}, DRAM={model.mem_access_size}")
 
@@ -200,7 +234,6 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
         "FMA",
         "INPUT Size",
         "OUTPUT Size",
-        "L2 Access Byte",
         "DRAM Access Byte",
     ]
     # full_feature_names = ["FMA", "DRAM Access Byte"]

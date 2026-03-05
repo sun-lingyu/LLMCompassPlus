@@ -167,6 +167,6 @@ if __name__ == "__main__":
         )
     else:
         avg_latency_ms_fa3 = inf
-    print(f"FA2: {avg_latency_ms_fa2}ms")
-    print(f"FA3: {avg_latency_ms_fa3}ms")
+    print(f"FA2: {avg_latency_ms_fa2} ms")
+    print(f"FA3: {avg_latency_ms_fa3} ms")
     print(f"Average Latency: {min(avg_latency_ms_fa2, avg_latency_ms_fa3):.4f} ms")

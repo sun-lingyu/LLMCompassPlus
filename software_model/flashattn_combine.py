@@ -100,6 +100,7 @@ class FlashAttentionCombine(Operator):
         super().__init__()
         self.activation_dtype = activation_dtype
         self.output_dtype = output_dtype
+        self.mem_access_size = -1
 
     def __call__(self, input1: Tensor) -> Tensor:
         assert self.activation_dtype == input1.dtype
@@ -167,4 +168,5 @@ class FlashAttentionCombine(Operator):
             )
         )
         self.latency = mem_access_cycle / pcb_module.compute_module.clock_freq
+        self.mem_access_size = mem_access_size
         return self.latency

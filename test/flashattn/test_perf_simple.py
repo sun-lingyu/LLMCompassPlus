@@ -45,7 +45,7 @@ if __name__ == "__main__":
     elif args.precision in ("fp8", "fp4"):
         qkv_dtype = data_type_dict["fp8"]
         intermediate_dtype = data_type_dict["fp32"]
-    output_dtype = get_output_dtype(args.precision, True)
+    output_dtype = get_output_dtype(data_type_dict[args.precision], True)
     temp_output_dtype = data_type_dict["fp32"]
 
     model = FlashAttn(

@@ -1,30 +1,29 @@
 import argparse
-import base64
 import json
 import os
 import re
 from typing import Optional
 
-from software_model.utils import data_type_dict
+from software_model.utils import DataType, data_type_dict
 from test.matmul.test_perf import cutlass_gemm_min_latency_remote
 from test.matmul.utils import get_model_shape, get_output_dtype
-from test.utils import run_remote_command
+from test.utils import run_power_monitor, run_remote_command
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 def get_cutlass_full_cmd(
-    M,
-    N,
-    K,
-    precision,
-    output_dtype,
-    device,
-    port,
-    host,
-    user,
-    profiler_path,
-    total_duration,
+    M: int,
+    N: int,
+    K: int,
+    precision: str,
+    output_dtype: DataType,
+    device: str,
+    port: int,
+    host: str,
+    user: str,
+    profiler_path: str,
+    total_duration: int,
 ):
     _, best_op_name = cutlass_gemm_min_latency_remote(
         M,
@@ -148,37 +147,9 @@ def measure_power_remote(
             total_duration,
         )
 
-    print(
-        f"Measuring power for {total_duration}s and take {valid_duration}s in the middle..."
+    avg_power_GPU, avg_power_MEM = run_power_monitor(
+        full_cmd, total_duration, valid_duration, device, user, host, port
     )
-    print(full_cmd)
-
-    power_monitor_path = os.path.abspath(
-        os.path.join(file_dir, "..", "power_monitor.py")
-    )
-    if not os.path.exists(power_monitor_path):
-        raise FileNotFoundError(f"Cannot find power_monitor at {power_monitor_path}")
-
-    with open(power_monitor_path, "r", encoding="utf-8") as f:
-        script_body = f.read()
-
-    variables_header = f"""
-FULL_CMD = {repr(full_cmd)}
-VALID_START_TIME = {total_duration / 2 - valid_duration / 2}
-VALID_DURATION = {valid_duration}
-DEVICE = "{device}"
-"""
-    remote_script_source = variables_header + "\n" + script_body
-    b64_script = base64.b64encode(remote_script_source.encode("utf-8")).decode("utf-8")
-    shell_pipeline = f"echo {b64_script} | base64 -d | python3"
-    remote_cmd = ["bash", "-c", shell_pipeline]
-    output = run_remote_command(user, host, port, remote_cmd).strip()
-
-    try:
-        avg_power_GPU = float(output.splitlines()[-2])
-        avg_power_MEM = float(output.splitlines()[-1])
-    except ValueError:
-        raise RuntimeError(f"Could not parse power output. Received:\n{output}")
 
     if not ignore_cache:
         new_record = {

@@ -11,9 +11,9 @@ def get_model_shape(model):
 
 
 def get_output_dtype(model_dtype: DataType, is_test: bool):
-    assert model_dtype in ("fp16", "int8", "int4", "fp8", "fp4")
+    assert model_dtype.name in ("fp16", "int8", "int4", "fp8", "fp4")
     if is_test:
-        if model_dtype in ("fp16", "int8", "int4"):
+        if model_dtype.name in ("fp16", "int8", "int4"):
             return data_type_dict["fp16"]
         else:
             return data_type_dict["fp8"]

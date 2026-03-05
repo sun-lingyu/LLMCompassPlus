@@ -26,16 +26,17 @@ def flash_attn_min_latency_remote(
     head_dim: int,
     num_splits: int,
     is_causal: bool,
+    is_prefill: bool,
     pack_gqa: bool,
     precision: str,
     output_dtype: DataType,
-    is_prefill: bool,
     flash_attn_perf_log: str,
     port: int,
     host: str = "202.120.39.3",
     user: Optional[str] = "sly",
     work_dir: str = "/home/sly",
     python_path: str = "/home/sly/anaconda3/envs/llmcompass/bin/python",
+    ignore_cache: bool = False,
 ):
     func = flash_attn_min_latency_remote
     if not hasattr(func, "_cache_dict"):
@@ -77,8 +78,8 @@ def flash_attn_min_latency_remote(
         precision,
         output_dtype.name,
     )
-    if search_key in func._cache_dict:
-        return func._cache_dict[search_key]
+    if not ignore_cache and search_key in func._cache_dict:
+        return func._cache_dict[search_key], (-1, -1)
 
     mode = "prefill" if is_prefill else "decode"
     python_cmd = [
@@ -109,36 +110,43 @@ def flash_attn_min_latency_remote(
 
     output = run_remote_command(user, host, port, python_cmd, work_dir=work_dir)
 
-    pattern = re.compile(r"Average Latency:\s*([0-9]+(?:\.[0-9]+)?)\s*ms")
-    match = pattern.search(output)
+    num = r"(inf|[0-9]+(?:\.[0-9]+)?)"
+    pat = re.compile(rf"(FA2|FA3|Average Latency):\s*{num}\s*ms", re.IGNORECASE)
 
-    if not match:
+    vals = {m.group(1).lower(): float(m.group(2)) for m in pat.finditer(output)}
+
+    if "average latency" not in vals:
         raise RuntimeError(
             "No 'Average Latency: xxx ms' found in remote output.\n"
             f"Python Command: {' '.join(python_cmd)}\n"
             f"Output:\n{output}"
         )
-    best_runtime = float(match.group(1))
-    new_record = {
-        "seq_len_q": seq_len_q,
-        "seq_len_kv": seq_len_kv,
-        "num_heads_q": num_heads_q,
-        "num_heads_kv": num_heads_kv,
-        "head_dim": head_dim,
-        "num_splits": num_splits,
-        "is_causal": is_causal,
-        "pack_gqa": pack_gqa,
-        "precision": precision,
-        "output_dtype": output_dtype.name,
-        "min_runtime": best_runtime,
-    }
 
-    func._all_records.append(new_record)
-    func._cache_dict[search_key] = best_runtime
-    with open(flash_attn_perf_log, "w") as f:
-        json.dump(func._all_records, f, indent=4, ensure_ascii=False)
+    best_runtime = vals["average latency"]
+    fa2_latency = vals.get("fa2", inf)
+    fa3_latency = vals.get("fa3", inf)
 
-    return best_runtime
+    if not ignore_cache:
+        new_record = {
+            "seq_len_q": seq_len_q,
+            "seq_len_kv": seq_len_kv,
+            "num_heads_q": num_heads_q,
+            "num_heads_kv": num_heads_kv,
+            "head_dim": head_dim,
+            "num_splits": num_splits,
+            "is_causal": is_causal,
+            "pack_gqa": pack_gqa,
+            "precision": precision,
+            "output_dtype": output_dtype.name,
+            "min_runtime": best_runtime,
+        }
+
+        func._all_records.append(new_record)
+        func._cache_dict[search_key] = best_runtime
+        with open(flash_attn_perf_log, "w") as f:
+            json.dump(func._all_records, f, indent=4, ensure_ascii=False)
+
+    return best_runtime, (fa2_latency, fa3_latency)
 
 
 def test_and_save_latency(
@@ -159,7 +167,7 @@ def test_and_save_latency(
         assert device == "Thor", "fp8 precision is for Thor only"
     else:
         raise ValueError("Unsupported precision")
-    output_dtype = get_output_dtype(precision, True)
+    output_dtype = get_output_dtype(data_type_dict[precision], True)
 
     latency_list = []
     for idx, (seq_len_q, seq_len_kv, num_heads_q, num_heads_kv) in enumerate(
@@ -209,7 +217,7 @@ def test_and_save_latency(
             roofline_latency = min(roofline_latency, roofline_latency_this)
 
             port = 9129 if args.device == "Orin" else 9147
-            measurement_latency_this = min(
+            measurement_latency_this, _ = (
                 flash_attn_min_latency_remote(
                     seq_len_q,
                     seq_len_kv,
@@ -218,10 +226,10 @@ def test_and_save_latency(
                     head_dim,
                     num_splits,
                     is_causal,
+                    is_prefill,
                     pack_gqa_val,
                     precision,
                     output_dtype,
-                    is_prefill,
                     f"{file_dir}/temp/flashattn_perf_log.{args.device}.json",
                     port,
                 )
