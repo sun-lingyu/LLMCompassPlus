@@ -177,8 +177,8 @@ class FlashAttn(Operator):
         self.device_type = DeviceType.ORIN if device == "Orin" else DeviceType.THOR
         assert (
             self.device_type == DeviceType.ORIN and self.qkv_dtype.name == "fp16"
-        ) or (self.device_type == DeviceType.THOR and self.qkv_dtype.name == "fp8"), (
-            "Only support fp16 for Orin and fp8 for Thor"
+        ) or (self.device_type == DeviceType.THOR and self.qkv_dtype.name == "fp16"), (
+            "Only support fp16 for Orin and fp16 for Thor"
         )
 
     def __call__(
@@ -305,12 +305,17 @@ class FlashAttn(Operator):
                 cta_seq_len_kv_list = [96] if self.is_prefill else [64]  # append_kv
             else:
                 cta_seq_len_kv_list = [96] if self.is_prefill else [48]  # append_kv
+        elif self.device_type == DeviceType.THOR:
+            # Tile size for Blackwell
+            # See https://github.com/Dao-AILab/flash-attention.git flash-attention/flash_attn/cute/interface.py
+            cta_seq_len_q = 128
+            cta_seq_len_kv_list = [128]
         else:
             assert False, "not implemented yet"
 
         gqa_group_size = num_heads_q // num_heads_kv
         assert num_heads_q % num_heads_kv == 0
-        gqa_packing_size_list = self.get_all_factors(gqa_group_size)
+        gqa_packing_size_list = [1, gqa_group_size]
         swizzle_size_list = [1, 2, 4, num_heads_q]
 
         for cta_seq_len_kv in cta_seq_len_kv_list:
@@ -319,20 +324,16 @@ class FlashAttn(Operator):
                     if swizzle_size > num_heads_q // gqa_packing_size:
                         continue
                     q_tile_size = int(
-                        gqa_packing_size
-                        * cta_seq_len_q
-                        * head_dim
-                        * self.qkv_dtype.word_size
+                        cta_seq_len_q * head_dim * self.qkv_dtype.word_size
                     )
                     kv_tile_size = int(
                         cta_seq_len_kv * head_dim * self.qkv_dtype.word_size
                     )
-                    intermediate_tile_size = int(
-                        gqa_packing_size
-                        * cta_seq_len_q
-                        * cta_seq_len_kv
-                        * self.intermediate_dtype.word_size
-                    )
+                    # intermediate_tile_size = (
+                    #     int(cta_seq_len_q * (cta_seq_len_kv * 2 + head_dim))
+                    #     * self.intermediate_dtype.word_size
+                    # )
+                    intermediate_tile_size = 0
                     stages = (
                         pcb_module.compute_module.core.SRAM_size - q_tile_size
                     ) // kv_tile_size
@@ -341,7 +342,7 @@ class FlashAttn(Operator):
 
                     # Check TMEM usage
                     if self.device_type == DeviceType.THOR:
-                        pass  # TODO: implement TMEM usage check for Thor
+                        assert intermediate_tile_size <= 256 * 1024  # TMEM: 256KB
 
                     # Check Register usage
                     if self.device_type == DeviceType.ORIN:
@@ -351,22 +352,19 @@ class FlashAttn(Operator):
                                 * self.qkv_dtype.word_size
                                 * 2  # Input operands, double buffering, suppose HMMA.m16n8k16
                                 # + (
-                                #     gqa_packing_size
-                                #     * cta_seq_len_q
+                                #     cta_seq_len_q
                                 #     * cta_seq_len_kv
                                 #     * self.intermediate_dtype.word_size
                                 # )  # S tile (S = QK^T)
                                 # In FA2 without GEMM-softmax overlap, P (P = softmax(QK^T) can reuse registers of S tile.
                                 + (
-                                    gqa_packing_size
-                                    * cta_seq_len_q
+                                    cta_seq_len_q
                                     * cta_seq_len_kv
                                     * self.qkv_dtype.word_size
                                 )  # P tile (P = softmax(QK^T)).
                                 # FA3 GEMM-softmax overlap: Accumulator for next GEMM0 (S) and operand for current GEMM1 (P) live concurrently.
                                 + (
-                                    gqa_packing_size
-                                    * cta_seq_len_q
+                                    cta_seq_len_q
                                     * head_dim
                                     * self.intermediate_dtype.word_size
                                 )  # O tile (O = softmax(QK^T)V)
@@ -426,11 +424,11 @@ class FlashAttn(Operator):
         swizzle_size = (
             mapping.swizzle_size
         )  # different from matmul: swizzle_size = num_heads_q means no swizzle
+        cta_seq_len_q_after_pack = cta_seq_len_q // gqa_packing_size
         total_ctas = (
             self.num_splits
-            * num_heads_q
-            // gqa_packing_size
-            * ceil(seq_len_q / cta_seq_len_q)
+            * (num_heads_q // gqa_packing_size)
+            * ceil(seq_len_q / cta_seq_len_q_after_pack)
         )
         assert num_heads_q % num_heads_kv == 0
         assert (num_heads_q // num_heads_kv) % gqa_packing_size == 0
@@ -446,28 +444,29 @@ class FlashAttn(Operator):
         )
         possible_l1_tiles = {
             "normal": FlashAttn.L1TileSimulator(
-                cta_seq_len_q,
+                cta_seq_len_q_after_pack,
                 cta_seq_len_kv,
                 *shared_l1_simulator_args,
             ),
             "tail_kv": FlashAttn.L1TileSimulator(
-                cta_seq_len_q,
+                cta_seq_len_q_after_pack,
                 seq_len_kv % cta_seq_len_kv,
                 *shared_l1_simulator_args,
             )
             if seq_len_kv % cta_seq_len_kv > 0
             else None,
             "tail_q": FlashAttn.L1TileSimulator(
-                seq_len_q % cta_seq_len_q,
+                seq_len_q % cta_seq_len_q_after_pack,
                 cta_seq_len_kv,
                 *shared_l1_simulator_args,
             ),
             "tail_qkv": FlashAttn.L1TileSimulator(
-                seq_len_q % cta_seq_len_q,
+                seq_len_q % cta_seq_len_q_after_pack,
                 seq_len_kv % cta_seq_len_kv,
                 *shared_l1_simulator_args,
             )
-            if seq_len_kv % cta_seq_len_kv > 0 and seq_len_q % cta_seq_len_q > 0
+            if seq_len_kv % cta_seq_len_kv > 0
+            and seq_len_q % cta_seq_len_q_after_pack > 0
             else None,
         }
 
@@ -476,11 +475,12 @@ class FlashAttn(Operator):
         for split in range(self.num_splits):
             for head_q_base in range(0, num_heads_q // gqa_packing_size, swizzle_size):
                 for seq_len_q_start in range(
-                    (ceil(seq_len_q / cta_seq_len_q) - 1) * cta_seq_len_q,
+                    (ceil(seq_len_q / cta_seq_len_q_after_pack) - 1)
+                    * cta_seq_len_q_after_pack,
                     -1,
-                    -cta_seq_len_q,
+                    -cta_seq_len_q_after_pack,
                 ):  # longest-processing-time-first during causal attention
-                    if seq_len_q - seq_len_q_start >= cta_seq_len_q:
+                    if seq_len_q - seq_len_q_start >= cta_seq_len_q_after_pack:
                         normal_l1_tile, tail_l1_tile = (
                             possible_l1_tiles["normal"],
                             possible_l1_tiles["tail_kv"],
@@ -580,9 +580,6 @@ class FlashAttn(Operator):
             )
             # print(l2_cycle_count, mem_cycle_count, compute_cycle_count)
         return total_cycle_count
-
-    def simulate_reduction(self):
-        return 0
 
     # There is no L2TileSimulator for FlashAttn, since the ctas does not work in lockstep like Matmul during causal attention.
     # Instead we need CTASimulator to track all the CTAs.

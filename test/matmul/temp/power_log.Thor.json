@@ -1753,5 +1753,3713 @@
         "output_dtype": "fp8",
         "power_GPU": 27.90528,
         "power_MEM": 14.706922105263157
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 20.99944421052632,
+        "power_MEM": 17.889246315789475
+    },
+    {
+        "M": 512,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 37.907233684210524,
+        "power_MEM": 17.494787368421054
+    },
+    {
+        "M": 512,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 32.12894315789474,
+        "power_MEM": 17.126981052631578
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 20.79296,
+        "power_MEM": 17.516109473684207
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 36.067368421052635,
+        "power_MEM": 16.785827368421053
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 32.06699789473684,
+        "power_MEM": 17.34020210526316
+    },
+    {
+        "M": 128,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 22.651317894736838,
+        "power_MEM": 19.047814736842106
+    },
+    {
+        "M": 512,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 44.190239999999996,
+        "power_MEM": 18.856218947368422
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 32.466719999999995,
+        "power_MEM": 19.98982736842105
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 40.47504,
+        "power_MEM": 19.53744842105263
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 37.17264,
+        "power_MEM": 18.967983157894736
+    },
+    {
+        "M": 768,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 50.09347368421053,
+        "power_MEM": 19.436328421052632
+    },
+    {
+        "M": 384,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 44.81178947368421,
+        "power_MEM": 19.069103157894734
+    },
+    {
+        "M": 192,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 33.024,
+        "power_MEM": 19.303275789473684
+    },
+    {
+        "M": 768,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 50.114105263157896,
+        "power_MEM": 18.691233684210527
+    },
+    {
+        "M": 768,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 41.55200000000001,
+        "power_MEM": 18.893473684210527
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 44.461052631578944,
+        "power_MEM": 19.164901052631578
+    },
+    {
+        "M": 384,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 40.66484210526317,
+        "power_MEM": 18.962661052631578
+    },
+    {
+        "M": 192,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 32.15712,
+        "power_MEM": 19.095713684210526
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 41.53136842105264,
+        "power_MEM": 18.180311578947368
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 34.69584,
+        "power_MEM": 18.675267368421054
+    },
+    {
+        "M": 768,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 56.73430736842105,
+        "power_MEM": 20.101591578947367
+    },
+    {
+        "M": 384,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 47.30821052631579,
+        "power_MEM": 19.675823157894737
+    },
+    {
+        "M": 192,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 35.21184,
+        "power_MEM": 19.904673684210525
+    },
+    {
+        "M": 768,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 54.71323789473683,
+        "power_MEM": 19.899351578947368
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 51.59359157894737,
+        "power_MEM": 20.75166315789474
+    },
+    {
+        "M": 384,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 46.81456842105263,
+        "power_MEM": 20.266576842105263
+    },
+    {
+        "M": 192,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 34.475368421052636,
+        "power_MEM": 20.511393684210525
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 47.90759578947368,
+        "power_MEM": 20.388985263157895
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 46.15462736842105,
+        "power_MEM": 19.191511578947367
+    },
+    {
+        "M": 1280,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 65.6836294736842,
+        "power_MEM": 19.431006315789475
+    },
+    {
+        "M": 640,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 53.94786526315789,
+        "power_MEM": 19.484227368421053
+    },
+    {
+        "M": 320,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 46.58771368421052,
+        "power_MEM": 19.585347368421054
+    },
+    {
+        "M": 1280,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 57.82433684210526,
+        "power_MEM": 19.383107368421054
+    },
+    {
+        "M": 1280,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 47.26827789473684,
+        "power_MEM": 18.973305263157894
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 53.888311578947366,
+        "power_MEM": 19.047814736842106
+    },
+    {
+        "M": 640,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 46.56709052631578,
+        "power_MEM": 18.98394947368421
+    },
+    {
+        "M": 320,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 41.882105263157904,
+        "power_MEM": 19.095713684210526
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 46.83519157894737,
+        "power_MEM": 18.691233684210527
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 43.470736842105275,
+        "power_MEM": 17.962105263157895
+    },
+    {
+        "M": 1280,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 73.02878315789474,
+        "power_MEM": 19.473583157894737
+    },
+    {
+        "M": 640,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 55.17570526315789,
+        "power_MEM": 20.149490526315788
+    },
+    {
+        "M": 320,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 48.52629052631578,
+        "power_MEM": 19.888707368421052
+    },
+    {
+        "M": 1280,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 70.6384505263158,
+        "power_MEM": 19.478905263157895
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 63.45216,
+        "power_MEM": 20.266576842105263
+    },
+    {
+        "M": 640,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 50.46486736842105,
+        "power_MEM": 20.962484210526316
+    },
+    {
+        "M": 320,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 45.39157052631578,
+        "power_MEM": 20.36769684210526
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 58.298475789473684,
+        "power_MEM": 20.165456842105264
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 51.24854736842105,
+        "power_MEM": 19.585347368421054
+    },
+    {
+        "M": 1536,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 65.28405894736841,
+        "power_MEM": 18.40916210526316
+    },
+    {
+        "M": 1536,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 58.07171368421053,
+        "power_MEM": 18.473027368421054
+    },
+    {
+        "M": 1536,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 47.701364210526314,
+        "power_MEM": 18.072943157894738
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 55.94839578947367,
+        "power_MEM": 18.58479157894737
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 50.67109894736842,
+        "power_MEM": 18.88815157894737
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 45.96901894736842,
+        "power_MEM": 18.089835789473685
+    },
+    {
+        "M": 1536,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 76.07851789473685,
+        "power_MEM": 19.22876631578947
+    },
+    {
+        "M": 1536,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 72.36938105263158,
+        "power_MEM": 19.09039157894737
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 62.715840000000014,
+        "power_MEM": 19.54277052631579
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 58.66954105263158,
+        "power_MEM": 19.164901052631578
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 53.809111578947366,
+        "power_MEM": 19.452294736842106
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 24.31392,
+        "power_MEM": 19.702433684210526
+    },
+    {
+        "M": 512,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 43.98919578947368,
+        "power_MEM": 18.691233684210527
+    },
+    {
+        "M": 512,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 34.888000000000005,
+        "power_MEM": 18.265465263157893
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 23.137439999999998,
+        "power_MEM": 18.802997894736844
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 34.083368421052626,
+        "power_MEM": 18.97862736842105
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 30.14273684210527,
+        "power_MEM": 18.467705263157896
+    },
+    {
+        "M": 128,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 24.70608,
+        "power_MEM": 20.208033684210523
+    },
+    {
+        "M": 512,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 45.94839578947368,
+        "power_MEM": 19.782265263157896
+    },
+    {
+        "M": 512,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 43.90670315789473,
+        "power_MEM": 19.59066947368421
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 33.6501052631579,
+        "power_MEM": 20.224
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 42.155553684210524,
+        "power_MEM": 19.00523789473684
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 38.911157894736846,
+        "power_MEM": 18.38255157894737
+    },
+    {
+        "M": 768,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 51.39290947368421,
+        "power_MEM": 19.319242105263157
+    },
+    {
+        "M": 384,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 43.432370526315786,
+        "power_MEM": 19.494871578947368
+    },
+    {
+        "M": 192,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 33.77389473684211,
+        "power_MEM": 19.59599157894737
+    },
+    {
+        "M": 768,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 46.175250526315786,
+        "power_MEM": 18.802997894736844
+    },
+    {
+        "M": 768,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 38.024,
+        "power_MEM": 18.797675789473686
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 43.47361684210526,
+        "power_MEM": 19.697111578947368
+    },
+    {
+        "M": 384,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 39.71578947368422,
+        "power_MEM": 18.802997894736844
+    },
+    {
+        "M": 192,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 32.102736842105266,
+        "power_MEM": 18.893473684210527
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 41.82021052631579,
+        "power_MEM": 18.79235368421053
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 36.06400000000001,
+        "power_MEM": 18.185633684210526
+    },
+    {
+        "M": 768,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 53.35210947368421,
+        "power_MEM": 20.389423157894736
+    },
+    {
+        "M": 384,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 45.92777263157895,
+        "power_MEM": 19.979183157894735
+    },
+    {
+        "M": 192,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 35.445052631578946,
+        "power_MEM": 20.112235789473683
+    },
+    {
+        "M": 768,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 51.166054736842106,
+        "power_MEM": 20.176101052631576
+    },
+    {
+        "M": 768,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 49.68118736842105,
+        "power_MEM": 19.00523789473684
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 46.09275789473684,
+        "power_MEM": 20.675545263157893
+    },
+    {
+        "M": 384,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 44.628513684210525,
+        "power_MEM": 20.558644210526314
+    },
+    {
+        "M": 192,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 32.82484210526316,
+        "power_MEM": 20.213355789473685
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 41.898248421052635,
+        "power_MEM": 19.79290947368421
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 42.56294736842106,
+        "power_MEM": 18.893473684210527
+    },
+    {
+        "M": 1280,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 60.40117894736842,
+        "power_MEM": 19.494871578947368
+    },
+    {
+        "M": 640,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 50.79483789473684,
+        "power_MEM": 19.494871578947368
+    },
+    {
+        "M": 320,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 43.759578947368425,
+        "power_MEM": 19.356496842105262
+    },
+    {
+        "M": 1280,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 52.83653052631579,
+        "power_MEM": 19.34053052631579
+    },
+    {
+        "M": 1280,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 44.64673684210526,
+        "power_MEM": 18.973305263157894
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 50.402997894736835,
+        "power_MEM": 19.38842947368421
+    },
+    {
+        "M": 640,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 44.13355789473684,
+        "power_MEM": 19.05845894736842
+    },
+    {
+        "M": 320,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 40.85052631578948,
+        "power_MEM": 18.78703157894737
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 43.90670315789473,
+        "power_MEM": 19.122324210526315
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 40.912421052631586,
+        "power_MEM": 18.281431578947366
+    },
+    {
+        "M": 1280,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 67.8978105263158,
+        "power_MEM": 19.98982736842105
+    },
+    {
+        "M": 640,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 55.14442105263157,
+        "power_MEM": 20.090947368421052
+    },
+    {
+        "M": 320,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 46.95893052631578,
+        "power_MEM": 20.090947368421052
+    },
+    {
+        "M": 1280,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 64.81273263157895,
+        "power_MEM": 19.888707368421052
+    },
+    {
+        "M": 1280,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 60.52486736842105,
+        "power_MEM": 19.38842947368421
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 54.58782315789473,
+        "power_MEM": 20.38432842105263
+    },
+    {
+        "M": 640,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 47.371393684210524,
+        "power_MEM": 20.389667368421055
+    },
+    {
+        "M": 320,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 45.80403368421052,
+        "power_MEM": 20.585212631578948
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 49.206854736842104,
+        "power_MEM": 19.574703157894735
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 43.641406315789474,
+        "power_MEM": 18.97862736842105
+    },
+    {
+        "M": 1536,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 62.52449684210527,
+        "power_MEM": 19.356496842105262
+    },
+    {
+        "M": 1536,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 54.04981052631578,
+        "power_MEM": 18.595435789473687
+    },
+    {
+        "M": 1536,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 44.99973052631578,
+        "power_MEM": 18.467705263157896
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 52.40344421052632,
+        "power_MEM": 19.202155789473682
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 45.76278736842105,
+        "power_MEM": 19.069103157894734
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 38.10652631578947,
+        "power_MEM": 18.653978947368422
+    },
+    {
+        "M": 1536,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 71.91604210526316,
+        "power_MEM": 20.085625263157894
+    },
+    {
+        "M": 1536,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 67.23840842105264,
+        "power_MEM": 19.803553684210527
+    },
+    {
+        "M": 1536,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 61.019621052631585,
+        "power_MEM": 18.97862736842105
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 56.319461052631574,
+        "power_MEM": 19.697111578947368
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 50.19676631578947,
+        "power_MEM": 19.074425263157895
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 46.732075789473676,
+        "power_MEM": 19.196833684210524
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 26.006400000000003,
+        "power_MEM": 19.095713684210526
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 35.19747368421053,
+        "power_MEM": 17.686686315789476
+    },
+    {
+        "M": 512,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 32.78853052631579,
+        "power_MEM": 16.471326315789472
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 22.415039999999998,
+        "power_MEM": 18.05790315789474
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 27.843360000000004,
+        "power_MEM": 17.606728421052633
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 26.130240000000004,
+        "power_MEM": 16.188808421052634
+    },
+    {
+        "M": 128,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 23.5296,
+        "power_MEM": 19.202155789473682
+    },
+    {
+        "M": 512,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 42.31536842105263,
+        "power_MEM": 18.701877894736842
+    },
+    {
+        "M": 512,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 40.685473684210535,
+        "power_MEM": 18.664623157894738
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 22.353119999999997,
+        "power_MEM": 19.33520842105263
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 34.67071157894737,
+        "power_MEM": 18.691233684210527
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 31.703039999999998,
+        "power_MEM": 17.697347368421052
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 45.8021052631579,
+        "power_MEM": 17.94613894736842
+    },
+    {
+        "M": 384,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 39.57136842105264,
+        "power_MEM": 18.377229473684213
+    },
+    {
+        "M": 192,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 31.3728,
+        "power_MEM": 18.446416842105265
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 39.57136842105264,
+        "power_MEM": 17.21226947368421
+    },
+    {
+        "M": 768,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 32.94144,
+        "power_MEM": 16.647233684210526
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 39.11747368421053,
+        "power_MEM": 18.084513684210528
+    },
+    {
+        "M": 384,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 31.764960000000002,
+        "power_MEM": 18.244176842105265
+    },
+    {
+        "M": 192,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 27.843360000000004,
+        "power_MEM": 17.436151578947367
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 32.38416,
+        "power_MEM": 17.988715789473684
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 29.37072,
+        "power_MEM": 16.487317894736844
+    },
+    {
+        "M": 768,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 49.249153684210526,
+        "power_MEM": 19.356496842105262
+    },
+    {
+        "M": 384,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 43.842105263157904,
+        "power_MEM": 19.26602105263158
+    },
+    {
+        "M": 192,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 33.973440000000004,
+        "power_MEM": 19.33520842105263
+    },
+    {
+        "M": 768,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 48.49025684210526,
+        "power_MEM": 18.547536842105263
+    },
+    {
+        "M": 768,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 43.67705263157895,
+        "power_MEM": 17.978071578947368
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 40.21094736842105,
+        "power_MEM": 19.835486315789474
+    },
+    {
+        "M": 384,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 39.014315789473685,
+        "power_MEM": 19.55873684210526
+    },
+    {
+        "M": 192,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 31.290240000000004,
+        "power_MEM": 19.500193684210526
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 39.5301052631579,
+        "power_MEM": 18.473027368421054
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 37.178105263157896,
+        "power_MEM": 18.073869473684212
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 48.69127578947368,
+        "power_MEM": 18.52624842105263
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 39.09684210526316,
+        "power_MEM": 18.59011368421053
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 53.888311578947366,
+        "power_MEM": 18.696555789473685
+    },
+    {
+        "M": 640,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 44.89141894736842,
+        "power_MEM": 19.484227368421053
+    },
+    {
+        "M": 320,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 39.17936842105263,
+        "power_MEM": 19.22876631578947
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 46.4639747368421,
+        "power_MEM": 18.286753684210527
+    },
+    {
+        "M": 1280,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 38.68421052631579,
+        "power_MEM": 17.948926315789475
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 42.29473684210527,
+        "power_MEM": 18.68058947368421
+    },
+    {
+        "M": 640,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 39.2,
+        "power_MEM": 18.38787368421053
+    },
+    {
+        "M": 320,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 35.09431578947368,
+        "power_MEM": 17.920825263157894
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 35.54821052631579,
+        "power_MEM": 18.14837894736842
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 33.58821052631579,
+        "power_MEM": 16.588597894736843
+    },
+    {
+        "M": 1280,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 62.6481852631579,
+        "power_MEM": 19.351174736842108
+    },
+    {
+        "M": 640,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 52.79528421052632,
+        "power_MEM": 19.580025263157896
+    },
+    {
+        "M": 320,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 43.151065263157896,
+        "power_MEM": 20.234644210526316
+    },
+    {
+        "M": 1280,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 58.648926315789474,
+        "power_MEM": 19.122324210526315
+    },
+    {
+        "M": 1280,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 51.57851789473684,
+        "power_MEM": 18.97862736842105
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 51.104185263157895,
+        "power_MEM": 20.19206736842105
+    },
+    {
+        "M": 640,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 45.2884547368421,
+        "power_MEM": 20.04304842105263
+    },
+    {
+        "M": 320,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 40.912421052631586,
+        "power_MEM": 19.803553684210527
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 45.806989473684204,
+        "power_MEM": 19.675823157894737
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 40.72673684210527,
+        "power_MEM": 19.037170526315787
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 57.391427368421056,
+        "power_MEM": 18.664623157894738
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 48.13445052631579,
+        "power_MEM": 18.169667368421052
+    },
+    {
+        "M": 1536,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 39.550736842105266,
+        "power_MEM": 17.878585263157895
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 45.47406315789473,
+        "power_MEM": 18.898795789473684
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 37.054315789473684,
+        "power_MEM": 18.467705263157896
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 34.80547368421053,
+        "power_MEM": 16.753844210526314
+    },
+    {
+        "M": 1536,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 66.43476210526316,
+        "power_MEM": 19.585347368421054
+    },
+    {
+        "M": 1536,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 61.16392421052632,
+        "power_MEM": 19.15957894736842
+    },
+    {
+        "M": 1536,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 53.44490947368421,
+        "power_MEM": 18.797675789473686
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 50.87733052631579,
+        "power_MEM": 19.095713684210526
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 47.350770526315785,
+        "power_MEM": 19.452294736842106
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 42.91679157894737,
+        "power_MEM": 19.13829052631579
+    },
+    {
+        "M": 512,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 82.56288,
+        "power_MEM": 18.180311578947368
+    },
+    {
+        "M": 512,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 66.12169263157894,
+        "power_MEM": 16.942332631578946
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 57.272336842105254,
+        "power_MEM": 16.80181894736842
+    },
+    {
+        "M": 512,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 87.65248000000001,
+        "power_MEM": 19.39674947368421
+    },
+    {
+        "M": 512,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 88.53412210526317,
+        "power_MEM": 18.952016842105262
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 79.08485894736842,
+        "power_MEM": 19.438214736842106
+    },
+    {
+        "M": 512,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 70.14803368421053,
+        "power_MEM": 18.366585263157894
+    },
+    {
+        "M": 768,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 94.06010947368421,
+        "power_MEM": 18.30804210526316
+    },
+    {
+        "M": 384,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 81.12427789473685,
+        "power_MEM": 18.818964210526314
+    },
+    {
+        "M": 192,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 57.33070315789473,
+        "power_MEM": 19.127646315789473
+    },
+    {
+        "M": 768,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 92.77472842105263,
+        "power_MEM": 18.222888421052634
+    },
+    {
+        "M": 768,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 73.93982315789474,
+        "power_MEM": 17.31413894736842
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 94.6485052631579,
+        "power_MEM": 18.036614736842107
+    },
+    {
+        "M": 384,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 72.45757473684212,
+        "power_MEM": 18.111124210526317
+    },
+    {
+        "M": 192,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 51.947410526315785,
+        "power_MEM": 18.30272
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 79.79041684210526,
+        "power_MEM": 17.79712
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 70.27755789473684,
+        "power_MEM": 16.471326315789472
+    },
+    {
+        "M": 768,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 85.84321684210526,
+        "power_MEM": 16.204800000000002
+    },
+    {
+        "M": 384,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 90.75063578947368,
+        "power_MEM": 19.38404210526316
+    },
+    {
+        "M": 192,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 70.33070315789475,
+        "power_MEM": 19.875654736842108
+    },
+    {
+        "M": 768,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 87.23321263157895,
+        "power_MEM": 19.980387368421052
+    },
+    {
+        "M": 768,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 94.88574315789474,
+        "power_MEM": 17.315494736842105
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 84.72583578947369,
+        "power_MEM": 20.33546947368421
+    },
+    {
+        "M": 384,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 78.6178105263158,
+        "power_MEM": 20.009077894736844
+    },
+    {
+        "M": 192,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 56.855444210526315,
+        "power_MEM": 20.205254736842104
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 92.06857263157895,
+        "power_MEM": 18.174989473684214
+    },
+    {
+        "M": 768,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 90.09728,
+        "power_MEM": 18.345296842105263
+    },
+    {
+        "M": 1024,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 97.37146105263157,
+        "power_MEM": 16.110012631578947
+    },
+    {
+        "M": 1280,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 95.3222147368421,
+        "power_MEM": 16.460143157894738
+    },
+    {
+        "M": 640,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 89.95508210526316,
+        "power_MEM": 16.53973052631579
+    },
+    {
+        "M": 320,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 82.10969263157895,
+        "power_MEM": 18.989271578947367
+    },
+    {
+        "M": 1280,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 94.10721684210526,
+        "power_MEM": 16.218896842105263
+    },
+    {
+        "M": 1280,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 92.17152,
+        "power_MEM": 17.72793263157895
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 96.54304842105263,
+        "power_MEM": 16.175292631578948
+    },
+    {
+        "M": 640,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 96.26750315789472,
+        "power_MEM": 18.238854736842107
+    },
+    {
+        "M": 320,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 74.25510736842106,
+        "power_MEM": 18.339974736842105
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 96.44679578947368,
+        "power_MEM": 17.775831578947372
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 78.26587789473685,
+        "power_MEM": 17.01343157894737
+    },
+    {
+        "M": 1280,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 94.64225684210527,
+        "power_MEM": 14.850846315789475
+    },
+    {
+        "M": 640,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 73.79859368421053,
+        "power_MEM": 16.247444210526314
+    },
+    {
+        "M": 320,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 89.41024,
+        "power_MEM": 19.50837894736842
+    },
+    {
+        "M": 1280,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 97.88886736842106,
+        "power_MEM": 15.647823157894738
+    },
+    {
+        "M": 1280,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 97.4689347368421,
+        "power_MEM": 15.085389473684211
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 91.24796631578947,
+        "power_MEM": 15.799494736842107
+    },
+    {
+        "M": 640,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 76.01669894736843,
+        "power_MEM": 16.535292631578944
+    },
+    {
+        "M": 320,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 79.90720842105264,
+        "power_MEM": 20.220101052631577
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 98.24454736842104,
+        "power_MEM": 16.620934736842106
+    },
+    {
+        "M": 1280,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 94.07630315789474,
+        "power_MEM": 15.751705263157895
+    },
+    {
+        "M": 1536,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 96.74325052631579,
+        "power_MEM": 15.943604210526317
+    },
+    {
+        "M": 1536,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 93.63975578947368,
+        "power_MEM": 16.140833684210527
+    },
+    {
+        "M": 1536,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 93.69738105263158,
+        "power_MEM": 17.238298947368424
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 97.34697263157895,
+        "power_MEM": 15.868976842105264
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 95.37996631578946,
+        "power_MEM": 17.122534736842105
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 86.59861894736842,
+        "power_MEM": 16.690046315789473
+    },
+    {
+        "M": 1536,
+        "N": 24576,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 98.13219368421052,
+        "power_MEM": 14.920143157894735
+    },
+    {
+        "M": 1536,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 94.91124210526316,
+        "power_MEM": 14.680269473684211
+    },
+    {
+        "M": 1536,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 95.54672000000001,
+        "power_MEM": 14.781549473684212
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 12288,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 97.7215747368421,
+        "power_MEM": 15.741044210526315
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 98.09628631578946,
+        "power_MEM": 15.738442105263157
+    },
+    {
+        "M": 1536,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 96.30465684210526,
+        "power_MEM": 16.60229894736842
+    },
+    {
+        "M": 512,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 73.87505684210527,
+        "power_MEM": 17.477793684210525
+    },
+    {
+        "M": 512,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 58.32497684210526,
+        "power_MEM": 16.290088421052634
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 65.66678736842105,
+        "power_MEM": 16.860623157894736
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 52.21783578947368,
+        "power_MEM": 15.959595789473685
+    },
+    {
+        "M": 512,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 94.16502736842104,
+        "power_MEM": 18.691233684210527
+    },
+    {
+        "M": 512,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 86.71456842105263,
+        "power_MEM": 18.031292631578946
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 79.31148631578948,
+        "power_MEM": 18.244176842105265
+    },
+    {
+        "M": 512,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 67.88544,
+        "power_MEM": 17.03104
+    },
+    {
+        "M": 768,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 89.97572210526316,
+        "power_MEM": 18.51028210526316
+    },
+    {
+        "M": 384,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 83.03667368421054,
+        "power_MEM": 18.313364210526316
+    },
+    {
+        "M": 192,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 53.99660631578947,
+        "power_MEM": 18.49963789473684
+    },
+    {
+        "M": 768,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 83.40746947368422,
+        "power_MEM": 17.685355789473686
+    },
+    {
+        "M": 768,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 65.33990736842105,
+        "power_MEM": 16.74806736842105
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 87.56819368421053,
+        "power_MEM": 18.068547368421054
+    },
+    {
+        "M": 384,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 77.35776,
+        "power_MEM": 17.84501894736842
+    },
+    {
+        "M": 192,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 46.0721347368421,
+        "power_MEM": 18.14837894736842
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 77.56383157894737,
+        "power_MEM": 17.119907368421053
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 63.96464,
+        "power_MEM": 16.060875789473684
+    },
+    {
+        "M": 768,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 96.07613473684209,
+        "power_MEM": 17.11598315789474
+    },
+    {
+        "M": 384,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 82.06518736842105,
+        "power_MEM": 19.68592
+    },
+    {
+        "M": 192,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 65.90563368421053,
+        "power_MEM": 19.184867368421052
+    },
+    {
+        "M": 768,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 94.78086736842106,
+        "power_MEM": 17.71196631578947
+    },
+    {
+        "M": 768,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 96.09675789473684,
+        "power_MEM": 17.536336842105264
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 94.88377263157894,
+        "power_MEM": 19.065515789473682
+    },
+    {
+        "M": 384,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 82.13030736842106,
+        "power_MEM": 19.037170526315787
+    },
+    {
+        "M": 192,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 59.432286315789476,
+        "power_MEM": 18.80832
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 88.37328842105264,
+        "power_MEM": 18.515604210526316
+    },
+    {
+        "M": 768,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 79.45739789473684,
+        "power_MEM": 17.829052631578946
+    },
+    {
+        "M": 1280,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 94.96809263157894,
+        "power_MEM": 17.179755789473685
+    },
+    {
+        "M": 640,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 91.67731368421053,
+        "power_MEM": 18.483671578947366
+    },
+    {
+        "M": 320,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 74.70838736842106,
+        "power_MEM": 18.244176842105265
+    },
+    {
+        "M": 1280,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 96.12128842105263,
+        "power_MEM": 17.626812631578947
+    },
+    {
+        "M": 1280,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 82.07191578947369,
+        "power_MEM": 17.03605894736842
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 93.95909052631579,
+        "power_MEM": 16.932244210526317
+    },
+    {
+        "M": 640,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 89.21206736842105,
+        "power_MEM": 18.063225263157893
+    },
+    {
+        "M": 320,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 76.86499368421053,
+        "power_MEM": 17.648101052631578
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 87.2577852631579,
+        "power_MEM": 17.31813052631579
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 75.64723368421053,
+        "power_MEM": 16.48731789473684
+    },
+    {
+        "M": 1280,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 82.36889263157894,
+        "power_MEM": 15.17600842105263
+    },
+    {
+        "M": 640,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 76.86454736842106,
+        "power_MEM": 16.633035789473684
+    },
+    {
+        "M": 320,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 83.53105684210527,
+        "power_MEM": 19.279781052631577
+    },
+    {
+        "M": 1280,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 97.09376,
+        "power_MEM": 15.572084210526315
+    },
+    {
+        "M": 1280,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 97.2324547368421,
+        "power_MEM": 16.044884210526316
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 97.38470736842106,
+        "power_MEM": 16.801886315789474
+    },
+    {
+        "M": 640,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 96.5517389473684,
+        "power_MEM": 18.222888421052634
+    },
+    {
+        "M": 320,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 81.70288842105263,
+        "power_MEM": 18.99459368421053
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 94.0660294736842,
+        "power_MEM": 17.117204210526314
+    },
+    {
+        "M": 1280,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 94.1052294736842,
+        "power_MEM": 17.680033684210525
+    },
+    {
+        "M": 1536,
+        "N": 6144,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 95.52612210526316,
+        "power_MEM": 15.698400000000001
+    },
+    {
+        "M": 1536,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 94.0248252631579,
+        "power_MEM": 17.11056842105263
+    },
+    {
+        "M": 1536,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 83.61694315789475,
+        "power_MEM": 16.829827368421054
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 93.38848,
+        "power_MEM": 16.45616
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 94.70239157894737,
+        "power_MEM": 17.834374736842104
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 76.07998315789473,
+        "power_MEM": 16.41802105263158
+    },
+    {
+        "M": 1536,
+        "N": 19456,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 96.64696421052632,
+        "power_MEM": 15.554475789473686
+    },
+    {
+        "M": 1536,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 98.37847578947367,
+        "power_MEM": 14.930804210526315
+    },
+    {
+        "M": 1536,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 97.33028210526315,
+        "power_MEM": 15.346585263157897
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 9728,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 95.31820631578948,
+        "power_MEM": 15.90629052631579
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 93.72668631578946,
+        "power_MEM": 16.65189894736842
+    },
+    {
+        "M": 1536,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 95.11629473684211,
+        "power_MEM": 17.52569263157895
+    },
+    {
+        "M": 512,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 44.83043368421053,
+        "power_MEM": 14.479435789473685
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 46.89989052631579,
+        "power_MEM": 15.21332210526316
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 44.667368421052636,
+        "power_MEM": 14.38309052631579
+    },
+    {
+        "M": 512,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 85.13779368421054,
+        "power_MEM": 17.823730526315792
+    },
+    {
+        "M": 512,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 74.04137263157895,
+        "power_MEM": 16.78889263157895
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 60.67034947368421,
+        "power_MEM": 17.17845894736842
+    },
+    {
+        "M": 512,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 53.20774736842105,
+        "power_MEM": 15.229313684210528
+    },
+    {
+        "M": 384,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 65.36933052631579,
+        "power_MEM": 17.46714947368421
+    },
+    {
+        "M": 192,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 48.52629052631579,
+        "power_MEM": 17.421945263157895
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 73.17735578947368,
+        "power_MEM": 16.599258947368423
+    },
+    {
+        "M": 768,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 50.36175157894737,
+        "power_MEM": 14.829524210526316
+    },
+    {
+        "M": 384,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 59.992471578947374,
+        "power_MEM": 15.847654736842104
+    },
+    {
+        "M": 192,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 41.366315789473695,
+        "power_MEM": 15.746374736842107
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 60.59157894736842,
+        "power_MEM": 15.645094736842106
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 45.98064,
+        "power_MEM": 14.781549473684212
+    },
+    {
+        "M": 768,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 77.05311157894737,
+        "power_MEM": 16.172816842105263
+    },
+    {
+        "M": 384,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 87.15478736842105,
+        "power_MEM": 18.842307368421054
+    },
+    {
+        "M": 192,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 57.478492631578945,
+        "power_MEM": 19.031848421052633
+    },
+    {
+        "M": 768,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 97.2704842105263,
+        "power_MEM": 18.041936842105265
+    },
+    {
+        "M": 768,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 87.81021473684211,
+        "power_MEM": 17.143823157894737
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 92.80991157894736,
+        "power_MEM": 18.313364210526316
+    },
+    {
+        "M": 384,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 75.03473684210526,
+        "power_MEM": 18.30272
+    },
+    {
+        "M": 192,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 55.66088421052632,
+        "power_MEM": 17.86630736842105
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 78.98524631578947,
+        "power_MEM": 17.026829473684213
+    },
+    {
+        "M": 768,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 69.42679578947369,
+        "power_MEM": 16.327402105263157
+    },
+    {
+        "M": 640,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 80.93888842105264,
+        "power_MEM": 17.74922105263158
+    },
+    {
+        "M": 320,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 66.03636210526317,
+        "power_MEM": 17.118543157894738
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 83.73881263157895,
+        "power_MEM": 17.376673684210527
+    },
+    {
+        "M": 1280,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 67.59835789473684,
+        "power_MEM": 16.456117894736842
+    },
+    {
+        "M": 640,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 66.08195368421052,
+        "power_MEM": 16.71364210526316
+    },
+    {
+        "M": 320,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 60.157389473684205,
+        "power_MEM": 15.91162105263158
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 70.54101052631579,
+        "power_MEM": 16.51445894736842
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 54.90728421052631,
+        "power_MEM": 15.463856842105264
+    },
+    {
+        "M": 1280,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 81.94728421052632,
+        "power_MEM": 15.218652631578948
+    },
+    {
+        "M": 640,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 96.61352421052631,
+        "power_MEM": 16.18880842105263
+    },
+    {
+        "M": 320,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 91.2244547368421,
+        "power_MEM": 19.28101052631579
+    },
+    {
+        "M": 1280,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 97.1263494736842,
+        "power_MEM": 16.11418105263158
+    },
+    {
+        "M": 1280,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 93.99836631578947,
+        "power_MEM": 16.547014736842105
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 96.73507368421052,
+        "power_MEM": 17.536336842105264
+    },
+    {
+        "M": 640,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 92.60201263157894,
+        "power_MEM": 18.19627789473684
+    },
+    {
+        "M": 320,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 71.3624505263158,
+        "power_MEM": 18.723166315789474
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 91.11241263157895,
+        "power_MEM": 17.46714947368421
+    },
+    {
+        "M": 1280,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 80.43082105263159,
+        "power_MEM": 16.505456842105264
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 88.00113684210527,
+        "power_MEM": 17.31280842105263
+    },
+    {
+        "M": 1536,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 64.8964547368421,
+        "power_MEM": 16.066206315789476
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 77.64760421052631,
+        "power_MEM": 16.151494736842107
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 56.58612210526315,
+        "power_MEM": 15.533153684210527
+    },
+    {
+        "M": 1536,
+        "N": 12288,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 97.03193263157895,
+        "power_MEM": 15.266627368421053
+    },
+    {
+        "M": 1536,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 97.45580631578947,
+        "power_MEM": 15.463856842105264
+    },
+    {
+        "M": 1536,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 96.6958989473684,
+        "power_MEM": 16.183477894736843
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 6144,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 96.24486736842105,
+        "power_MEM": 16.95754105263158
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 92.83450105263158,
+        "power_MEM": 17.24362105263158
+    },
+    {
+        "M": 1536,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp4",
+        "output_dtype": "fp8",
+        "power_GPU": 88.38495157894738,
+        "power_MEM": 17.048016842105266
+    },
+    {
+        "M": 576,
+        "N": 3072,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 41.03621052631579,
+        "power_MEM": 17.780564210526315
+    },
+    {
+        "M": 288,
+        "N": 3072,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 36.3322105263158,
+        "power_MEM": 17.11098947368421
+    },
+    {
+        "M": 144,
+        "N": 3072,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 29.019840000000002,
+        "power_MEM": 16.785827368421053
+    },
+    {
+        "M": 576,
+        "N": 1536,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 34.78484210526316,
+        "power_MEM": 16.476656842105264
+    },
+    {
+        "M": 576,
+        "N": 768,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 27.843360000000004,
+        "power_MEM": 15.294063157894737
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 29.639039999999998,
+        "power_MEM": 16.58326736842105
+    },
+    {
+        "M": 288,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 27.575039999999998,
+        "power_MEM": 15.205894736842106
+    },
+    {
+        "M": 144,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 21.960960000000004,
+        "power_MEM": 14.607360000000002
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 512,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 25.345920000000003,
+        "power_MEM": 14.767528421052631
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 256,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 22.745279999999998,
+        "power_MEM": 14.393802105263157
+    },
+    {
+        "M": 576,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 42.975578947368426,
+        "power_MEM": 17.733254736842106
+    },
+    {
+        "M": 288,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 41.90273684210526,
+        "power_MEM": 17.425490526315787
+    },
+    {
+        "M": 144,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 29.80416,
+        "power_MEM": 17.23892210526316
+    },
+    {
+        "M": 576,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 36.08463157894738,
+        "power_MEM": 16.705869473684206
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 32.15712,
+        "power_MEM": 15.437204210526318
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 36.06400000000001,
+        "power_MEM": 18.50496
+    },
+    {
+        "M": 288,
+        "N": 1024,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 34.496,
+        "power_MEM": 17.718105263157895
+    },
+    {
+        "M": 144,
+        "N": 1024,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 28.503840000000004,
+        "power_MEM": 17.51077894736842
+    },
+    {
+        "M": 576,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 35.28,
+        "power_MEM": 16.807149473684213
+    },
+    {
+        "M": 1024,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 46.97955368421052,
+        "power_MEM": 18.143056842105263
+    },
+    {
+        "M": 1024,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 39.468210526315794,
+        "power_MEM": 17.372185263157892
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 32.53879578947368,
+        "power_MEM": 16.29541894736842
+    },
+    {
+        "M": 1024,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 32.98989473684211,
+        "power_MEM": 17.90782315789474
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 28.524480000000004,
+        "power_MEM": 18.79235368421053
+    },
+    {
+        "M": 128,
+        "N": 1536,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 21.960960000000004,
+        "power_MEM": 17.93594105263158
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 22.353119999999997,
+        "power_MEM": 18.45706105263158
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 22.745279999999998,
+        "power_MEM": 18.185633684210526
+    },
+    {
+        "M": 128,
+        "N": 12288,
+        "K": 4096,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 23.92176,
+        "power_MEM": 19.633246315789474
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 6144,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 23.26128,
+        "power_MEM": 20.059014736842105
+    },
+    {
+        "M": 128,
+        "N": 4096,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 22.745279999999998,
+        "power_MEM": 19.276665263157895
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 27.05904,
+        "power_MEM": 18.47834947368421
+    },
+    {
+        "M": 128,
+        "N": 1536,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 20.784480000000002,
+        "power_MEM": 17.32954105263158
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 26.666880000000003,
+        "power_MEM": 18.07919157894737
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 26.85264,
+        "power_MEM": 16.274096842105266
+    },
+    {
+        "M": 128,
+        "N": 9728,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 34.496,
+        "power_MEM": 19.66517894736842
+    },
+    {
+        "M": 128,
+        "N": 4864,
+        "K": 2560,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 33.27168,
+        "power_MEM": 19.154256842105262
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 4864,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 30.98064,
+        "power_MEM": 19.09039157894737
+    },
+    {
+        "M": 128,
+        "N": 2560,
+        "K": 2432,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 21.568800000000003,
+        "power_MEM": 18.286753684210527
+    },
+    {
+        "M": 64,
+        "N": 4096,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 32.15712,
+        "power_MEM": 18.281431578947366
+    },
+    {
+        "M": 64,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 21.960960000000004,
+        "power_MEM": 17.617389473684213
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 21.960960000000004,
+        "power_MEM": 17.537431578947366
+    },
+    {
+        "M": 128,
+        "N": 1024,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 25.779360000000004,
+        "power_MEM": 15.682408421052633
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 1024,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 20.7432,
+        "power_MEM": 16.30608
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 512,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 18.04672,
+        "power_MEM": 14.303039999999998
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 22.724639999999997,
+        "power_MEM": 18.802997894736844
+    },
+    {
+        "M": 128,
+        "N": 3072,
+        "K": 2048,
+        "precision": "fp8",
+        "output_dtype": "fp8",
+        "power_GPU": 21.568800000000003,
+        "power_MEM": 17.95146105263158
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 3072,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 21.40368,
+        "power_MEM": 18.169667368421052
+    },
+    {
+        "M": 128,
+        "N": 2048,
+        "K": 1536,
+        "precision": "fp8",
+        "output_dtype": "fp16",
+        "power_GPU": 21.176640000000003,
+        "power_MEM": 17.07900631578947
+    },
+    {
+        "M": 128,
+        "N": 6144,
+        "K": 4096,
+        "precision": "fp4",
+        "output_dtype": "fp4",
+        "power_GPU": 55.80626526315789,
+        "power_MEM": 18.622046315789472
     }
 ]

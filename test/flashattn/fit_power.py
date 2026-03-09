@@ -105,7 +105,6 @@ def load_or_generate_data(args):
     else:
         raise FileNotFoundError(f"{json_path} not found")
 
-    X_features_raw = []
     X_features = []
     y_soc_list = []
     y_mem_list = []
@@ -205,7 +204,6 @@ def load_or_generate_data(args):
             best_model.mem_access_size / runtime_s,  # 3: DRAM
         ]
 
-        X_features_raw.append([model.fma_count, model.mem_access_size])
         X_features.append(features)
         y_soc_list.append(record["power_GPU"])
         y_mem_list.append(record["power_MEM"])

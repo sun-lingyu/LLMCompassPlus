@@ -217,7 +217,7 @@ def test_and_save_latency(
             roofline_latency = min(roofline_latency, roofline_latency_this)
 
             port = 9129 if args.device == "Orin" else 9147
-            measurement_latency_this, _ = (
+            measurement_latency_this = min(
                 flash_attn_min_latency_remote(
                     seq_len_q,
                     seq_len_kv,
@@ -232,7 +232,7 @@ def test_and_save_latency(
                     output_dtype,
                     f"{file_dir}/temp/flashattn_perf_log.{args.device}.json",
                     port,
-                )
+                )[0]
                 for pack_gqa_val in [False, True]
             )
             measurement_latency = min(measurement_latency, measurement_latency_this)
