@@ -25,8 +25,8 @@
     "launch_latency": {
       "matmul": 5e-06,
       "layernorm": 2e-06,
-      "flashattn": 0,
-      "flashattn_combine": 0
+      "flashattn": 2e-06,
+      "flashattn_combine": 2e-06
     }
   },
   "io_module": {

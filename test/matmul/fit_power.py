@@ -15,7 +15,7 @@ from software_model.utils import Tensor, data_type_dict
 file_dir = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE_TEMPLATE = f"{file_dir}/temp/power_features_cache"
 
-intercept_dict = {"Orin": {"soc": 25, "mem": 0.5}, "Thor": {"soc": 25, "mem": 6.7}}
+intercept_dict = {"Orin": {"soc": 25, "mem": 0.5}, "Thor": {"soc": 20, "mem": 6.7}}
 
 
 def plot_fitting_results(
@@ -207,7 +207,7 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
 
     # Custom features here
     # ==============================================================================
-    soc_features_to_use = ["FMA", "INPUT Size"]
+    soc_features_to_use = ["FMA", "DRAM Access Byte"]
     # Not using OUTPUT Size, since it colinear with FMA!
 
     mem_features_to_use = ["DRAM Access Byte"]
@@ -261,7 +261,12 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
         }
 
     res_soc = fit_single_rail(
-        X_raw, y_soc, soc_features_to_use, "Rail 1: GPU", enforce_positive=True
+        X_raw,
+        y_soc,
+        soc_features_to_use,
+        "Rail 1: GPU",
+        enforce_positive=True,
+        fit_intercept=True,
     )
     res_mem = fit_single_rail(
         X_raw,

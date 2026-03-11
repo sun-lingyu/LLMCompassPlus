@@ -442,7 +442,7 @@ if __name__ == "__main__":
         else:
             raise ValueError("Unsupported device")
 
-    target_dir = f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}"
+    target_dir = f"{file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.mode}"
     if os.path.exists(target_dir):
         shutil.rmtree(target_dir)
     os.makedirs(

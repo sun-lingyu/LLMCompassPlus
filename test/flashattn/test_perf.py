@@ -85,15 +85,15 @@ def flash_attn_min_latency_remote(
     python_cmd = [
         python_path,
         f"benchmark_flash_attn_{mode}.py",
-        "-b",
+        "--batch",
         "1",
-        "-s",
+        "--seqlen",
         f"{seq_len_kv}",
-        "-hq",
+        "--heads",
         f"{num_heads_q}",
-        "-hkv",
+        "--kv_heads",
         f"{num_heads_kv}",
-        "-d",
+        "--dim",
         f"{head_dim}",
         "--num_splits",
         f"{num_splits}",
@@ -106,7 +106,7 @@ def flash_attn_min_latency_remote(
         assert seq_len_q == seq_len_kv
     else:
         assert not is_causal
-        python_cmd.append(f"-q {seq_len_q}")
+        python_cmd.append(f"-seqlen_q {seq_len_q}")
 
     output = run_remote_command(user, host, port, python_cmd, work_dir=work_dir)
 
@@ -160,7 +160,7 @@ def test_and_save_latency(
     if precision == "fp16":
         qkv_dtype = data_type_dict["fp16"]
         intermediate_dtype = data_type_dict["fp32"]
-        assert device == "Orin", "fp16 precision is for Orin only"
+        assert device in ("Orin", "Thor"), "fp16 precision is for Orin and Thor"
     elif precision == "fp8":
         qkv_dtype = data_type_dict["fp8"]
         intermediate_dtype = data_type_dict["fp32"]
@@ -277,7 +277,7 @@ if __name__ == "__main__":
         seq_len_kv_list = [576, 1024]  # 336x336/448x448 with patch 14x14
         is_causal = False
 
-    target_dir = f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}"
+    target_dir = f"{file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.mode}"
     if os.path.exists(target_dir):
         shutil.rmtree(target_dir)
     os.makedirs(

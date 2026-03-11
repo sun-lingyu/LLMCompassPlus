@@ -177,9 +177,10 @@ class FlashAttn(Operator):
         self.device_type = DeviceType.ORIN if device == "Orin" else DeviceType.THOR
         assert (
             self.device_type == DeviceType.ORIN and self.qkv_dtype.name == "fp16"
-        ) or (self.device_type == DeviceType.THOR and self.qkv_dtype.name == "fp16"), (
-            "Only support fp16 for Orin and fp16 for Thor"
-        )
+        ) or (
+            self.device_type == DeviceType.THOR
+            and self.qkv_dtype.name in ["fp16", "fp8"]
+        ), "Only support fp16 for Orin and fp16/fp8 for Thor"
 
     def __call__(
         self,
@@ -441,6 +442,7 @@ class FlashAttn(Operator):
             self.intermediate_dtype,
             self.output_dtype,
             pcb_module,
+            self.device_type,
         )
         possible_l1_tiles = {
             "normal": FlashAttn.L1TileSimulator(
@@ -509,6 +511,7 @@ class FlashAttn(Operator):
                                     l2_status,
                                     self.output_dtype,
                                     pcb_module,
+                                    self.device_type,
                                 )
                             )
         assert len(cta_sequence) == total_ctas
@@ -598,6 +601,7 @@ class FlashAttn(Operator):
             l2_status: L2CacheFlashAttn,
             output_dtype: DataType,
             pcb_module: Device,
+            device_type: DeviceType,
         ):
             self.num_heads_q = num_heads_q
             self.seq_len_kv = seq_len_kv
@@ -610,6 +614,7 @@ class FlashAttn(Operator):
             self.l2_status = l2_status
             self.output_dtype = output_dtype
             self.pcb_module = pcb_module
+            self.device_type = device_type
             self.previous_cta = None
             self.next_cta = None
 
@@ -659,6 +664,11 @@ class FlashAttn(Operator):
                     self.next_tile_idx + 1
                 ].KV_io_cycle_count
             compute_cycle_count = l1_tile.compute_cycle_count
+            if self.device_type == DeviceType.THOR and self.next_tile_idx == 0:
+                offset_for_cta_launch_overhead = 1
+                compute_cycle_count += (
+                    offset_for_cta_launch_overhead * l1_tile.compute_cycle_count
+                )
 
             self.next_tile_idx += 1
             return l2_cycle_count, mem_cycle_count, compute_cycle_count
@@ -749,11 +759,13 @@ class FlashAttn(Operator):
             intermediate_dtype: DataType,
             output_dtype: DataType,
             pcb_module: Device,
+            device_type: DeviceType,
         ):
             self.seq_len_q = seq_len_q
             self.seq_len_kv = seq_len_kv
             self.gqa_packing_size = gqa_packing_size
             self.head_dim = head_dim
+            self.device_type = device_type
             seq_len_q_packed = seq_len_q * gqa_packing_size
 
             self.Q_io_cycle_count = self.simulate_l1_tile_io_cycle_count(

@@ -5,8 +5,16 @@ import time
 from math import inf
 
 import torch
-from flash_attn import flash_attn_func as flash_attn_func_fa2
-from flash_attn_interface import flash_attn_func as flash_attn_func_fa3
+
+if torch.cuda.is_available():
+    current_device = torch.cuda.current_device()
+    capability = torch.cuda.get_device_capability(current_device)
+
+if capability[0] >= 10:
+    from flash_attn.cute import flash_attn_func as flash_attn_func_fa4
+else:
+    from flash_attn import flash_attn_func as flash_attn_func_fa2
+    from flash_attn_interface import flash_attn_func as flash_attn_func_fa3
 
 
 def benchmark_flash_attn_graph(
@@ -65,9 +73,14 @@ def benchmark_flash_attn_graph(
         "causal": causal,
     }
 
-    if flash_attn_func == flash_attn_func_fa3:
+    if capability[0] >= 10:
+        # FA4: only needs pack_gqa
         kwargs["pack_gqa"] = pack_gqa
-        kwargs["num_splits"] = num_splits
+    else:
+        # FA3: needs pack_gqa + num_splits; FA2: no extra kwargs
+        if flash_attn_func == flash_attn_func_fa3:
+            kwargs["pack_gqa"] = pack_gqa
+            kwargs["num_splits"] = num_splits
 
     # 4. Warmup
     print("Warming up...")
@@ -133,12 +146,9 @@ if __name__ == "__main__":
         print("Error: HeadDim > 256 is not supported by FlashAttention.")
         sys.exit(1)
 
-    print(f"Running benchmark with num_splits={args.num_splits}...")
-    if (
-        not args.fa3_only and int(args.num_splits) == 1 and not args.pack_gqa
-    ):  # FA2 does not support num_splits > 1 or pack_gqa
-        avg_latency_ms_fa2 = benchmark_flash_attn_graph(
-            flash_attn_func_fa2,
+    if capability[0] >= 10:
+        avg_latency_ms = benchmark_flash_attn_graph(
+            flash_attn_func_fa4,
             args.batch,
             args.seqlen,
             args.heads,
@@ -150,23 +160,41 @@ if __name__ == "__main__":
             duration=args.duration,
         )
     else:
-        avg_latency_ms_fa2 = inf
+        if (
+            not args.fa3_only and int(args.num_splits) == 1 and not args.pack_gqa
+        ):  # FA2 does not support num_splits > 1 or pack_gqa
+            avg_latency_ms_fa2 = benchmark_flash_attn_graph(
+                flash_attn_func_fa2,
+                args.batch,
+                args.seqlen,
+                args.heads,
+                args.kv_heads,
+                args.dim,
+                num_splits=args.num_splits,
+                causal=args.causal,
+                pack_gqa=args.pack_gqa,
+                duration=args.duration,
+            )
+        else:
+            avg_latency_ms_fa2 = inf
 
-    if not args.fa2_only:
-        avg_latency_ms_fa3 = benchmark_flash_attn_graph(
-            flash_attn_func_fa3,
-            args.batch,
-            args.seqlen,
-            args.heads,
-            args.kv_heads,
-            args.dim,
-            num_splits=args.num_splits,
-            causal=args.causal,
-            pack_gqa=args.pack_gqa,
-            duration=args.duration,
-        )
-    else:
-        avg_latency_ms_fa3 = inf
-    print(f"FA2: {avg_latency_ms_fa2} ms")
-    print(f"FA3: {avg_latency_ms_fa3} ms")
-    print(f"Average Latency: {min(avg_latency_ms_fa2, avg_latency_ms_fa3):.4f} ms")
+        if not args.fa2_only:
+            avg_latency_ms_fa3 = benchmark_flash_attn_graph(
+                flash_attn_func_fa3,
+                args.batch,
+                args.seqlen,
+                args.heads,
+                args.kv_heads,
+                args.dim,
+                num_splits=args.num_splits,
+                causal=args.causal,
+                pack_gqa=args.pack_gqa,
+                duration=args.duration,
+            )
+        else:
+            avg_latency_ms_fa3 = inf
+        print(f"FA2: {avg_latency_ms_fa2} ms")
+        print(f"FA3: {avg_latency_ms_fa3} ms")
+        avg_latency_ms = min(avg_latency_ms_fa2, avg_latency_ms_fa3)
+
+    print(f"Average Latency: {avg_latency_ms:.4f} ms")

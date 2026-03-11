@@ -69,6 +69,11 @@ if __name__ == "__main__":
         choices=["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"],
     )
     parser.add_argument(
+        "--device",
+        type=str,
+        choices=["Orin", "Thor"],
+    )
+    parser.add_argument(
         "--precision", type=str, choices=["fp16", "int8", "int4", "fp8", "fp4"]
     )
     args = parser.parse_args()
@@ -82,7 +87,9 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(1, 1, figsize=(3, 2.8), sharey=True)
     csv_files = glob.glob(
         str(
-            Path(f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}")
+            Path(
+                f"{file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.mode}"
+            )
             / "*.csv"
         )
     )
@@ -105,6 +112,6 @@ if __name__ == "__main__":
 
     fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.1)
     fig.savefig(
-        f"{file_dir}/results_perf/{args.model}/{args.precision}/{args.mode}.png",
+        f"{file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.mode}.png",
         dpi=300,
     )
