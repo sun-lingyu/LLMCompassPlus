@@ -1,8 +1,6 @@
 from enum import Enum
 from math import ceil, inf
 
-import pandas as pd
-
 from hardware_model.device import Device
 from software_model.operators import Operator
 from software_model.utils import (
@@ -13,7 +11,6 @@ from software_model.utils import (
     Tensor,
     data_type_dict,
 )
-from utils import size
 
 
 class L2CacheMatmul(L2Cache):
@@ -193,7 +190,6 @@ class Matmul(Operator):
         self.weight_dtype = weight_dtype
         self.intermediate_dtype = intermediate_dtype
         self.output_dtype = output_dtype
-        self.look_up_table = None
         self.best_mapping = None
         self.l2_access_size = 0
 
@@ -212,7 +208,9 @@ class Matmul(Operator):
         assert self.weight_dtype == input2.dtype
         assert input2.shape[-2] == input1.shape[-1]
 
-        self.M = size(input1.shape[:-1])
+        self.M = 1
+        for dim in input1.shape[:-1]:
+            self.M *= dim
         self.K = input1.shape[-1]
         self.N = input2.shape[-1]
         if len(input1.shape) == 2:
@@ -478,30 +476,6 @@ class Matmul(Operator):
         pcb_module: Device,
         l2_status: L2CacheMatmul,
     ):
-        if self.look_up_table is None:
-            self.look_up_table = pd.read_csv(
-                f"./systolic_array_model/look_up_table_{pcb_module.compute_module.core.systolic_array.array_width}_{pcb_module.compute_module.core.systolic_array.array_height}.csv",
-                header=None,
-                names=[
-                    "M",
-                    "N",
-                    "K",
-                    "ArrayHeight",
-                    "ArrayWidth",
-                    "Dataflow",
-                    "cycle_count",
-                    "util_rate",
-                ],
-            )
-            self.look_up_table.drop_duplicates(
-                inplace=True,
-                subset=["M", "N", "K", "ArrayHeight", "ArrayWidth", "Dataflow"],
-            )
-            self.look_up_table.set_index(
-                ["M", "N", "K", "ArrayHeight", "ArrayWidth", "Dataflow"],
-                inplace=True,
-            )
-
         M = self.M
         N = self.N
         K = self.K
@@ -550,7 +524,6 @@ class Matmul(Operator):
             self.intermediate_dtype,
             self.output_dtype,
             pcb_module,
-            self.look_up_table,
             is_2sm_mode,
             dataflow,
         )
@@ -834,7 +807,6 @@ class Matmul(Operator):
             intermediate_dtype: DataType,
             output_dtype: DataType,
             pcb_module: Device,
-            look_up_table: pd.DataFrame,
             is_2sm_mode: bool,
             dataflow: str,
         ):
@@ -848,7 +820,6 @@ class Matmul(Operator):
             self.intermediate_dtype = intermediate_dtype
             self.output_dtype = output_dtype
             self.pcb_module = pcb_module
-            self.look_up_table = look_up_table
             self.dataflow = dataflow
 
             M_K_io_cycle_count = self.simulate_l1_tile_io_cycle_count(
@@ -879,7 +850,6 @@ class Matmul(Operator):
                 self.intermediate_dtype,
                 self.dataflow,
                 self.pcb_module,
-                self.look_up_table,
             )
 
         def simulate_l1_tile_io_cycle_count(
@@ -901,7 +871,6 @@ class Matmul(Operator):
             intermediate_dtype: DataType,
             dataflow: str,
             pcb_module: Device,
-            look_up_table: pd.DataFrame,
         ):
             assert M >= pcb_module.compute_module.core.systolic_array.array_width
             assert N >= pcb_module.compute_module.core.systolic_array.array_height

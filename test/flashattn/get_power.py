@@ -54,36 +54,37 @@ def get_flash_attn_full_cmd(
                 best_runtime = best_runtime_temp
                 best_num_splits = num_splits
                 best_pack_gqa = pack_gqa
-    _, (fa2_latency, fa3_latency) = flash_attn_min_latency_remote(
-        seq_len_q,
-        seq_len_kv,
-        num_heads_q,
-        num_heads_kv,
-        head_dim,
-        best_num_splits,
-        is_causal,
-        is_prefill,
-        best_pack_gqa,
-        precision,
-        output_dtype,
-        f"{file_dir}/temp/flashattn_perf_log.{args.device}.json",
-        port,
-        ignore_cache=True,  # important: get fa2 and fa3 latency respectively
-    )
+    if not (device == "Thor" and is_prefill):  # Thor prefill use FA4 only
+        _, (fa2_latency, fa3_latency) = flash_attn_min_latency_remote(
+            seq_len_q,
+            seq_len_kv,
+            num_heads_q,
+            num_heads_kv,
+            head_dim,
+            best_num_splits,
+            is_causal,
+            is_prefill,
+            best_pack_gqa,
+            precision,
+            output_dtype,
+            f"{file_dir}/temp/flashattn_perf_log.{args.device}.json",
+            port,
+            ignore_cache=True,  # important: get fa2 and fa3 latency respectively
+        )
 
     mode = "prefill" if is_prefill else "decode"
     python_cmd = [
         python_path,
         f"benchmark_flash_attn_{mode}.py",
-        "-b",
+        "--batch",
         "1",
         "-s",
         f"{seq_len_kv}",
-        "-hq",
+        "--heads",
         f"{num_heads_q}",
-        "-hkv",
+        "--kv_heads",
         f"{num_heads_kv}",
-        "-d",
+        "--dim",
         f"{head_dim}",
         "--num_splits",
         f"{num_splits}",
@@ -96,11 +97,13 @@ def get_flash_attn_full_cmd(
         assert seq_len_q == seq_len_kv
     else:
         assert not is_causal
-        python_cmd.append(f"-q {seq_len_q}")
-    if fa2_latency < fa3_latency:
-        python_cmd.append("--fa2_only")
-    else:
-        python_cmd.append("--fa3_only")
+        python_cmd.append("--seqlen_q")
+        python_cmd.append(f"{seq_len_q}")
+    if not (device == "Thor" and is_prefill):
+        if fa2_latency < fa3_latency:
+            python_cmd.append("--fa2_only")
+        else:
+            python_cmd.append("--fa3_only")
     python_cmd.append("--duration")
     python_cmd.append(f"{total_duration * 1000}")
 
@@ -266,7 +269,7 @@ if __name__ == "__main__":
                     args.precision,
                     args.device,
                     f"{file_dir}/temp/power_log.{args.device}.json",
-                    total_duration=10,
+                    total_duration=15,
                 )
                 print(
                     f"seq_len_q {seq_len_q}, seq_len_kv {seq_len_kv}, num_heads_q {num_heads_q}, num_heads_kv {num_heads_kv}, precision {args.precision} Power GPU {p1:.2f}W Power MEM {p2:.2f}W"

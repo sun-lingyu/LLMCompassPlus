@@ -134,9 +134,7 @@ class FlashAttentionCombine(Operator):
         )  # must be io_bound
         return self.roofline_latency
 
-    def compile_and_simulate(
-        self, pcb_module: Device, drain_l2: bool = True
-    ):  # memory bound operator
+    def compile_and_simulate(self, pcb_module: Device):  # memory bound operator
         self.l2_status = L2CacheFlashAttnCombine(
             pcb_module.compute_module.l2_size,
             self.M,
@@ -157,8 +155,6 @@ class FlashAttentionCombine(Operator):
                 (0, 0),
                 (self.M, self.N / self.output_dtype.scale_block_size),
             )
-        if drain_l2:
-            mem_access_size += self.l2_status.drain()
         mem_access_cycle = ceil(
             mem_access_size
             / (

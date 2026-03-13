@@ -3,6 +3,12 @@ import os
 import shlex
 import subprocess
 
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_percentage_error, r2_score
+from sklearn.preprocessing import StandardScaler
+
 file_dir = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -107,3 +113,119 @@ DEVICE = "{device}"
         raise RuntimeError(f"Could not parse power output. Received:\n{output}")
 
     return avg_power_GPU, avg_power_MEM
+
+
+def plot_fitting_results(
+    y_true, y_pred, feature_names, coefs, intercept, r2, mape, save_dir, title_suffix=""
+):
+    try:
+        plt.style.use("seaborn-v0_8")
+    except:
+        plt.style.use("ggplot")
+
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+    ax1 = axes[0]
+    ax1.scatter(y_true, y_pred, color="navy", alpha=0.6, s=60, label="Records")
+    min_val, max_val = min(y_true.min(), y_pred.min()), max(y_true.max(), y_pred.max())
+    ax1.plot(
+        [min_val, max_val], [min_val, max_val], "r--", linewidth=2, label="Ideal (y=x)"
+    )
+    ax1.set_title(
+        f"Physical Power Model (NNLS)\n$R^2={r2:.4f}, MAPE={mape * 100:.2f}\\%$",
+        fontsize=14,
+    )
+    ax1.set_xlabel("Measured Power (W)", fontsize=12)
+    ax1.set_ylabel("Predicted Power (W)", fontsize=12)
+    ax1.legend()
+    ax1.grid(True, linestyle="--", alpha=0.5)
+
+    ax2 = axes[1]
+    y_pos = np.arange(len(feature_names))
+
+    bars = ax2.barh(y_pos, coefs, color="forestgreen", alpha=0.8, edgecolor="k")
+
+    ax2.set_yticks(y_pos)
+    ax2.set_yticklabels(feature_names, fontsize=12)
+    ax2.set_xlabel("Energy Cost (Joules / Op or Byte)", fontsize=12)
+    ax2.set_title("Estimated Energy Per Operation (Must be >= 0)", fontsize=14)
+
+    for i, v in enumerate(coefs):
+        ax2.text(v, i, f" {v:.2e} J", va="center", fontsize=10, fontweight="bold")
+
+    plt.figtext(
+        0.5,
+        0.02,
+        f"Static Power (Intercept) = {intercept:.4f} W",
+        ha="center",
+        fontsize=12,
+        bbox={"facecolor": "orange", "alpha": 0.2, "pad": 5},
+    )
+
+    plt.tight_layout()
+    plt.subplots_adjust(bottom=0.15)
+    save_path = f"{save_dir}/power_nnls_fitting_{title_suffix}.png"
+    plt.savefig(save_path, dpi=300)
+    print(f"\n[Info] Plot saved to: {save_path}")
+
+
+def fit_single_rail(
+    X_full,
+    y,
+    features_to_use,
+    rail_label,
+    feat_map,
+    full_feature_names,
+    enforce_positive=True,
+    fit_intercept=True,
+):
+    print(f"\n--- [{rail_label}] Fitting with: {features_to_use} ---")
+
+    try:
+        indices = [feat_map[name] for name in features_to_use]
+    except KeyError as e:
+        raise ValueError(f"Feature name {e} not found in full_feature_names")
+
+    X_subset = X_full[:, indices]
+
+    scaler = StandardScaler(with_mean=False)
+    X_scaled = scaler.fit_transform(X_subset)
+
+    model = LinearRegression(positive=enforce_positive, fit_intercept=fit_intercept)
+    model.fit(X_scaled, y)
+
+    subset_coefs = model.coef_ / scaler.scale_
+    intercept = model.intercept_
+
+    aligned_coefs = np.zeros(len(full_feature_names))
+    for idx_in_subset, original_idx in enumerate(indices):
+        aligned_coefs[original_idx] = subset_coefs[idx_in_subset]
+
+    y_pred = model.predict(X_scaled)
+    r2 = r2_score(y, y_pred)
+    mape = mean_absolute_percentage_error(y, y_pred)
+
+    return {
+        "coefs": aligned_coefs,
+        "intercept": intercept,
+        "y_pred": y_pred,
+        "r2": r2,
+        "mape": mape,
+        "model": model,
+    }
+
+
+def print_rail_results(label, res, full_feature_names, features_to_use):
+    print("\n" + "-" * 85)
+    print(f" {label} RESULTS (R^2: {res['r2']:.4f}, MAPE: {res['mape']:.4f})")
+    print(f" {label} Static Power: {res['intercept']:.4f} W")
+    print("-" * 85)
+    print(f"{'Component':<15} | {'Coef (J/op)':<20} | {'Status'}")
+    print("-" * 85)
+    for i, name in enumerate(full_feature_names):
+        val = res["coefs"][i]
+        if name in features_to_use:
+            status = "Fitted" if abs(val) > 1e-15 else "Zeroed by Solver"
+        else:
+            status = "Ignored (Config)"
+        print(f"{name:<15} | {val:.6e}           | {status}")
