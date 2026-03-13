@@ -164,10 +164,12 @@ def load_or_generate_data(args):
                 Tensor([seq_len_kv, num_heads_kv, head_dim], dtype=qkv_dtype),
                 Tensor([seq_len_kv, num_heads_kv, head_dim], dtype=qkv_dtype),
             )
-            latency_this = 1000 * (
-                model.compile_and_simulate(pcb)
-                + pcb.compute_module.launch_latency.flashattn
+            launch_latency = (
+                pcb.compute_module.launch_latency.flashattn_prefill
+                if is_prefill
+                else pcb.compute_module.launch_latency.flashattn_decode
             )
+            latency_this = 1000 * (model.compile_and_simulate(pcb) + launch_latency)
             if num_splits > 1:
                 model1 = FlashAttentionCombine(intermediate_dtype, output_dtype)
                 _ = model1(

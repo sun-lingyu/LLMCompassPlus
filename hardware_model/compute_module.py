@@ -40,10 +40,13 @@ class Core:
 
 
 class LaunchLatency:
-    def __init__(self, matmul, layernorm, flashattn, flashattn_combine):
+    def __init__(
+        self, matmul, layernorm, flashattn_prefill, flashattn_decode, flashattn_combine
+    ):
         self.matmul = matmul
         self.layernorm = layernorm
-        self.flashattn = flashattn
+        self.flashattn_prefill = flashattn_prefill
+        self.flashattn_decode = flashattn_decode
         self.flashattn_combine = flashattn_combine
 
 

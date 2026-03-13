@@ -87,7 +87,7 @@ def flash_attn_min_latency_remote(
         f"benchmark_flash_attn_{mode}.py",
         "--batch",
         "1",
-        "--seqlen",
+        "-s",
         f"{seq_len_kv}",
         "--heads",
         f"{num_heads_q}",
@@ -106,7 +106,8 @@ def flash_attn_min_latency_remote(
         assert seq_len_q == seq_len_kv
     else:
         assert not is_causal
-        python_cmd.append(f"-seqlen_q {seq_len_q}")
+        python_cmd.append("--seqlen_q")
+        python_cmd.append(f"{seq_len_q}")
 
     output = run_remote_command(user, host, port, python_cmd, work_dir=work_dir)
 
@@ -192,13 +193,29 @@ def test_and_save_latency(
             )
             _ = model(
                 Tensor([seq_len_q, num_heads_q, head_dim], dtype=qkv_dtype),
-                Tensor([seq_len_kv, num_heads_kv, head_dim], dtype=qkv_dtype),
-                Tensor([seq_len_kv, num_heads_kv, head_dim], dtype=qkv_dtype),
+                Tensor(
+                    [
+                        seq_len_kv if is_prefill else seq_len_q + seq_len_kv,
+                        num_heads_kv,
+                        head_dim,
+                    ],
+                    dtype=qkv_dtype,
+                ),
+                Tensor(
+                    [
+                        seq_len_kv if is_prefill else seq_len_q + seq_len_kv,
+                        num_heads_kv,
+                        head_dim,
+                    ],
+                    dtype=qkv_dtype,
+                ),
             )
-            latency_this = 1000 * (
-                model.compile_and_simulate(pcb)
-                + pcb.compute_module.launch_latency.flashattn
+            launch_latency = (
+                pcb.compute_module.launch_latency.flashattn_prefill
+                if is_prefill
+                else pcb.compute_module.launch_latency.flashattn_decode
             )
+            latency_this = 1000 * (model.compile_and_simulate(pcb) + launch_latency)
             roofline_latency_this = 1000 * model.roofline_model(pcb)
             if num_splits > 1:
                 model1 = FlashAttentionCombine(intermediate_dtype, output_dtype)

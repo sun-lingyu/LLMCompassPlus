@@ -63,9 +63,12 @@ if __name__ == "__main__":
         Tensor([seq_len_kv, num_heads_kv, head_dim], dtype=qkv_dtype),
     )
 
-    latency = (
-        model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency.flashattn
+    launch_latency = (
+        pcb.compute_module.launch_latency.flashattn_prefill
+        if args.is_prefill
+        else pcb.compute_module.launch_latency.flashattn_decode
     )
+    latency = model.compile_and_simulate(pcb) + launch_latency
     roofline_latency = model.roofline_model(pcb)
 
     if args.num_splits > 1:

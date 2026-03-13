@@ -27,7 +27,7 @@ def benchmark_flash_attn_decode_append(
 
     total_cache_capacity = seq_kv_history + seq_new
 
-    print("--- Benchmarking FA3 Decode with Append (KV Cache Update) ---")
+    print("--- Benchmarking FA Decode with Append (KV Cache Update) ---")
     print(f"Batch={b}")
     print(f"History KV Len={seq_kv_history} (Existing)")
     print(f"New Q/K/V Len={seq_new} (Appended)")
@@ -242,4 +242,6 @@ if __name__ == "__main__":
 
     print(f"FA2: {avg_latency_ms_fa2} ms")
     print(f"FA3: {avg_latency_ms_fa3} ms")
-    print(f"Average Latency: {min(avg_latency_ms_fa2, avg_latency_ms_fa3):.4f} ms")
+    avg_latency_ms = min(avg_latency_ms_fa2, avg_latency_ms_fa3)
+
+    print(f"Average Latency: {avg_latency_ms:.4f} ms")

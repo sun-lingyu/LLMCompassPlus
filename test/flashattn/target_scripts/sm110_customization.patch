@@ -1,5 +1,5 @@
 diff --git a/hopper/setup.py b/hopper/setup.py
-index 87f6f45..8889fae 100755
+index 87f6f45..81fde4f 100755
 --- a/hopper/setup.py
 +++ b/hopper/setup.py
 @@ -48,11 +48,11 @@ USE_TRITON_ROCM = os.getenv("FLASH_ATTENTION_TRITON_AMD_ENABLE", "FALSE") == "TR
@@ -31,7 +31,33 @@ index 87f6f45..8889fae 100755
      cc_flag = []
      cc_flag.append("-gencode")
 -    cc_flag.append("arch=compute_90a,code=sm_90a")
-+    cc_flag.append("arch=compute_87,code=sm_87")
++    cc_flag.append("arch=compute_110,code=sm_110")
  
      # HACK: The compiler flag -D_GLIBCXX_USE_CXX11_ABI is set to be the same as
      # torch._C._GLIBCXX_USE_CXX11_ABI
+diff --git a/hopper/static_switch.h b/hopper/static_switch.h
+index 15a7d51..2cc10e7 100644
+--- a/hopper/static_switch.h
++++ b/hopper/static_switch.h
+@@ -140,7 +140,7 @@
+     if (ARCH == 86 || ARCH == 89) {                                                              \
+       constexpr static int ARCH_NAME = 86;                                                       \
+       return __VA_ARGS__();                                                                      \
+-    } else if (ARCH < 90) {                                                                      \
++    } else if (ARCH < 90 || ARCH >= 100) {                                                                      \
+       constexpr static int ARCH_NAME = 80;                                                       \
+       return __VA_ARGS__();                                                                      \
+     } else {                                                                                     \
+diff --git a/hopper/utils.h b/hopper/utils.h
+index a568e30..e6efb27 100644
+--- a/hopper/utils.h
++++ b/hopper/utils.h
+@@ -47,7 +47,7 @@ template <typename Kernel>
+ struct enable_sm80_to_sm89 : Kernel {
+     template <typename... Args>
+     CUTLASS_DEVICE void operator()(Args&&... args) {
+-#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 800) && (__CUDA_ARCH__ <= 890)
++#if defined(__CUDA_ARCH__) && ((__CUDA_ARCH__ >= 800 && __CUDA_ARCH__ <= 890) || (__CUDA_ARCH__ >= 1000))
+         Kernel::operator()(std::forward<Args>(args)...);
+ #endif
+     }
