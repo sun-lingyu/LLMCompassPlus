@@ -3,7 +3,6 @@ from math import ceil
 from hardware_model.device import Device
 from software_model.operators import Operator
 from software_model.utils import DataType, L2AccessType, L2Cache, Tensor
-from utils import size
 
 
 class L2CacheLayerNorm(L2Cache):
@@ -65,7 +64,9 @@ class FusedLayerNorm(Operator):  # Residual + LayerNorm/RMSNorm
         assert self.dtype == input1.dtype
         assert input1.dtype == input2.dtype
         assert input1.shape == input2.shape
-        self.M = size(input1.shape[:-1])
+        self.M = 1
+        for dim in input1.shape[:-1]:
+            self.M *= dim
         self.N = input1.shape[-1]
         self.io_size = self.M * self.N * self.dtype.word_size * 4  # 2 input + 2 output
         return input1, input2

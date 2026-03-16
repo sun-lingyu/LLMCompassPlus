@@ -4,64 +4,15 @@ import os
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
+
+from test.utils import add_mape_annotation, plot_latency
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 
 color_machine = sns.color_palette("flare", 1)
 color_simulate = sns.color_palette("Blues_d", 4)[1:]
-
-
-def plot_latency(latency_table, ax, title, precision, is_first=False, is_last=False):
-    sorted_table = latency_table.sort_values(by="Measurement")
-
-    x = sorted_table["Measurement"]
-
-    ax.scatter(x, sorted_table["Ours"], color="navy", alpha=0.6, s=8, label="Ours")
-    ax.scatter(
-        x, sorted_table["Roofline"], marker="x", alpha=0.6, s=8, label="Roofline"
-    )
-    if precision in ("int8", "fp16"):
-        ax.scatter(
-            x, sorted_table["Baseline"], marker="^", alpha=0.6, s=8, label="LLMCompass"
-        )
-    ax.plot(x, x, "r--", linewidth=1, label="Ideal (y=x)")
-
-    ax.set_title(title)
-    ax.set_xlabel("Measured Latency (ms)", fontsize=6)
-
-    if is_first:
-        ax.set_ylabel("Predicted Latency (ms)")
-    if is_last:
-        ax.legend(loc="best")
-
-    ax.grid(True, linestyle="--", alpha=0.5)
-
-
-def add_mape_annotation(df, ax, precision, fontsize=6):
-    def calc_mape(pred, true):
-        return np.mean(np.abs((pred - true) / true)) * 100
-
-    mape_ours = calc_mape(df["Ours"], df["Measurement"])
-    mape_baseline = calc_mape(df["Baseline"], df["Measurement"])
-    mape_roofline = calc_mape(df["Roofline"], df["Measurement"])
-
-    if precision in ("int8", "fp16"):
-        text_str = f"MAPE: Ours {mape_ours:.1f}%, LLMCompass {mape_baseline:.1f}%, Roofline {mape_roofline:.1f}%"
-    else:
-        text_str = f"MAPE: Ours {mape_ours:.1f}%, Roofline {mape_roofline:.1f}%"
-
-    ax.text(
-        0.5,
-        0.01,
-        text_str,
-        ha="center",
-        va="bottom",
-        transform=ax.transAxes,
-        fontsize=fontsize,
-    )
 
 
 if __name__ == "__main__":
@@ -108,6 +59,7 @@ if __name__ == "__main__":
         keep="first",
     )
     latency_table = latency_table.sort_values(by="Measurement", ascending=False)
+    has_baseline = args.precision in ("int8", "fp16")
     plot_latency(
         latency_table,
         axes,
@@ -115,8 +67,14 @@ if __name__ == "__main__":
         precision=args.precision,
         is_first=True,
         is_last=True,
+        has_baseline=has_baseline,
     )
-    add_mape_annotation(latency_table, axes, args.precision)
+    add_mape_annotation(
+        latency_table,
+        axes,
+        args.precision,
+        has_baseline=has_baseline,
+    )
 
     fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.1)
     fig.savefig(

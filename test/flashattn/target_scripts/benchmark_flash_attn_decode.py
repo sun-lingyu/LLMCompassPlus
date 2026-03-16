@@ -1,7 +1,5 @@
 import argparse
-import random
 import sys
-import time
 from math import inf
 
 import torch
@@ -101,14 +99,14 @@ def benchmark_flash_attn_decode_append(
 
     cache_seqlens = torch.full((b,), seq_kv_history, dtype=torch.int32, device=dev)
 
-    access_order = list(range(nodes_per_graph))
-    random.shuffle(access_order)
+    stride = nodes_per_graph // 2 + 1
+    access_order = [(i * stride) % nodes_per_graph for i in range(nodes_per_graph)]
 
-    print("Warming up...")
-    with torch.inference_mode():
-        for i in range(10):
-            idx = access_order[i % nodes_per_graph]
-            _ = flash_attn_with_kvcache(
+    def run_graph_nodes():
+        outs = []
+        for idx in access_order:
+            # Must keep return value to avoid Python GC immediately recycling it.
+            res = flash_attn_with_kvcache(
                 q=q_pool[idx],
                 k_cache=k_cache_pool[idx],
                 v_cache=v_cache_pool[idx],
@@ -119,43 +117,44 @@ def benchmark_flash_attn_decode_append(
                 num_splits=num_splits,
                 **extra_kwargs,
             )
-    torch.cuda.synchronize()
+            outs.append(res)
+        return outs
 
     print("Capturing Randomized Graph...")
     g = torch.cuda.CUDAGraph()
 
-    # Capture
     with torch.cuda.graph(g):
         with torch.inference_mode():
-            for idx in access_order:
-                _ = flash_attn_with_kvcache(
-                    q=q_pool[idx],
-                    k_cache=k_cache_pool[idx],
-                    v_cache=v_cache_pool[idx],
-                    k=k_new_pool[idx],
-                    v=v_new_pool[idx],
-                    cache_seqlens=cache_seqlens,
-                    causal=True,
-                    num_splits=num_splits,
-                    **extra_kwargs,
-                )
+            captured_outs = run_graph_nodes()
+
+    # 4. Warmup
+    print("Warming up...")
+    with torch.inference_mode():
+        for i in range(10):
+            warmup_outs = g.replay()
+    del warmup_outs
+    torch.cuda.synchronize()
+
+    # Estimate iterations for target duration
+    print("Estimating iterations for target duration...")
+    start_event = torch.cuda.Event(enable_timing=True)
+    end_event = torch.cuda.Event(enable_timing=True)
+    start_event.record()
+    g.replay()
+    end_event.record()
+    end_event.synchronize()
+    single_graph_time_ms = start_event.elapsed_time(end_event)
+    print(f"Single Graph Time: {single_graph_time_ms:.1f} ms")
+    real_iters = max(1, int(duration / single_graph_time_ms) + 1)
 
     print(f"Replaying Graph ({duration} ms)...")
 
     start_event = torch.cuda.Event(enable_timing=True)
     end_event = torch.cuda.Event(enable_timing=True)
-
-    start_cpu = time.time()
     start_event.record()
-
-    real_iters = 0
-    while True:
+    for i in range(real_iters):
         g.replay()
-        real_iters += 1
-        if real_iters % 10 == 0:
-            if (time.time() - start_cpu) * 1000 >= duration:
-                break
-
+        torch.cuda.empty_cache()
     end_event.record()
     end_event.synchronize()
 

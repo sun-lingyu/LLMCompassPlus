@@ -27,8 +27,8 @@ if __name__ == "__main__":
         Tensor([M, N], data_type_dict["fp16"]),
     )
 
-    latency = max(
-        model.compile_and_simulate(pcb), pcb.compute_module.launch_latency.layernorm
+    latency = (
+        model.compile_and_simulate(pcb) + pcb.compute_module.launch_latency.layernorm
     )
 
     roofline_latency = model.roofline_model(pcb)

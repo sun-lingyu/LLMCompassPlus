@@ -2,8 +2,7 @@ import argparse
 import json
 import os
 import re
-import shlex
-import subprocess
+import shutil
 from typing import Optional
 
 import pandas as pd
@@ -12,6 +11,7 @@ from hardware_model.device import device_dict
 from software_model.layernorm import FusedLayerNorm
 from software_model.utils import Tensor, data_type_dict
 from test.layernorm.utils import get_model_shape
+from test.utils import run_remote_command
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -20,31 +20,35 @@ def layernorm_latency_remote(
     M: int,
     N: int,
     device: str,
+    layernorm_perf_log: str,
     host: str = "202.120.39.3",
     port: int = 9129,
     user: Optional[str] = "sly",
     work_dir: str = "/home/sly",
     python_path: str = "/home/sly/anaconda3/envs/llmcompass/bin/python",
-    layernorm_perf_log: str = f"{file_dir}/temp/layernorm_perf_log.json",
 ) -> float:
-    existing_data = []
-    if os.path.exists(layernorm_perf_log):
-        with open(layernorm_perf_log, "r") as f:
-            content = f.read().strip()
-            if content:
-                data = json.loads(content)
-                if isinstance(data, list):
-                    existing_data = data
-                else:
-                    assert False, "layernorm_perf_log.json format error"
-
-    for record in existing_data:
-        if (
-            record.get("M") == M
-            and record.get("N") == N
-            and record.get("device") == device
-        ):
-            return record["min_runtime"]
+    func = layernorm_latency_remote
+    if not hasattr(func, "_cache_dict"):
+        func._all_records = []
+        func._cache_dict = {}
+        if os.path.exists(layernorm_perf_log):
+            try:
+                with open(layernorm_perf_log, "r") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        func._all_records = data
+                        for r in data:
+                            key = (
+                                r["M"],
+                                r["N"],
+                            )
+                            func._cache_dict[key] = r["min_runtime"]
+            except (json.JSONDecodeError, KeyError):
+                func._all_records = []
+                func._cache_dict = {}
+    search_key = (M, N)
+    if search_key in func._cache_dict:
+        return func._cache_dict[search_key]
 
     port = 9129 if device == "Orin" else 9147
     python_cmd = [
@@ -55,34 +59,7 @@ def layernorm_latency_remote(
         str(N),
     ]
 
-    cmd_part = " ".join(shlex.quote(arg) for arg in python_cmd)
-    remote_cmd_str = f"cd {work_dir} && {cmd_part}"
-
-    target = f"{user}@{host}" if user is not None else host
-    ssh_cmd = [
-        "ssh",
-        "-p",
-        str(port),
-        target,
-        remote_cmd_str,
-    ]
-
-    proc = subprocess.run(
-        ssh_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        check=False,
-    )
-
-    output = proc.stdout
-
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"ssh/python exited with code {proc.returncode}\n"
-            f"SSH Command: {' '.join(ssh_cmd)}\n"
-            f"Output:\n{output}"
-        )
+    output = run_remote_command(user, host, port, python_cmd, work_dir=work_dir)
 
     pattern = re.compile(r"Average Latency:\s*([0-9]+(?:\.[0-9]+)?)\s*ms")
     match = pattern.search(output)
@@ -90,43 +67,30 @@ def layernorm_latency_remote(
     if not match:
         raise RuntimeError(
             "No 'Average Latency: xxx ms' found in remote output.\n"
-            f"SSH Command: {' '.join(ssh_cmd)}\n"
+            f"Python Command: {' '.join(python_cmd)}\n"
             f"Output:\n{output}"
         )
     best_runtime = float(match.group(1))
     new_record = {
         "M": M,
         "N": N,
-        "device": device,
         "min_runtime": best_runtime,
     }
 
-    existing_data.append(new_record)
-
+    func._all_records.append(new_record)
+    func._cache_dict[search_key] = best_runtime
     with open(layernorm_perf_log, "w") as f:
-        json.dump(existing_data, f, indent=4, ensure_ascii=False)
+        json.dump(func._all_records, f, indent=4, ensure_ascii=False)
 
     return best_runtime
 
 
 def test_and_save_latency(
-    M: int,
+    test_problems: list,
     file_name: str,
     precision: str,
-    update_ours_only: bool,
     device: str,
 ):
-    test_problems = []
-    for model in ["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"]:
-        N = get_model_shape(model)
-        test_problems.append((M, N))
-
-    if update_ours_only:
-        df = pd.read_csv(file_name)
-        assert len(model) == df.shape[0]
-
-    assert precision == "fp16"
-
     latency_list = []
     for idx, (M, N) in enumerate(test_problems):
         print(f"problem: M {M} N {N}")
@@ -135,22 +99,27 @@ def test_and_save_latency(
             Tensor([M, N], data_type_dict["fp16"]),
             Tensor([M, N], data_type_dict["fp16"]),
         )
-        latency = 1000 * max(
-            model.compile_and_simulate(pcb), pcb.compute_module.launch_latency.layernorm
+        latency = 1000 * (
+            model.compile_and_simulate(pcb)
+            + pcb.compute_module.launch_latency.layernorm
         )
         roofline_latency = 1000 * model.roofline_model(pcb)
-        if update_ours_only:
-            measured_latency = float(df["Measured"].iloc[idx])
-        else:
-            measured_latency = layernorm_latency_remote(M, N, args.device)
+        port = 9129 if device == "Orin" else 9147
+        measurement_latency = layernorm_latency_remote(
+            M, N, device, f"{file_dir}/temp/layernorm_perf_log.{device}.json", port=port
+        )
         print(
-            f"latency {latency:.3f}, roofline_latency {roofline_latency:.3f}, measured_latency {measured_latency:.3f}"
+            f"latency {latency:.3f}, roofline_latency {roofline_latency:.3f}, measured_latency {measurement_latency:.3f}"
         )
         print()
-        latency_list.append((latency, roofline_latency, measured_latency))
+        latency_list.append((latency, roofline_latency, measurement_latency))
 
-    df = pd.DataFrame(latency_list, columns=["Ours", "Roofline", "Measured"])
-    df.to_csv(file_name, index=False)
+    df = pd.DataFrame(latency_list, columns=["Ours", "Roofline", "Measurement"])
+    if file_name:
+        file_exists = os.path.exists(file_name)
+        df.to_csv(file_name, mode="a", index=False, header=not file_exists)
+    else:
+        raise ValueError("file_name is required to save results")
 
 
 if __name__ == "__main__":
@@ -161,22 +130,36 @@ if __name__ == "__main__":
         choices=["Orin", "Thor"],
     )
     parser.add_argument("--mode", type=str, choices=["prefill", "decode"])
+    parser.add_argument(
+        "--model",
+        type=str,
+        choices=["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"],
+    )
     parser.add_argument("--precision", type=str, choices=["fp16"])
-    parser.add_argument("--update_ours_only", action="store_true")
     args = parser.parse_args()
 
     pcb = device_dict[args.device]
 
-    M = 1024 if args.mode == "prefill" else 64
-    assert M % 4 == 0
-    if args.precision == "fp4" and args.mode == "decode":
-        M = 128  # at least 128
+    if args.mode == "prefill":
+        M_list = [512, 768, 1024, 1280, 1536]
+        if args.model == "InternVision":
+            M_list = [576, 1024]  # 336x336/448x448 with patch 14x14
+    elif args.mode == "decode":
+        M_list = [64, 128]
 
-    os.makedirs(f"{file_dir}/results_perf/", exist_ok=True)
-    test_and_save_latency(
-        M,
-        f"{file_dir}/results_perf/{args.device}_{args.mode}.csv",
-        args.precision,
-        args.update_ours_only,
-        args.device,
+    target_dir = f"{file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.mode}"
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir)
+    os.makedirs(
+        target_dir,
+        exist_ok=True,
     )
+
+    for M in M_list:
+        assert M % 4 == 0
+        test_problems = []
+        N = get_model_shape(args.model)
+        test_problems.append((M, N))
+        test_and_save_latency(
+            test_problems, f"{target_dir}/layernorm.csv", args.precision, args.device
+        )

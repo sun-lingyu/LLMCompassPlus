@@ -24,7 +24,7 @@
     },
     "launch_latency": {
       "matmul": 5e-06,
-      "layernorm": 2e-06,
+      "layernorm": 7e-06,
       "flashattn_prefill": 2e-05,
       "flashattn_decode": 2e-05,
       "flashattn_combine": 2e-06

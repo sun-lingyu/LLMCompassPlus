@@ -229,3 +229,61 @@ def print_rail_results(label, res, full_feature_names, features_to_use):
         else:
             status = "Ignored (Config)"
         print(f"{name:<15} | {val:.6e}           | {status}")
+
+
+def plot_latency(
+    latency_table,
+    ax,
+    title,
+    precision,
+    is_first=False,
+    is_last=False,
+    has_baseline=False,
+):
+    sorted_table = latency_table.sort_values(by="Measurement")
+
+    x = sorted_table["Measurement"]
+
+    ax.scatter(x, sorted_table["Ours"], color="navy", alpha=0.6, s=8, label="Ours")
+    ax.scatter(
+        x, sorted_table["Roofline"], marker="x", alpha=0.6, s=8, label="Roofline"
+    )
+    if has_baseline:
+        ax.scatter(
+            x, sorted_table["Baseline"], marker="^", alpha=0.6, s=8, label="LLMCompass"
+        )
+    ax.plot(x, x, "r--", linewidth=1, label="Ideal (y=x)")
+
+    ax.set_title(title)
+    ax.set_xlabel("Measured Latency (ms)", fontsize=6)
+
+    if is_first:
+        ax.set_ylabel("Predicted Latency (ms)")
+    if is_last:
+        ax.legend(loc="best")
+
+    ax.grid(True, linestyle="--", alpha=0.5)
+
+
+def add_mape_annotation(df, ax, precision, fontsize=6, has_baseline=False):
+    def calc_mape(pred, true):
+        return np.mean(np.abs((pred - true) / true)) * 100
+
+    mape_ours = calc_mape(df["Ours"], df["Measurement"])
+    mape_roofline = calc_mape(df["Roofline"], df["Measurement"])
+
+    if has_baseline:
+        mape_baseline = calc_mape(df["Baseline"], df["Measurement"])
+        text_str = f"MAPE: Ours {mape_ours:.1f}%, LLMCompass {mape_baseline:.1f}%, Roofline {mape_roofline:.1f}%"
+    else:
+        text_str = f"MAPE: Ours {mape_ours:.1f}%, Roofline {mape_roofline:.1f}%"
+
+    ax.text(
+        0.5,
+        0.01,
+        text_str,
+        ha="center",
+        va="bottom",
+        transform=ax.transAxes,
+        fontsize=fontsize,
+    )
