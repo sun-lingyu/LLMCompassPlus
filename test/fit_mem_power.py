@@ -11,6 +11,7 @@ file_dir = os.path.dirname(os.path.abspath(__file__))
 mem_intercept_dict = {"Orin": 0.5, "Thor": 6.7}
 MATMUL_PRECISIONS = ["fp16", "int8", "int4", "fp8", "fp4"]
 FLASHATTN_PRECISIONS = ["fp16"]
+LAYERNORM_PRECISIONS = ["fp16"]
 
 
 def load_matmul_data(device):
@@ -61,6 +62,31 @@ def load_flashattn_data(device):
     return dram_rates, y_mem_list
 
 
+def load_layernorm_data(device):
+    layernorm_dir = os.path.join(file_dir, "layernorm")
+    dram_rates = []
+    y_mem_list = []
+    for precision in LAYERNORM_PRECISIONS:
+        cache_path = (
+            f"{layernorm_dir}/temp/power_features_cache_{precision}.{device}.npz"
+        )
+        if not os.path.exists(cache_path):
+            print(f"[layernorm/{precision}] Cache not found, skipping: {cache_path}")
+            continue
+        try:
+            data = np.load(cache_path)
+            X = data["X"]  # shape (N, 1): DRAM
+            y_mem = data["y_mem"]  # shape (N,)
+        except Exception as e:
+            print(f"[layernorm/{precision}] Failed to load cache: {e}, skipping.")
+            continue
+        dram_col = X[:, -1]  # DRAM Access Byte rate, index 0
+        dram_rates.extend(dram_col.tolist())
+        y_mem_list.extend(y_mem.tolist())
+        print(f"[layernorm/{precision}] Loaded {len(dram_col)} records from cache.")
+    return dram_rates, y_mem_list
+
+
 def fit_mem_power(device):
     print(f"\n{'=' * 80}")
     print(f" UNIFIED MEM POWER FITTING  (device={device})")
@@ -71,14 +97,17 @@ def fit_mem_power(device):
     print("\n[Step 2] Loading FlashAttn data...")
     flashattn_dram, flashattn_y_mem = load_flashattn_data(device)
     print(f"  -> {len(flashattn_dram)} records loaded.")
-    all_dram = matmul_dram + flashattn_dram
-    all_y_mem = matmul_y_mem + flashattn_y_mem
+    print("\n[Step 3] Loading LayerNorm data...")
+    layernorm_dram, layernorm_y_mem = load_layernorm_data(device)
+    print(f"  -> {len(layernorm_dram)} records loaded.")
+    all_dram = matmul_dram + flashattn_dram + layernorm_dram
+    all_y_mem = matmul_y_mem + flashattn_y_mem + layernorm_y_mem
     if len(all_dram) == 0:
         print("No data available. Exiting.")
         return
     print(
         f"\n[Step 3] Fitting with {len(all_dram)} total records"
-        f" (matmul: {len(matmul_dram)}, flashattn: {len(flashattn_dram)})"
+        f" (matmul: {len(matmul_dram)}, flashattn: {len(flashattn_dram)}, layernorm: {len(layernorm_dram)})"
     )
     X = np.array(all_dram).reshape(-1, 1)
     y_mem = np.array(all_y_mem)

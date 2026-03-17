@@ -1,7 +1,14 @@
 # power_monitor.py
+import glob
 import subprocess
 import sys
 import time
+
+
+def get_glob_path(path):
+    res = glob.glob(path)
+    return res[0] if res else None
+
 
 if "FULL_CMD" not in globals():  # to get rid of compiler complains
     FULL_CMD = ""
@@ -11,15 +18,31 @@ if "FULL_CMD" not in globals():  # to get rid of compiler complains
 
 assert DEVICE in ("Orin", "Thor")
 if DEVICE == "Orin":
-    VOLT_PATH_GPU = "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon1/in1_input"
-    CURR_PATH_GPU = "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon1/curr1_input"
-    VOLT_PATH_MEM = "/sys/bus/i2c/drivers/ina3221/1-0041/hwmon/hwmon2/in2_input"
-    CURR_PATH_MEM = "/sys/bus/i2c/drivers/ina3221/1-0041/hwmon/hwmon2/curr2_input"
+    VOLT_PATH_GPU = get_glob_path(
+        "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon*/in1_input"
+    )
+    CURR_PATH_GPU = get_glob_path(
+        "/sys/bus/i2c/drivers/ina3221/1-0040/hwmon/hwmon*/curr1_input"
+    )
+    VOLT_PATH_MEM = get_glob_path(
+        "/sys/bus/i2c/drivers/ina3221/1-0041/hwmon/hwmon*/in2_input"
+    )
+    CURR_PATH_MEM = get_glob_path(
+        "/sys/bus/i2c/drivers/ina3221/1-0041/hwmon/hwmon*/curr2_input"
+    )
 elif DEVICE == "Thor":
-    VOLT_PATH_GPU = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/in1_input"
-    CURR_PATH_GPU = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/curr1_input"
-    VOLT_PATH_MEM = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/in3_input"
-    CURR_PATH_MEM = "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon4/curr3_input"
+    VOLT_PATH_GPU = get_glob_path(
+        "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon*/in1_input"
+    )
+    CURR_PATH_GPU = get_glob_path(
+        "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon*/curr1_input"
+    )
+    VOLT_PATH_MEM = get_glob_path(
+        "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon*/in3_input"
+    )
+    CURR_PATH_MEM = get_glob_path(
+        "/sys/bus/i2c/drivers/ina3221/2-0040/hwmon/hwmon*/curr3_input"
+    )
 else:
     assert False, f"illegal {DEVICE}"
 

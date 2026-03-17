@@ -153,7 +153,7 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
     soc_features_to_use = ["FMA", "DRAM Access Byte"]
     # Not using OUTPUT Size, since it colinear with FMA!
 
-    mem_features_to_use = ["DRAM Access Byte"]
+    # mem_features_to_use = ["DRAM Access Byte"]
     # ==============================================================================
 
     print("\n" + "=" * 80)
@@ -170,20 +170,20 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
         enforce_positive=True,
         fit_intercept=True,
     )
-    res_mem = fit_single_rail(
-        X_raw,
-        y_mem - intercept_dict[args.device]["mem"],
-        mem_features_to_use,
-        "Rail 2: MEM",
-        feat_map,
-        full_feature_names,
-        enforce_positive=True,
-        fit_intercept=False,
-    )
+    # res_mem = fit_single_rail(
+    #     X_raw,
+    #     y_mem - intercept_dict[args.device]["mem"],
+    #     mem_features_to_use,
+    #     "Rail 2: MEM",
+    #     feat_map,
+    #     full_feature_names,
+    #     enforce_positive=True,
+    #     fit_intercept=False,
+    # )
 
     print_rail_results("SoC", res_soc, full_feature_names, soc_features_to_use)
 
-    print_rail_results("Mem", res_mem, full_feature_names, mem_features_to_use)
+    # print_rail_results("Mem", res_mem, full_feature_names, mem_features_to_use)
 
     plot_fitting_results(
         y_soc,
@@ -197,17 +197,17 @@ def fit_and_analyze_rails(X_raw, y_soc, y_mem, args):
         title_suffix=f"soc_{args.precision}_{args.device}",
     )
 
-    plot_fitting_results(
-        y_mem,
-        res_mem["y_pred"] + intercept_dict[args.device]["mem"],
-        full_feature_names,
-        res_mem["coefs"],
-        res_mem["intercept"] + intercept_dict[args.device]["mem"],
-        res_mem["r2"],
-        res_mem["mape"],
-        f"{file_dir}/results_power",
-        title_suffix=f"mem_{args.precision}_{args.device}",
-    )
+    # plot_fitting_results(
+    #     y_mem,
+    #     res_mem["y_pred"] + intercept_dict[args.device]["mem"],
+    #     full_feature_names,
+    #     res_mem["coefs"],
+    #     res_mem["intercept"] + intercept_dict[args.device]["mem"],
+    #     res_mem["r2"],
+    #     res_mem["mape"],
+    #     f"{file_dir}/results_power",
+    #     title_suffix=f"mem_{args.precision}_{args.device}",
+    # )
 
 
 if __name__ == "__main__":

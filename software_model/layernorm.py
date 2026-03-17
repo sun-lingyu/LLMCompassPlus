@@ -103,5 +103,6 @@ class FusedLayerNorm(Operator):  # Residual + LayerNorm/RMSNorm
                 / pcb_module.compute_module.clock_freq
             )
         )
+        self.mem_access_size = mem_access_size
         self.latency = mem_access_cycle / pcb_module.compute_module.clock_freq
         return self.latency
