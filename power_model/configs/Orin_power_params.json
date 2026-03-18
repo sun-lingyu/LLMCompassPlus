@@ -32,7 +32,7 @@
       }
     },
     "dram_access": {
-      "mamtmul": {
+      "matmul": {
         "fp16": 0,
         "int8": 0,
         "int4": 1.47e-11

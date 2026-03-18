@@ -2,6 +2,11 @@ import argparse
 from math import inf
 
 from hardware_model.device import device_dict
+from power_model.power_model import (
+    calculate_flashattn_power,
+    calculate_layernorm_power,
+    calculate_matmul_power,
+)
 from software_model.flashattn import FlashAttn
 from software_model.flashattn_combine import FlashAttnCombine
 from software_model.layernorm import FusedLayerNorm
@@ -36,15 +41,12 @@ def run_matmul(M, K, N, act_dt, wt_dt, mid_dt, out_dt, device, pcb, l2_prev=None
     """Run [M,K]x[K,N] matmul. Falls back to roofline if M or K too small."""
     mm = Matmul(act_dt, wt_dt, mid_dt, out_dt, device=device)
     mm(Tensor([M, K], dtype=act_dt), Tensor([K, N], dtype=wt_dt))
-    min_m = 16
-    if M >= min_m and K >= 256:
-        lat = (
-            mm.compile_and_simulate(pcb, L2Cache_previous=l2_prev)
-            + pcb.compute_module.launch_latency.matmul
-        )
-    else:
-        print("Warning: M or K too small, using roofline model")
-        lat = mm.roofline_model(pcb)
+    if M < 16 or K < 256:
+        assert False, "M or K too small"
+    lat = (
+        mm.compile_and_simulate(pcb, L2Cache_previous=l2_prev)
+        + pcb.compute_module.launch_latency.matmul
+    )
     return lat, mm
 
 
@@ -100,13 +102,18 @@ def run_layer(
     dn_act, dn_out = up_out, get_matmul_output_dtype(up_out, "down_proj", is_test=False)
 
     l2_prev = None
-    lat_first = 0.0
-    lat_rest = 0.0
-    breakdown = {}
+    lat_breakdown = {}
+    power_breakdown = {}
+    mode = "prefill" if is_prefill else "decode"
+    fa_precision = "fp16" if precision in ("int4", "int8", "fp16") else "fp8"
 
-    def _log(op_name, lat_ms):
-        breakdown[op_name] = lat_ms
-        print(f"    {op_name:<18} {lat_ms:>8.4f} ms")
+    def record_op(op_name, lat_s, power_fn):
+        lat_breakdown[op_name] = lat_s * 1000
+        r = power_fn()
+        power_breakdown[op_name] = r["power_breakdown_watts"]["total"]
+        print(
+            f"    {op_name:<18} {lat_s * 1000:>8.4f} ms {power_breakdown[op_name]:>8.2f} W"
+        )
 
     # 1. QKV proj (L2 cold)
     print(
@@ -124,9 +131,14 @@ def run_layer(
         pcb,
         l2_prev,
     )
-    l2_prev = getattr(mm, "l2_status", None)
-    lat_first += lat
-    _log("qkv_proj", lat * 1000)
+    l2_prev = mm.l2_status
+    record_op(
+        "qkv_proj",
+        lat,
+        lambda: calculate_matmul_power(
+            device, precision, mm.mem_access_size, mm.fma_count, lat
+        ),
+    )
 
     # 2. FlashAttn
     print(
@@ -134,6 +146,7 @@ def run_layer(
     )
     num_splits_list = [1] if is_prefill else [1, 2, 4]
     lat_fa_combine = inf
+    best_fa = None
     for num_splits in num_splits_list:
         temp_out = fp32 if num_splits > 1 else attn_out_dt
         fa = FlashAttn(
@@ -163,10 +176,19 @@ def run_layer(
         if lat_fa_combine_temp < lat_fa_combine:
             lat_fa_combine = lat_fa_combine_temp
             l2_prev = combine.l2_status if num_splits > 1 else fa.l2_status
+            best_fa = fa
 
-    lat_first += lat_fa_combine
-    lat_rest += lat_fa_combine
-    _log("flash_attn", lat_fa_combine * 1000)
+    record_op(
+        "flash_attn",
+        lat_fa_combine,
+        lambda: calculate_flashattn_power(
+            device,
+            fa_precision,
+            best_fa.mem_access_size,
+            best_fa.fma_count,
+            lat_fa_combine,
+        ),
+    )
 
     # 3. O proj
     print(f"  [3/8] O_proj  [M={M}, K={K_shapes['o_proj']}, N={N_shapes['o_proj']}]")
@@ -182,10 +204,14 @@ def run_layer(
         pcb,
         l2_prev,
     )
-    l2_prev = getattr(mm, "l2_status", None)
-    lat_first += lat
-    lat_rest += lat
-    _log("o_proj", lat * 1000)
+    l2_prev = mm.l2_status
+    record_op(
+        "o_proj",
+        lat,
+        lambda: calculate_matmul_power(
+            device, precision, mm.mem_access_size, mm.fma_count, lat
+        ),
+    )
 
     # 4. Post-attn LayerNorm
     print(f"  [4/8] PostAttn_LayerNorm  [M={M}, N={H}]")
@@ -196,9 +222,11 @@ def run_layer(
         + pcb.compute_module.launch_latency.layernorm
     )
     l2_prev = ln.l2_status
-    lat_first += lat
-    lat_rest += lat
-    _log("post_attn_ln", lat * 1000)
+    record_op(
+        "post_attn_ln",
+        lat,
+        lambda: calculate_layernorm_power(device, mode, ln.mem_access_size, lat),
+    )
 
     # 5. Gate+Up proj
     print(
@@ -216,10 +244,14 @@ def run_layer(
         pcb,
         l2_prev,
     )
-    l2_prev = getattr(mm, "l2_status", None)
-    lat_first += lat
-    lat_rest += lat
-    _log("gate_up_proj", lat * 1000)
+    l2_prev = mm.l2_status
+    record_op(
+        "gate_up_proj",
+        lat,
+        lambda: calculate_matmul_power(
+            device, precision, mm.mem_access_size, mm.fma_count, lat
+        ),
+    )
 
     # 6. Down proj
     print(
@@ -237,10 +269,14 @@ def run_layer(
         pcb,
         l2_prev,
     )
-    l2_prev = getattr(mm, "l2_status", None)
-    lat_first += lat
-    lat_rest += lat
-    _log("down_proj", lat * 1000)
+    l2_prev = mm.l2_status
+    record_op(
+        "down_proj",
+        lat,
+        lambda: calculate_matmul_power(
+            device, precision, mm.mem_access_size, mm.fma_count, lat
+        ),
+    )
 
     # 7. Post-FFN LayerNorm
     print(f"  [7/8] PostFFN_LayerNorm  [M={M}, N={H}]")
@@ -251,9 +287,11 @@ def run_layer(
         + pcb.compute_module.launch_latency.layernorm
     )
     l2_prev = ln.l2_status
-    lat_first += lat
-    lat_rest += lat
-    _log("post_ffn_ln", lat * 1000)
+    record_op(
+        "post_ffn_ln",
+        lat,
+        lambda: calculate_layernorm_power(device, mode, ln.mem_access_size, lat),
+    )
 
     # 8. QKV proj (L2 warm, receives from post_ffn_ln)
     print(
@@ -271,23 +309,51 @@ def run_layer(
         pcb,
         l2_prev,
     )
-    lat_rest += lat
-    _log("qkv_proj_2", lat * 1000)
+    record_op(
+        "qkv_proj_2",
+        lat,
+        lambda: calculate_matmul_power(
+            device, precision, mm.mem_access_size, mm.fma_count, lat
+        ),
+    )
 
-    if breakdown:
+    first_ops = [
+        "qkv_proj",
+        "flash_attn",
+        "o_proj",
+        "post_attn_ln",
+        "gate_up_proj",
+        "down_proj",
+        "post_ffn_ln",
+    ]
+    rest_ops = [
+        "flash_attn",
+        "o_proj",
+        "post_attn_ln",
+        "gate_up_proj",
+        "down_proj",
+        "post_ffn_ln",
+        "qkv_proj_2",
+    ]
+    lat_first = sum(lat_breakdown.get(op, 0) for op in first_ops) / 1000
+    lat_rest = sum(lat_breakdown.get(op, 0) for op in rest_ops) / 1000
+
+    if lat_breakdown:
         print(
             f"  --- lat_first: {lat_first * 1000:.4f} ms, lat_rest: {lat_rest * 1000:.4f} ms ---"
         )
-        # Summary table: use qkv_proj warm value, show latency and share
         summary_ops = [
-            ("qkv_proj", breakdown.get("qkv_proj_2", breakdown.get("qkv_proj", 0))),
-            ("flash_attn", breakdown.get("flash_attn", 0)),
-            ("flashattn_combine", breakdown.get("flashattn_combine", 0)),
-            ("o_proj", breakdown.get("o_proj", 0)),
-            ("post_attn_ln", breakdown.get("post_attn_ln", 0)),
-            ("gate_up_proj", breakdown.get("gate_up_proj", 0)),
-            ("down_proj", breakdown.get("down_proj", 0)),
-            ("post_ffn_ln", breakdown.get("post_ffn_ln", 0)),
+            (
+                "qkv_proj",
+                lat_breakdown.get("qkv_proj_2", lat_breakdown.get("qkv_proj", 0)),
+            ),
+            ("flash_attn", lat_breakdown.get("flash_attn", 0)),
+            ("flashattn_combine", lat_breakdown.get("flashattn_combine", 0)),
+            ("o_proj", lat_breakdown.get("o_proj", 0)),
+            ("post_attn_ln", lat_breakdown.get("post_attn_ln", 0)),
+            ("gate_up_proj", lat_breakdown.get("gate_up_proj", 0)),
+            ("down_proj", lat_breakdown.get("down_proj", 0)),
+            ("post_ffn_ln", lat_breakdown.get("post_ffn_ln", 0)),
         ]
         total_ms = lat_rest * 1000
         print("  Operator latency summary (qkv_proj=warm):")
@@ -299,7 +365,28 @@ def run_layer(
             pct = (lat_ms / total_ms * 100) if total_ms > 0 else 0
             print(f"  {name:<20} {lat_ms:>12.4f} {pct:>7.1f}%")
 
-    return lat_first, lat_rest
+    if power_breakdown:
+        total_energy_mJ = sum(
+            power_breakdown[name] * lat_breakdown.get(name, 0)
+            for name in power_breakdown
+        )
+        total_runtime_s = lat_rest
+        power_avg = (
+            total_energy_mJ / 1000 / total_runtime_s if total_runtime_s > 0 else 0
+        )
+        print("  Power/Energy summary (mJ), avg power (W) = energy / runtime:")
+        print(f"  {'Operator':<20} {'Power(W)':>10} {'Energy(mJ)':>12} {'Share':>8}")
+        print("  " + "-" * 52)
+        for name in power_breakdown:
+            power_w = power_breakdown[name]
+            energy_mJ = power_w * lat_breakdown.get(name, 0)
+            pct = (energy_mJ / total_energy_mJ * 100) if total_energy_mJ > 0 else 0
+            print(f"  {name:<20} {power_w:>10.2f} {energy_mJ:>12.2f} {pct:>7.1f}%")
+        print(f"  {'Total':<20} {power_avg:>10.2f} {total_energy_mJ:>12.2f}")
+    else:
+        power_avg = None
+
+    return lat_first, lat_rest, power_avg
 
 
 def resolve_dims(args, is_prefill):
@@ -362,7 +449,7 @@ def main():
     print(f"  seq_len_kv:  {seq_len_kv}")
     print("-" * 56)
     print("  Simulating (QKV->FA->O->LN->GateUp->Down->LN->QKV)...")
-    lat_first, lat_rest = run_layer(
+    lat_first, lat_rest, power_avg = run_layer(
         args.model,
         test_model_dict[args.model],
         args.precision,
@@ -379,6 +466,8 @@ def main():
     print(f"  Layer 1 (cold):  {lat_first * 1000:.4f} ms")
     print(f"  Layer 2+ (warm): {lat_rest * 1000:.4f} ms")
     print(f"  Total ({num_layers} layers): {total * 1000:.4f} ms")
+    if power_avg is not None:
+        print(f"  Est. avg power:   {power_avg:.2f} W")
     print("=" * 56)
 
 
