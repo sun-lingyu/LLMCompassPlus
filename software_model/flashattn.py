@@ -51,28 +51,28 @@ class L2CacheFlashAttn(L2Cache):
 
         # Convert resident output tiles to qkv tiles
         if L2Cache_previous:
-            assert L2Cache_previous.output_tile_size == self.output_tile_size
+            assert L2Cache_previous.output_tile_size == self.qkv_tile_size
             q_range = num_heads_q * head_dim
             kv_range = num_heads_kv * head_dim
-            while L2Cache_previous.resident_tiles:
-                tile = L2Cache_previous.resident_tiles.popitem(last=False)[0]
+            for tile in L2Cache_previous.resident_tiles.keys():
                 if tile.access_type == L2AccessType.OUTPUT:  # qkv_proj output
-                    if tile.location_tuple[1] < q_range:
+                    coord_0, coord_1 = tile.coord_tuple[0], tile.coord_tuple[1]
+                    if coord_1 < q_range:
                         self.resident_tiles[
-                            L2Cache.Tile(L2AccessType.Q, tile.coord_tuple)
+                            L2Cache.Tile(L2AccessType.Q, (coord_0, coord_1))
                         ] = None
                     elif is_prefill:
                         # only consider KV residence for prefill
                         # if decode, KV cache will be in DRAM
-                        if tile.location_tuple[1] < q_range + kv_range:
-                            tile.coord_tuple[1] -= q_range
+                        if coord_1 < q_range + kv_range:
+                            coord_1 -= q_range
                             self.resident_tiles[
-                                L2Cache.Tile(L2AccessType.K, tile.coord_tuple)
+                                L2Cache.Tile(L2AccessType.K, (coord_0, coord_1))
                             ] = None
                         else:
-                            tile.coord_tuple[1] -= q_range + kv_range
+                            coord_1 -= q_range + kv_range
                             self.resident_tiles[
-                                L2Cache.Tile(L2AccessType.V, tile.coord_tuple)
+                                L2Cache.Tile(L2AccessType.V, (coord_0, coord_1))
                             ] = None
                     self.occupied_size += L2Cache_previous.output_tile_size
 
@@ -278,7 +278,9 @@ class FlashAttn(Operator):
             {j for i in range(1, int(m**0.5) + 1) if m % i == 0 for j in (i, m // i)}
         )
 
-    def compile_and_simulate(self, pcb_module: Device):
+    def compile_and_simulate(
+        self, pcb_module: Device, L2Cache_previous: L2Cache = None
+    ):
         min_cycle_count = inf
         seq_len_q = self.seq_len_q
         seq_len_kv = self.seq_len_kv
@@ -396,13 +398,15 @@ class FlashAttn(Operator):
                         self.output_dtype,
                         self.is_prefill,
                         self.num_splits,
+                        L2Cache_previous=L2Cache_previous,
                     )
                     cycle_count = self.simulate(mapping, pcb_module, l2_status)
                     if cycle_count < min_cycle_count:
                         min_cycle_count = cycle_count
                         self.best_mapping = mapping
+                        self.l2_status = l2_status
         self.latency = min_cycle_count / pcb_module.compute_module.clock_freq
-        self.mem_access_size = l2_status.total_mem_access_size
+        self.mem_access_size = self.l2_status.total_mem_access_size
         self.best_mapping.display()
         return self.latency
 

@@ -7,7 +7,7 @@ import numpy as np
 
 from hardware_model.device import device_dict
 from software_model.flashattn import FlashAttn
-from software_model.flashattn_combine import FlashAttentionCombine
+from software_model.flashattn_combine import FlashAttnCombine
 from software_model.utils import Tensor, data_type_dict
 from test.flashattn.utils import get_output_dtype
 from test.utils import fit_single_rail, plot_fitting_results, print_rail_results
@@ -15,7 +15,7 @@ from test.utils import fit_single_rail, plot_fitting_results, print_rail_results
 file_dir = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE_TEMPLATE = f"{file_dir}/temp/power_features_cache"
 
-intercept_dict = {"Orin": {"soc": 25, "mem": 0.5}, "Thor": {"soc": 25, "mem": 6.7}}
+intercept_dict = {"Orin": {"mem": 0.5}, "Thor": {"mem": 6.7}}
 
 
 def load_or_generate_data(args):
@@ -95,10 +95,11 @@ def load_or_generate_data(args):
         best_model1 = None
         num_splits_list = [1] if is_prefill else [1, 2, 4]
         for num_splits in num_splits_list:
+            temp_output_dtype = intermediate_dtype if num_splits > 1 else output_dtype
             model = FlashAttn(
                 qkv_dtype,
                 intermediate_dtype,
-                output_dtype,
+                temp_output_dtype,
                 is_prefill,
                 is_causal,
                 num_splits,
@@ -116,7 +117,9 @@ def load_or_generate_data(args):
             )
             latency_this = 1000 * (model.compile_and_simulate(pcb) + launch_latency)
             if num_splits > 1:
-                model1 = FlashAttentionCombine(intermediate_dtype, output_dtype)
+                model1 = FlashAttnCombine(
+                    intermediate_dtype, output_dtype, L2Cache_previous=model.l2_status
+                )
                 _ = model1(
                     Tensor(
                         [seq_len_q, num_heads_q * head_dim, num_splits],

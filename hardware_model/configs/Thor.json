@@ -34,8 +34,5 @@
     "bandwidth": 273100000000,
     "bandwidth_efficiency": 0.9,
     "latency_cycles": 470
-  },
-  "memory_module": {
-    "memory_capacity": 128000000000
   }
 }

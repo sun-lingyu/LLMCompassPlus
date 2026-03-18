@@ -1,12 +1,48 @@
 {
   "name": "NVIDIA AGX Thor",
-  "matmul": {
-    "k_mem": 5.5e-11, "mem_intercept": 1, "soc_intercept": 19,
-    "k_soc_fma": { "fp8": 2.1e-13, "fp4": 2.2e-13 },
-    "k_soc_input": { "fp8": 4.6e-11, "fp4": 1.8e-10 }
+  "intercept": {
+    "mem": 1,
+    "soc": {
+      "matmul": {
+        "fp8": 2.3,
+        "fp4": 10.5
+      },
+      "layernorm": {
+        "fp16": 12.5
+      },
+      "flashattn": {
+        "fp16": 26.0,
+        "fp8": 26.0
+      }
+    }
   },
-  "layernorm": {
-    "k_mem": 5.5e-11, "mem_intercept": 1,
-    "fma_intercept": { "prefill": 28.5, "decode": 22 }
+  "k_mem": 4.95e-11,
+  "k_soc": {
+    "fma": {
+      "matmul": {
+        "fp8": 2.08e-13,
+        "fp4": 2.05e-13
+      },
+      "layernorm": {
+        "fp16": 0
+      },
+      "flashattn": {
+        "fp16": 1.64e-12,
+        "fp8": 1.64e-12
+      }
+    },
+    "dram_access": {
+      "mamtmul": {
+        "fp8": 8.67e-11,
+        "fp4": 1.52e-10
+      },
+      "layernorm": {
+        "fp16": 5.15e-11
+      },
+      "flashattn": {
+        "fp16": 0,
+        "fp8": 0
+      }
+    }
   }
 }

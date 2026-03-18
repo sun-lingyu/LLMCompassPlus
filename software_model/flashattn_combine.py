@@ -36,8 +36,7 @@ class L2CacheFlashAttnCombine(L2Cache):
 
         if L2Cache_previous:
             assert L2Cache_previous.output_tile_size == self.activation_tile_size
-            while L2Cache_previous.resident_tiles:
-                tile = L2Cache_previous.resident_tiles.popitem(last=False)[0]
+            for tile in L2Cache_previous.resident_tiles.keys():
                 if tile.access_type == L2AccessType.OUTPUT:
                     self.resident_tiles[
                         L2Cache.Tile(L2AccessType.ACTIVATION, tile.coord_tuple)
@@ -91,7 +90,7 @@ class L2CacheFlashAttnCombine(L2Cache):
         self.occupied_size -= tile_size
 
 
-class FlashAttentionCombine(Operator):
+class FlashAttnCombine(Operator):
     def __init__(
         self,
         activation_dtype: DataType,
@@ -134,7 +133,9 @@ class FlashAttentionCombine(Operator):
         )  # must be io_bound
         return self.roofline_latency
 
-    def compile_and_simulate(self, pcb_module: Device):  # memory bound operator
+    def compile_and_simulate(
+        self, pcb_module: Device, L2Cache_previous: L2Cache = None
+    ):  # memory bound operator
         self.l2_status = L2CacheFlashAttnCombine(
             pcb_module.compute_module.l2_size,
             self.M,
@@ -142,6 +143,7 @@ class FlashAttentionCombine(Operator):
             self.num_splits,
             self.activation_dtype,
             self.output_dtype,
+            L2Cache_previous=L2Cache_previous,
         )
         mem_access_size = self.l2_status.access(
             L2AccessType.ACTIVATION, (0, 0), (self.M, self.N * self.num_splits)

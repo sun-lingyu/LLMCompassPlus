@@ -10,7 +10,7 @@ import pandas as pd
 
 from hardware_model.device import device_dict
 from software_model.flashattn import FlashAttn
-from software_model.flashattn_combine import FlashAttentionCombine
+from software_model.flashattn_combine import FlashAttnCombine
 from software_model.utils import DataType, Tensor, data_type_dict
 from test.flashattn.utils import get_model_shape, get_output_dtype
 from test.utils import run_remote_command
@@ -182,10 +182,11 @@ def test_and_save_latency(
         measurement_latency = inf
         num_splits_list = [1] if is_prefill else [1, 2, 4]
         for num_splits in num_splits_list:
+            temp_output_dtype = intermediate_dtype if num_splits > 1 else output_dtype
             model = FlashAttn(
                 qkv_dtype,
                 intermediate_dtype,
-                output_dtype,
+                temp_output_dtype,
                 is_prefill,
                 is_causal,
                 num_splits,
@@ -218,7 +219,9 @@ def test_and_save_latency(
             latency_this = 1000 * (model.compile_and_simulate(pcb) + launch_latency)
             roofline_latency_this = 1000 * model.roofline_model(pcb)
             if num_splits > 1:
-                model1 = FlashAttentionCombine(intermediate_dtype, output_dtype)
+                model1 = FlashAttnCombine(
+                    intermediate_dtype, output_dtype, L2Cache_previous=model.l2_status
+                )
                 _ = model1(
                     Tensor(
                         [seq_len_q, num_heads_q * head_dim, num_splits],
@@ -226,7 +229,7 @@ def test_and_save_latency(
                     )
                 )
                 latency_this += 1000 * (
-                    model1.compile_and_simulate(pcb)
+                    model1.compile_and_simulate(pcb, L2Cache_previous=model.l2_status)
                     + pcb.compute_module.launch_latency.flashattn_combine
                 )
                 roofline_latency_this += 1000 * model1.roofline_model(pcb)

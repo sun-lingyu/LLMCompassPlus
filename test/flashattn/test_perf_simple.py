@@ -2,7 +2,7 @@ import argparse
 
 from hardware_model.device import device_dict
 from software_model.flashattn import FlashAttn
-from software_model.flashattn_combine import FlashAttentionCombine
+from software_model.flashattn_combine import FlashAttnCombine
 from software_model.utils import Tensor, data_type_dict
 from test.flashattn.utils import get_output_dtype
 
@@ -72,7 +72,9 @@ if __name__ == "__main__":
     roofline_latency = model.roofline_model(pcb)
 
     if args.num_splits > 1:
-        model = FlashAttentionCombine(intermediate_dtype, output_dtype)
+        model = FlashAttnCombine(
+            intermediate_dtype, output_dtype, L2Cache_previous=model.l2_status
+        )
         _ = model(
             Tensor(
                 [seq_len_q, num_heads_q * head_dim, args.num_splits],

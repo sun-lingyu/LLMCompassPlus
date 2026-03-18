@@ -1,12 +1,48 @@
 {
   "name": "NVIDIA AGX Orin",
-  "matmul": {
-    "k_mem": 4.1e-11, "mem_intercept": 0.5, "soc_intercept": 25,
-    "k_soc_fma": { "fp16": 1.3e-12, "int8": 0.9e-12, "int4": 1.5e-12 },
-    "k_soc_input": { "fp16": 0, "int8": 0, "int4": 0 }
+  "intercept": {
+    "mem": 0.5,
+    "soc": {
+      "matmul": {
+        "fp16": 25.6,
+        "int8": 26.6,
+        "int4": 11.8
+      },
+      "layernorm": {
+        "fp16": 7.0
+      },
+      "flashattn": {
+        "fp16": 19.6
+      }
+    }
   },
-  "layernorm": {
-    "k_mem": 4.1e-11, "mem_intercept": 0.5,
-    "fma_intercept": { "prefill": 28, "decode": 6 }
+  "k_mem": 3.87e-11,
+  "k_soc": {
+    "fma": {
+      "matmul": {
+        "fp16": 1.17e-12,
+        "int8": 8.45e-13,
+        "int4": 8.07e-13
+      },
+      "layernorm": {
+        "fp16": 0
+      },
+      "flashattn": {
+        "fp16": 2.66e-12
+      }
+    },
+    "dram_access": {
+      "mamtmul": {
+        "fp16": 0,
+        "int8": 0,
+        "int4": 1.47e-11
+      },
+      "layernorm": {
+        "fp16": 1.18e-10
+      },
+      "flashattn": {
+        "fp16": 0
+      }
+    }
   }
 }

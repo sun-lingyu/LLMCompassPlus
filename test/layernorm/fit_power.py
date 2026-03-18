@@ -7,12 +7,13 @@ import numpy as np
 from hardware_model.device import device_dict
 from software_model.layernorm import FusedLayerNorm
 from software_model.utils import Tensor, data_type_dict
+from test.layernorm.utils import get_output_dtype
 from test.utils import fit_single_rail, plot_fitting_results, print_rail_results
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE_TEMPLATE = f"{file_dir}/temp/power_features_cache"
 
-intercept_dict = {"Orin": {"soc": 25, "mem": 0.5}, "Thor": {"soc": 20, "mem": 6.7}}
+intercept_dict = {"Orin": {"mem": 0.5}, "Thor": {"mem": 6.7}}
 
 
 def load_or_generate_data(args):
@@ -49,13 +50,16 @@ def load_or_generate_data(args):
     y_soc_list = []
     y_mem_list = []
 
+    input_dtype = data_type_dict[args.precision]
+    output_dtype = get_output_dtype(input_dtype, True)
+
     for record in existing_data:
         M, N = record["M"], record["N"]
 
-        model = FusedLayerNorm(data_type_dict["fp16"])
+        model = FusedLayerNorm(input_dtype, output_dtype)
         _ = model(
-            Tensor([M, N], data_type_dict["fp16"]),
-            Tensor([M, N], data_type_dict["fp16"]),
+            Tensor([M, N], input_dtype),
+            Tensor([M, N], input_dtype),
         )
 
         latency_ms = 1000 * (

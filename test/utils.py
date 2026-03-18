@@ -20,6 +20,7 @@ test_model_dict = {
         "hidden_size": 1024,
         "intermediate_size": 4096,
         "hidden_act": "gelu",
+        "num_layers": 24,
     },
     "Qwen3_0_6B": {
         "head_dim": 128,
@@ -28,6 +29,7 @@ test_model_dict = {
         "hidden_size": 1024,
         "intermediate_size": 3072,
         "hidden_act": "silu",
+        "num_layers": 28,
     },
     "Qwen3_1_7B": {
         "head_dim": 128,
@@ -36,6 +38,7 @@ test_model_dict = {
         "hidden_size": 2048,
         "intermediate_size": 6144,
         "hidden_act": "silu",
+        "num_layers": 28,
     },
     "Qwen3_4B": {
         "head_dim": 128,
@@ -44,6 +47,7 @@ test_model_dict = {
         "hidden_size": 2560,
         "intermediate_size": 9728,
         "hidden_act": "silu",
+        "num_layers": 36,
     },
     "Qwen3_8B": {
         "head_dim": 128,
@@ -52,6 +56,7 @@ test_model_dict = {
         "hidden_size": 4096,
         "intermediate_size": 12288,
         "hidden_act": "silu",
+        "num_layers": 36,
     },
 }
 

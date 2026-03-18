@@ -10,7 +10,7 @@ import pandas as pd
 from hardware_model.device import device_dict
 from software_model.layernorm import FusedLayerNorm
 from software_model.utils import Tensor, data_type_dict
-from test.layernorm.utils import get_model_shape
+from test.layernorm.utils import get_model_shape, get_output_dtype
 from test.utils import run_remote_command
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -91,13 +91,15 @@ def test_and_save_latency(
     precision: str,
     device: str,
 ):
+    input_dtype = data_type_dict[precision]
+    output_dtype = get_output_dtype(input_dtype, True)
     latency_list = []
     for idx, (M, N) in enumerate(test_problems):
         print(f"problem: M {M} N {N}")
-        model = FusedLayerNorm(data_type_dict["fp16"])
+        model = FusedLayerNorm(input_dtype, output_dtype)
         _ = model(
-            Tensor([M, N], data_type_dict["fp16"]),
-            Tensor([M, N], data_type_dict["fp16"]),
+            Tensor([M, N], input_dtype),
+            Tensor([M, N], input_dtype),
         )
         latency = 1000 * (
             model.compile_and_simulate(pcb)
@@ -157,9 +159,8 @@ if __name__ == "__main__":
 
     for M in M_list:
         assert M % 4 == 0
-        test_problems = []
         N = get_model_shape(args.model)
-        test_problems.append((M, N))
+        test_problems = [(M, N), (M // 2, N), (M // 4, N)]
         test_and_save_latency(
             test_problems, f"{target_dir}/layernorm.csv", args.precision, args.device
         )

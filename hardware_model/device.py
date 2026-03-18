@@ -10,7 +10,6 @@ from hardware_model.compute_module import (
     VectorUnit,
 )
 from hardware_model.io_module import IOModule
-from hardware_model.memory_module import MemoryModule
 
 
 class Device:
@@ -18,11 +17,9 @@ class Device:
         self,
         compute_module: ComputeModule,
         io_module: IOModule,
-        memory_module: MemoryModule,
     ) -> None:
         self.compute_module = compute_module
         self.io_module = io_module
-        self.memory_module = memory_module
 
 
 def _create_device_from_config(config_data: dict) -> Device:
@@ -59,10 +56,7 @@ def _create_device_from_config(config_data: dict) -> Device:
     # 2. Build IO Module
     io_module = IOModule(**config_data["io_module"])
 
-    # 3. Build Memory Module
-    memory_module = MemoryModule(**config_data["memory_module"])
-
-    return Device(compute_module, io_module, memory_module)
+    return Device(compute_module, io_module)
 
 
 def _load_all_devices(config_dir: str):

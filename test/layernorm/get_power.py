@@ -114,7 +114,9 @@ if __name__ == "__main__":
 
     for M in M_list:
         assert M % 4 == 0
-        p1, p2 = measure_power_remote(
-            M, N, args.device, f"{file_dir}/temp/power_log.{args.device}.json"
-        )
-        print(f"M {M} N {N}, Power GPU {p1:.2f}W Power MEM {p2:.2f}W")
+        test_problems = [(M, N), (M // 2, N), (M // 4, N)]
+        for problem in test_problems:
+            p1, p2 = measure_power_remote(
+                *problem, args.device, f"{file_dir}/temp/power_log.{args.device}.json"
+            )
+            print(f"M {M} N {N}, Power GPU {p1:.2f}W Power MEM {p2:.2f}W")

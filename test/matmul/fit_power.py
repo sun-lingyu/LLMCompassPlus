@@ -12,7 +12,7 @@ from test.utils import fit_single_rail, plot_fitting_results, print_rail_results
 file_dir = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE_TEMPLATE = f"{file_dir}/temp/power_features_cache"
 
-intercept_dict = {"Orin": {"soc": 25, "mem": 0.5}, "Thor": {"soc": 20, "mem": 6.7}}
+intercept_dict = {"Orin": {"mem": 0.5}, "Thor": {"mem": 6.7}}
 
 
 def load_or_generate_data(args):

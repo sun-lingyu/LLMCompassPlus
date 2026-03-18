@@ -51,7 +51,7 @@ class L2Cache:
 
     class Tile(NamedTuple):  # squre tile with side length 32
         access_type: L2AccessType
-        location_tuple: tuple[int, int]
+        coord_tuple: tuple[int, int]
 
     def __init__(self, l2_size: int):
         assert l2_size > 0

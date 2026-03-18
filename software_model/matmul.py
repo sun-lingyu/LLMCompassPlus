@@ -54,8 +54,7 @@ class L2CacheMatmul(L2Cache):
         # Convert resident output tiles to activation tiles
         if L2Cache_previous:
             assert L2Cache_previous.output_tile_size == self.activation_tile_size
-            while L2Cache_previous.resident_tiles:
-                tile = L2Cache_previous.resident_tiles.popitem(last=False)[0]
+            for tile in L2Cache_previous.resident_tiles.keys():
                 if tile.access_type == L2AccessType.OUTPUT:
                     self.resident_tiles[
                         L2Cache.Tile(L2AccessType.ACTIVATION, tile.coord_tuple)
@@ -269,7 +268,9 @@ class Matmul(Operator):
         )  # throughput in FMA
         return self.roofline_latency
 
-    def compile_and_simulate(self, pcb_module: Device):
+    def compile_and_simulate(
+        self, pcb_module: Device, L2Cache_previous: L2Cache = None
+    ):
         min_cycle_count = inf
         M = self.M
         N = self.N
@@ -460,13 +461,15 @@ class Matmul(Operator):
                             self.activation_dtype,
                             self.weight_dtype,
                             self.output_dtype,
+                            L2Cache_previous=L2Cache_previous,
                         )
                         cycle_count = self.simulate(mapping, pcb_module, l2_status)
                         if cycle_count < min_cycle_count:
                             min_cycle_count = cycle_count
                             self.best_mapping = mapping
+                            self.l2_status = l2_status
         self.latency = min_cycle_count / pcb_module.compute_module.clock_freq
-        self.mem_access_size = l2_status.total_mem_access_size
+        self.mem_access_size = self.l2_status.total_mem_access_size
         self.best_mapping.display()
         return self.latency
 
