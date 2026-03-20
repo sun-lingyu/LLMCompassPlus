@@ -1,6 +1,5 @@
 import json
 import os
-from math import ceil
 
 
 def load_json_data(file_name):
@@ -20,60 +19,67 @@ def load_json_data(file_name):
         return None
 
 
-def get_min_ucie_rate(data_size_bytes, expected_time_s, spec_db):
-    if expected_time_s <= 0:
-        return {"error": "Expected time must be greater than 0"}
+def get_nearest_ucie_configurations(expected_bw_gbps, spec_db):
+    if expected_bw_gbps <= 0:
+        return {"error": "Expected bw must be greater than 0"}
 
-    expected_time_s -= spec_db["latency"]
-    required_bw_bps = (
-        data_size_bytes / expected_time_s / spec_db["bandwidth_efficiency"]
-    )
     result = {}
 
     for pkg_key, pkg_info in spec_db["packages"].items():
-        lane_count = pkg_info["lane_count"]
-        found_rate = None
-        for config in pkg_info["configurations"]:
-            rate = config["rate_gt"]
-            capacity_bps = (rate * (1024**3) * lane_count * spec_db["max_modules"]) / 8
-            if capacity_bps >= required_bw_bps:
-                found_rate = rate
-                break
-        result[pkg_key] = found_rate
+        nearest = []
+        nearest_bandwidth_gap = float("inf")
+        for module_count in spec_db["available_module_count"]:
+            for lane_count in pkg_info["available_lane_count"]:
+                for config in pkg_info["configurations"]:
+                    rate_gt = config["rate_gt"]
+                    capacity_gbps = rate_gt * lane_count * module_count
+                    bandwidth_gap = abs(capacity_gbps - expected_bw_gbps)
+                    if bandwidth_gap < nearest_bandwidth_gap:
+                        nearest = [
+                            {
+                                "module_count": module_count,
+                                "lane_count": lane_count,
+                                "rate_gt": rate_gt,
+                            }
+                        ]
+                        nearest_bandwidth_gap = bandwidth_gap
+                    elif bandwidth_gap == nearest_bandwidth_gap:
+                        nearest.append(
+                            {
+                                "module_count": module_count,
+                                "lane_count": lane_count,
+                                "rate_gt": rate_gt,
+                            }
+                        )
+        result[pkg_key] = sorted(
+            nearest, key=lambda x: (x["module_count"], x["lane_count"], x["rate_gt"])
+        )
     return result
 
 
-def calculate_ucie_phy_area(package_type, data_rate_gt, spec_db):
+def calculate_ucie_phy_area(package_type, lane_count, module_count, spec_db):
     pkg_key = package_type.lower()
-    if pkg_key not in spec_db["packages"]:
-        raise ValueError(f"Unknown package type: {package_type}")
 
     pkg_info = spec_db["packages"][pkg_key]
     width_um = pkg_info["phy_width_um"]
-    depth_um = None
 
     for config in pkg_info["configurations"]:
-        if config["rate_gt"] == data_rate_gt:
+        if config["rate_gt"] == rate_gt:
             depth_um = config["phy_depth_um"]
+            if lane_count == 32:
+                depth_um *= pkg_info["x32_phy_depth_discount"]
             break
 
-    if depth_um is None:
-        raise ValueError(
-            f"Data rate {data_rate_gt} GT/s not found in JSON for {package_type}"
-        )
-
     area_mm2 = (width_um * depth_um) / 1_000_000.0
-    return area_mm2 * spec_db["max_modules"]
+    return area_mm2 * module_count
 
 
-def calculate_ucie_average_power(
+def calculate_ucie_dynamic_energy(
     package_type,
-    data_rate_gt,
+    rate,
     voltage,
     data_size_bytes,
-    expected_time_s,
     spec_db,
-    multiplier=1.5,
 ):
     pkg_key = package_type.lower()
     if pkg_key not in spec_db["packages"]:
@@ -81,103 +87,99 @@ def calculate_ucie_average_power(
 
     efficiency_dict = None
     for config in spec_db["packages"][pkg_key]["configurations"]:
-        if config["rate_gt"] == data_rate_gt:
+        if config["rate_gt"] == rate:
             efficiency_dict = config["efficiency_pj_per_bit"]
             break
 
     if efficiency_dict is None:
-        raise ValueError(f"Data rate {data_rate_gt} GT/s not found for {package_type}.")
+        raise ValueError(f"Data rate {rate} GT/s not found for {package_type}.")
     if voltage not in efficiency_dict:
         raise ValueError(f"Voltage '{voltage}' not defined for this configuration.")
 
     pj_per_bit = efficiency_dict[voltage]
     total_bits = data_size_bytes * 8
     total_energy_joules = total_bits * (pj_per_bit * 1e-12)
-    average_power_watts = total_energy_joules / expected_time_s
-    return (
-        average_power_watts * multiplier
-    )  # multiplier implicitly incorporates protocal overhead and digital circuit power
+    return total_energy_joules
 
 
-def get_min_pcie_lane(data_size_bytes, expected_time_s, spec_db):
-    if expected_time_s <= 0:
-        return {"error": "Expected time must be greater than 0"}
+def get_nearest_pcie_lane(expected_bw_gbps, spec_db):
+    if expected_bw_gbps <= 0:
+        return {"error": "Expected bw must be greater than 0"}
 
-    expected_time_s -= spec_db["latency"]
-    required_bw_bps = (
-        data_size_bytes / expected_time_s / spec_db["bandwidth_efficiency"]
-    )
     rate_gt = spec_db["rate_gt"]
-    effective_lanes = ceil(required_bw_bps * 8 / (1024**3) / rate_gt)
 
-    found_lane_count = None
+    nearest = None
+    nearest_bandwidth_gap = float("inf")
     for lane_count in spec_db["available_lane_count"]:
-        capacity_bps = (rate_gt * (1024**3) * lane_count) / 8
-        if capacity_bps >= required_bw_bps:
-            found_lane_count = lane_count
-            break
-    return found_lane_count, effective_lanes
+        capacity_gbps = rate_gt * lane_count
+        bandwidth_gap = abs(capacity_gbps - expected_bw_gbps)
+        if bandwidth_gap < nearest_bandwidth_gap:
+            nearest = lane_count
+            nearest_bandwidth_gap = bandwidth_gap
+    return nearest
 
 
-def calculate_pcie_average_power(
-    required_switch_lanes, data_size_bytes, expected_time_s, spec_db
-):
-    # switch_power_watt = None
-    # for switch in spec_db["switches"]:
-    #     if switch["lane_count"] >= required_switch_lanes:
-    #         switch_power_watt = switch["efficiency_watt"]
-    #         break
-    switch_power_watt = (
-        spec_db["switch_power_k"] * required_switch_lanes
-        + spec_db["switch_power_intercept"]
-    )
-
+def calculate_pcie_dynamic_energy(data_size_bytes, spec_db):
     pj_per_bit = spec_db["efficiency_pj_per_bit"]
     total_bits = data_size_bytes * 8
     total_energy_joules = total_bits * (pj_per_bit * 1e-12)
-    average_power_watts = total_energy_joules / expected_time_s
-    average_power_watts += switch_power_watt
-    return average_power_watts
+    return total_energy_joules
 
 
 if __name__ == "__main__":
     ucie_spec = load_json_data("UCIE")
+    if ucie_spec is None:
+        raise SystemExit(1)
 
-    data = 40 * 1024**3
-    time = 1
+    data_size_gigabytes = 64
+    time_s = 1.0
+    expected_bw_gbps = data_size_gigabytes * 8 / time_s
 
-    min_rates = get_min_ucie_rate(data, time, ucie_spec)
+    ucie_nearest = get_nearest_ucie_configurations(expected_bw_gbps, ucie_spec)
 
-    print(f"--- Transfer: {data / 1024**3} GB / {time} s ---")
-    for pkg, rate in min_rates.items():
-        if rate:
-            area = calculate_ucie_phy_area(pkg, rate, ucie_spec)
-            print(f"Package: {pkg:8} | Min rate {rate:2} GT/s | Area {area:.4f} mm²")
-        else:
-            print(f"Package: {pkg:8} | Requirement cannot be satisfied")
-
-    avg_p = calculate_ucie_average_power(
-        package_type="advanced",
-        data_rate_gt=4,
-        voltage="0.5V",
-        data_size_bytes=data,
-        expected_time_s=time,
-        spec_db=ucie_spec,
+    print(
+        f"--- Transfer: {data_size_gigabytes} GB / {time_s} s (~{expected_bw_gbps:.1f} Gbps) ---"
     )
+    for pkg, candidates in ucie_nearest.items():
+        for candidate in candidates:
+            module_count, lane_count, rate_gt = (
+                candidate["module_count"],
+                candidate["lane_count"],
+                candidate["rate_gt"],
+            )
+            capacity_gbps = module_count * lane_count * rate_gt
+            area = calculate_ucie_phy_area(pkg, lane_count, module_count, ucie_spec)
+            print(
+                f"Package: {pkg:8} | Nearest {module_count} module(s) × {lane_count} lane(s) x {rate_gt} GT/s = {capacity_gbps:.1f} Gbps | "
+                f"Area {area:.4f} mm²"
+            )
 
+    energy_adv = calculate_ucie_dynamic_energy(
+        "advanced", 4, "0.5V", data_size_gigabytes * 1024**3, ucie_spec
+    )
+    avg_p = energy_adv / time_s
     print(f"Average power of advanced package at 0.5V: {avg_p:.4f} W")
 
-    avg_p_high = calculate_ucie_average_power(
-        "standard", 12, "0.7V", data, time, ucie_spec
+    energy_std = calculate_ucie_dynamic_energy(
+        "standard", 12, "0.7V", data_size_gigabytes * 1024**3, ucie_spec
     )
+    avg_p_high = energy_std / time_s
     print(f"Average power of standard package at 0.7V: {avg_p_high:.4f} W")
 
     print()
 
     pcie_spec = load_json_data("PCIE")
-    lanes, effective_lanes = get_min_pcie_lane(data, time, pcie_spec)
-    print(f"Required lanes: {lanes}; Effective lanes: {effective_lanes}")
-    avg_p_pcie = calculate_pcie_average_power(
-        effective_lanes * 4, data, time, pcie_spec
+    if pcie_spec is None:
+        raise SystemExit(1)
+    pcie_lanes = get_nearest_pcie_lane(expected_bw_gbps, pcie_spec)
+    print(
+        f"Nearest PCIe lane count: {pcie_lanes}, bandwidth {pcie_lanes * pcie_spec['rate_gt']:.1f} Gbps"
     )
-    print(f"Average power of pcie: {avg_p_pcie} W")
+    energy_pcie = calculate_pcie_dynamic_energy(
+        data_size_gigabytes * 1024**3, pcie_spec
+    )
+    avg_p_pcie = energy_pcie / time_s
+    avg_p_pcie += (
+        pcie_spec["switch_power_k"] * pcie_lanes + pcie_spec["switch_power_intercept"]
+    )
+    print(f"Average power of PCIe: {avg_p_pcie:.4f} W")
