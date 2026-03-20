@@ -27,7 +27,25 @@ def _comm_tx_allgather_reducescatter(total_bytes: float, degree: int) -> float:
 
 def _comm_tx_alltoall_transpose(per_rank_bytes: float, degree: int) -> float:
     """Ring: per-rank Tx for AlltoAll (transpose)."""
-    return (degree - 1) * per_rank_bytes / degree
+    if degree == 2:
+        # unidirection ring
+        # Calculation:
+        # Suppose there are p processors and each processor holds p messages of size m.
+        # Each processor sends (p-1) round of messages.
+        # The message size of each round is m(p-1), m(p-2), ..., m.
+        # Therefore, the total TX of each processor is mp(p-1)/2.
+        # In our notation, degree = p, per_rank_bytes = mp.
+        # See https://en.wikipedia.org/wiki/All-to-all_%28parallel_pattern%29
+        return (degree - 1) * per_rank_bytes / 2
+    elif degree == 4:
+        # bidirection ring
+        # Calculation:
+        # For bidirection ring, Each processor sends messages to both left and right neighbors.
+        # When p is even:
+        # The message size for left neighbors is mp/2, m(p/2-1), ..., m.
+        # The message size for right neighbors is m(p/2-1), m(p/2-2), ..., m.
+        # Therefore, the total TX of each processor is mp^2/4
+        return degree * per_rank_bytes / 4
 
 
 def _compute_comm_time(
@@ -119,7 +137,7 @@ def print_layer_summary(
         print(f"  {name:<35} {lat_ms:>12.4f} {pct:>7.1f}%")
     for name, lat_ms in sorted(comm_non_overlapped_ms.items()):
         pct = (lat_ms / total_ms * 100) if total_ms > 0 else 0
-        print(f"  {name:<35} {lat_ms:>12.4f} {pct:>7.1f}%")
+        print(f"  *{name:<35} {lat_ms:>12.4f} {pct:>7.1f}%")
 
     # Power/Energy summary
     total_energy_mJ = sum(
@@ -296,7 +314,7 @@ def run_layer(
     if parallelism == "CP" and degree > 1:
         # Q+K+V before FA
         comm_breakdown["alltoall_before_fa"] = _comm_tx_alltoall_transpose(
-            seq_len_q * N_shapes["qkv_proj"] * qkv_dt.word_size, degree
+            M * N_shapes["qkv_proj"] * qkv_dt.word_size, degree
         )
         assert N_shapes["qkv_proj"] == (nq * d + 2 * nkv * d) * degree
     else:
@@ -357,7 +375,7 @@ def run_layer(
     if parallelism == "CP" and degree > 1:
         # attn output after FA
         comm_breakdown["alltoall_after_fa"] = _comm_tx_alltoall_transpose(
-            seq_len_q * K_shapes["o_proj"] * attn_out_dt.word_size, degree
+            seq_len_q * nq * d * attn_out_dt.word_size, degree
         )
         assert degree * nq * d == K_shapes["o_proj"]
     else:
@@ -622,19 +640,25 @@ def main():
     print(f"  device:      {args.device}")
     print(f"  model:       {args.model}")
     print(f"  precision:   {args.precision}")
+    print(f"  parallelism: {args.parallelism} (degree={degree})")
+    print(f"  comm_bandwidth:   {args.comm_bandwidth} GB/s")
+    print(f"  comm_latency:   {args.comm_latency} us")
     print(f"  phase:       {args.phase}")
+    print(f"  causal:       {args.is_causal}")
     print(f"  seq_len:     {args.seq_len}")
     if not is_prefill:
         print(f"  spec_tokens: {args.spec_tokens}")
     model_cfg = test_model_dict[args.model]
     num_layers = model_cfg["num_layers"]
     print(f"  num_layers:  {num_layers}")
-    print(f"  parallelism: {args.parallelism} (degree={degree})")
-    print(f"  M:           {M}  (matmul batch dim)")
+    print(f"  M:           {M}")
     print(f"  seq_len_q:   {seq_len_q}")
     print(f"  seq_len_kv:  {seq_len_kv}")
     print("-" * 56)
     print("  Simulating (QKV->FA->O->LN->GateUp->Down->LN->QKV)...")
+    effective_comm_bandwidth_gbps = (
+        args.comm_bandwidth if degree == 2 else args.comm_bandwidth * 2
+    )  # unidirection ring when degree == 2, bidirection ring when degree == 4
     lat_first, lat_rest, power_avg = run_layer(
         args.model,
         test_model_dict[args.model],
@@ -648,7 +672,7 @@ def main():
         args.is_causal if is_prefill else False,
         parallelism=args.parallelism,
         degree=degree,
-        comm_bandwidth_gbps=args.comm_bandwidth,
+        comm_bandwidth_gbps=effective_comm_bandwidth_gbps,
         comm_latency_us=args.comm_latency,
     )
     total = lat_first + (num_layers - 1) * lat_rest
