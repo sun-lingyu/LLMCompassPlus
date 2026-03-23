@@ -1,12 +1,13 @@
 {
   "spec_version": "5.0",
   "description": "PCIE 5.0 PHY and switch Power Modeling",
-  "latency": 379e-9,
+  "latency": 868e-9,
   "bandwidth_efficiency": 0.9,
   "rate_gt": 32,
   "efficiency_pj_per_bit": 7,
   "available_lane_count": [
     1,
+    2,
     4,
     8,
     16

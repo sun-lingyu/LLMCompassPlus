@@ -3,8 +3,6 @@ import os
 
 
 def load_json_data(file_name):
-    file_name = f"configs/{file_name}.json"
-
     if not os.path.exists(file_name):
         print(f"Error: {file_name} not found")
         return None
@@ -12,7 +10,6 @@ def load_json_data(file_name):
     try:
         with open(file_name, "r") as f:
             data = json.load(f)
-            print(f"Read file success: {file_name}")
             return data
     except json.JSONDecodeError:
         print(f"Error: {file_name} format error")
@@ -57,7 +54,7 @@ def get_nearest_ucie_configurations(expected_bw_gbps, spec_db):
     return result
 
 
-def calculate_ucie_phy_area(package_type, lane_count, module_count, spec_db):
+def calculate_ucie_phy_area(package_type, module_count, lane_count, rate_gt, spec_db):
     pkg_key = package_type.lower()
 
     pkg_info = spec_db["packages"][pkg_key]
@@ -98,8 +95,8 @@ def calculate_ucie_dynamic_energy(
 
     pj_per_bit = efficiency_dict[voltage]
     total_bits = data_size_bytes * 8
-    total_energy_joules = total_bits * (pj_per_bit * 1e-12)
-    return total_energy_joules
+    total_energy_mj = total_bits * (pj_per_bit * 1e-9)
+    return total_energy_mj
 
 
 def get_nearest_pcie_lane(expected_bw_gbps, spec_db):
@@ -122,16 +119,16 @@ def get_nearest_pcie_lane(expected_bw_gbps, spec_db):
 def calculate_pcie_dynamic_energy(data_size_bytes, spec_db):
     pj_per_bit = spec_db["efficiency_pj_per_bit"]
     total_bits = data_size_bytes * 8
-    total_energy_joules = total_bits * (pj_per_bit * 1e-12)
-    return total_energy_joules
+    total_energy_mj = total_bits * (pj_per_bit * 1e-9)
+    return total_energy_mj
 
 
 if __name__ == "__main__":
-    ucie_spec = load_json_data("UCIE")
+    ucie_spec = load_json_data("configs/UCIE.json")
     if ucie_spec is None:
         raise SystemExit(1)
 
-    data_size_gigabytes = 64
+    data_size_gigabytes = 32
     time_s = 1.0
     expected_bw_gbps = data_size_gigabytes * 8 / time_s
 
@@ -148,37 +145,34 @@ if __name__ == "__main__":
                 candidate["rate_gt"],
             )
             capacity_gbps = module_count * lane_count * rate_gt
-            area = calculate_ucie_phy_area(pkg, lane_count, module_count, ucie_spec)
-            print(
-                f"Package: {pkg:8} | Nearest {module_count} module(s) × {lane_count} lane(s) x {rate_gt} GT/s = {capacity_gbps:.1f} Gbps | "
-                f"Area {area:.4f} mm²"
+            area = calculate_ucie_phy_area(
+                pkg, module_count, lane_count, rate_gt, ucie_spec
             )
-
-    energy_adv = calculate_ucie_dynamic_energy(
-        "advanced", 4, "0.5V", data_size_gigabytes * 1024**3, ucie_spec
-    )
-    avg_p = energy_adv / time_s
-    print(f"Average power of advanced package at 0.5V: {avg_p:.4f} W")
-
-    energy_std = calculate_ucie_dynamic_energy(
-        "standard", 12, "0.7V", data_size_gigabytes * 1024**3, ucie_spec
-    )
-    avg_p_high = energy_std / time_s
-    print(f"Average power of standard package at 0.7V: {avg_p_high:.4f} W")
+            energy_0_7v_mj = calculate_ucie_dynamic_energy(
+                pkg, rate_gt, "0.7V", data_size_gigabytes * 1024**3, ucie_spec
+            )
+            energy_0_5v_mj = calculate_ucie_dynamic_energy(
+                pkg, rate_gt, "0.5V", data_size_gigabytes * 1024**3, ucie_spec
+            )
+            power_0_7v = energy_0_7v_mj * 1e-3 / time_s
+            power_0_5v = energy_0_5v_mj * 1e-3 / time_s
+            print(
+                f"{pkg:8} | {module_count} module(s) × {lane_count} lane(s) x {rate_gt} GT/s = {capacity_gbps:.1f} Gbps | Area {area:.4f} mm² | Power 0.7V: {power_0_7v:.4f} W, 0.5V: {power_0_5v:.4f} W"
+            )
 
     print()
 
-    pcie_spec = load_json_data("PCIE")
+    pcie_spec = load_json_data("configs/PCIE.json")
     if pcie_spec is None:
         raise SystemExit(1)
     pcie_lanes = get_nearest_pcie_lane(expected_bw_gbps, pcie_spec)
     print(
         f"Nearest PCIe lane count: {pcie_lanes}, bandwidth {pcie_lanes * pcie_spec['rate_gt']:.1f} Gbps"
     )
-    energy_pcie = calculate_pcie_dynamic_energy(
+    energy_pcie_mj = calculate_pcie_dynamic_energy(
         data_size_gigabytes * 1024**3, pcie_spec
     )
-    avg_p_pcie = energy_pcie / time_s
+    avg_p_pcie = energy_pcie_mj * 1000 / time_s
     avg_p_pcie += (
         pcie_spec["switch_power_k"] * pcie_lanes + pcie_spec["switch_power_intercept"]
     )

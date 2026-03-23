@@ -1,7 +1,15 @@
 import argparse
+import os
 from math import inf
 
 from hardware_model.device import device_dict
+from icnt_model.icnt_model import (
+    calculate_pcie_dynamic_energy,
+    calculate_ucie_dynamic_energy,
+    get_nearest_pcie_lane,
+    get_nearest_ucie_configurations,
+    load_json_data,
+)
 from power_model.power_model import (
     calculate_flashattn_power,
     calculate_layernorm_power,
@@ -18,6 +26,8 @@ from test.layernorm.utils import get_output_dtype as get_ln_output_dtype
 from test.matmul.utils import get_model_shape as get_matmul_shapes
 from test.matmul.utils import get_output_dtype as get_matmul_output_dtype
 from test.utils import test_model_dict
+
+file_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 def _comm_tx_allgather_reducescatter(total_bytes: float, degree: int) -> float:
@@ -49,74 +59,51 @@ def _comm_tx_alltoall_transpose(per_rank_bytes: float, degree: int) -> float:
 
 
 def _compute_comm_time(
-    tx_bytes: float, bandwidth_gbps: float, latency_us: float
+    tx_bytes: float,
+    bandwidth_gbps: float,
+    latency_ns: float,
+    bandwidth_efficiency: float = 0.9,
 ) -> float:
     """Comm time (s) = bytes/bandwidth + latency."""
     if bandwidth_gbps <= 0:
         return 0.0
-    return tx_bytes / (bandwidth_gbps * 1e9) + latency_us * 1e-6
+    return (
+        tx_bytes * 8 / (bandwidth_gbps * bandwidth_efficiency * 1e9) + latency_ns * 1e-9
+    )
 
 
 def _compute_non_overlapped_comm(
     comm_breakdown: dict[str, float],
     bandwidth_gbps: float,
-    latency_us: float,
+    latency_ns: float,
     lat_breakdown_ms: dict[str, float],
     overlap_config: dict[str, str],
 ) -> tuple[float, dict[str, float]]:
     """Non-overlapped comm latency (s) and per-collective breakdown (ms)."""
     if bandwidth_gbps <= 0:
         return 0.0, {}
-    total_s = 0.0
+    total_ms = 0.0
     breakdown_ms = {}
     for name, tx_bytes in comm_breakdown.items():
-        comm_time = _compute_comm_time(tx_bytes, bandwidth_gbps, latency_us)
+        comm_time = _compute_comm_time(tx_bytes, bandwidth_gbps, latency_ns)
         overlap_op = overlap_config.get(name)
-        overlap_s = lat_breakdown_ms[overlap_op] / 1000 if overlap_op else 0.0
+        overlap_s = lat_breakdown_ms[overlap_op] / 1000
         non_overlapped_s = max(0.0, comm_time - overlap_s)
-        total_s += non_overlapped_s
+        total_ms += non_overlapped_s * 1000
         if non_overlapped_s > 0:
             breakdown_ms[name] = non_overlapped_s * 1000
-    return total_s, breakdown_ms
+    return total_ms, breakdown_ms
 
 
-def print_layer_summary(
+def print_layer_summary_comp(
     lat_breakdown,
     power_breakdown,
-    comm_breakdown,
-    first_ops,
-    rest_ops,
-    comm_bandwidth_gbps=0.0,
-    comm_latency_us=0.0,
+    op_names,
 ):
-    """Compute lat_first/lat_rest (incl. non-overlapped comm), print breakdown, return (lat_first, lat_rest, power_avg)."""
-    lat_first = sum(lat_breakdown[op] for op in first_ops) / 1000
-    lat_rest = sum(lat_breakdown[op] for op in rest_ops) / 1000
-
-    comm_non_overlapped_ms = {}
-    if comm_bandwidth_gbps > 0 and comm_breakdown:
-        overlap_config = {
-            "reducescatter_before_postattn_ln": "o_proj",
-            "allgather_after_postattn_ln": "gate_up_proj",
-            "reducescatter_before_postffn_ln": "down_proj",
-            "allgather_after_postffn_ln": "qkv_proj_2",
-            "alltoall_before_fa": "qkv_proj",
-            "alltoall_after_fa": "o_proj",
-        }
-        non_overlapped_s, comm_non_overlapped_ms = _compute_non_overlapped_comm(
-            comm_breakdown,
-            comm_bandwidth_gbps,
-            comm_latency_us,
-            lat_breakdown,
-            overlap_config,
-        )
-        lat_first += non_overlapped_s
-        lat_rest += non_overlapped_s
+    """Compute layer latency (compute only), print breakdown, return (layer_lat_ms, power_avg)."""
+    layer_lat_ms = sum(lat_breakdown[op] for op in op_names)
 
     # Latency summary
-    print(
-        f"  --- lat_first: {lat_first * 1000:.4f} ms, lat_rest: {lat_rest * 1000:.4f} ms ---"
-    )
     summary_ops = [
         ("qkv_proj", lat_breakdown["qkv_proj_2"]),  # warm path
         ("flash_attn", lat_breakdown["flash_attn"]),
@@ -126,46 +113,121 @@ def print_layer_summary(
         ("down_proj", lat_breakdown["down_proj"]),
         ("post_ffn_ln", lat_breakdown["post_ffn_ln"]),
     ]
-    total_ms = sum(lat_breakdown[op] for op in rest_ops) + sum(
-        comm_non_overlapped_ms.values()
-    )
-    print("  Operator latency summary (qkv_proj=warm):")
-    print(f"  {'Operator':<35} {'Latency(ms)':>12} {'Share':>8}")
-    print("  " + "-" * 57)
+    print("  " + "=" * 57)
+    print("  Operator latency summary:")
+    print(f"  {'Operator':<20} {'Latency(ms)':>12} {'Share':>8}")
+    print("  " + "-" * 55)
     for name, lat_ms in summary_ops:
-        pct = (lat_ms / total_ms * 100) if total_ms > 0 else 0
+        pct = (lat_ms / layer_lat_ms * 100) if layer_lat_ms > 0 else 0
         print(f"  {name:<35} {lat_ms:>12.4f} {pct:>7.1f}%")
-    for name, lat_ms in sorted(comm_non_overlapped_ms.items()):
-        pct = (lat_ms / total_ms * 100) if total_ms > 0 else 0
-        print(f"  *{name:<35} {lat_ms:>12.4f} {pct:>7.1f}%")
+    print(f"  {'Total':<35} {layer_lat_ms:>12.4f}")
 
     # Power/Energy summary
     total_energy_mJ = sum(
-        power_breakdown[name] * lat_breakdown[name] for name in rest_ops
+        power_breakdown[name] * lat_breakdown[name] for name in op_names
     )
-    total_runtime_s = lat_rest
-    power_avg = total_energy_mJ / 1000 / total_runtime_s if total_runtime_s > 0 else 0
-    print("  Power/Energy summary (mJ), avg power (W) = energy / runtime:")
+    power_avg = total_energy_mJ / layer_lat_ms
+    print("  " + "=" * 57)
+    print("  Operator Power/Energy summary:")
     print(f"  {'Operator':<20} {'Power(W)':>10} {'Energy(mJ)':>12} {'Share':>8}")
-    print("  " + "-" * 52)
+    print("  " + "-" * 55)
     for name in power_breakdown:
         power_w = power_breakdown[name]
         energy_mJ = power_w * lat_breakdown[name]
         pct = (energy_mJ / total_energy_mJ * 100) if total_energy_mJ > 0 else 0
         print(f"  {name:<20} {power_w:>10.2f} {energy_mJ:>12.2f} {pct:>7.1f}%")
-    print(f"  {'Total':<20} {power_avg:>10.2f} {total_energy_mJ:>12.2f}")
+    print(f"  {'Avg/Total':<20} {power_avg:>10.2f} {total_energy_mJ:>12.2f}")
 
-    if comm_breakdown:
-        total_comm_tx = sum(comm_breakdown.values())
-        print("  Communication (Ring, per-rank Tx bytes):")
-        print(f"  {'Collective':<35} {'Tx(bytes)':>14} {'Share':>8}")
-        print("  " + "-" * 60)
-        for name, tx_bytes in sorted(comm_breakdown.items()):
-            pct = (tx_bytes / total_comm_tx * 100) if total_comm_tx > 0 else 0
-            print(f"  {name:<35} {tx_bytes:>14.0f} {pct:>7.1f}%")
-        print(f"  {'Total per layer':<35} {total_comm_tx:>14.0f}")
+    return layer_lat_ms, power_avg
 
-    return lat_first, lat_rest, power_avg
+
+def print_layer_summary_comm(
+    lat_breakdown,
+    comm_breakdown,
+    comm_bandwidth_gbps,
+    device,
+    ucie_or_pcie,
+    ucie_spec_path=f"{file_dir}/../icnt_model/configs/UCIE.json",
+    pcie_spec_path=f"{file_dir}/../icnt_model/configs/PCIE.json",
+):
+    assert ucie_or_pcie in ("ucie", "pcie")
+    print(f"  {ucie_or_pcie.upper()} communication summary:")
+    if ucie_or_pcie == "ucie":
+        ucie_spec = load_json_data(ucie_spec_path)
+        comm_latency_ns = ucie_spec["latency"]
+    else:  # pcie
+        pcie_spec = load_json_data(pcie_spec_path)
+        comm_latency_ns = pcie_spec["latency"]
+
+    total_comm_tx_bytes = sum(comm_breakdown.values())
+    total_comm_tx_time_s = _compute_comm_time(
+        total_comm_tx_bytes, comm_bandwidth_gbps, comm_latency_ns
+    )
+
+    overlap_config = {
+        "reducescatter_before_postattn_ln": "o_proj",
+        "allgather_after_postattn_ln": "gate_up_proj",
+        "reducescatter_before_postffn_ln": "down_proj",
+        "allgather_after_postffn_ln": "qkv_proj_2",
+        "alltoall_before_fa": "qkv_proj",
+        "alltoall_after_fa": "o_proj",
+    }
+    non_overlapped_ms, comm_non_overlapped_ms = _compute_non_overlapped_comm(
+        comm_breakdown,
+        comm_bandwidth_gbps,
+        comm_latency_ns,
+        lat_breakdown,
+        overlap_config,
+    )
+
+    if non_overlapped_ms > 0:
+        print("  " + "=" * 57)
+        print(f"  {ucie_or_pcie.upper()} Communication latency summary:")
+        print(f"  {'Operator':<35} {'Latency(ms)':>12} {'Share':>8}")
+        for name, lat_ms in sorted(comm_non_overlapped_ms.items()):
+            print(f"  *{name:<35} {lat_ms:>12.4f}")
+
+    print("  " + "=" * 57)
+    power_results = {}
+    voltage = 0.7 if device == "Orin" else 0.5
+    if ucie_or_pcie == "ucie":
+        ucie_nearest_configs = get_nearest_ucie_configurations(
+            comm_bandwidth_gbps, ucie_spec
+        )
+        for pkg, candidates in ucie_nearest_configs.items():
+            for candidate in candidates:
+                module_count, lane_count, rate_gt = (
+                    candidate["module_count"],
+                    candidate["lane_count"],
+                    candidate["rate_gt"],
+                )
+                capacity_gbps = module_count * lane_count * rate_gt
+                energy_mj = calculate_ucie_dynamic_energy(
+                    pkg,
+                    rate_gt,
+                    f"{voltage}V",
+                    total_comm_tx_bytes,
+                    ucie_spec,
+                )
+                power_avg = energy_mj * 1e-3 / total_comm_tx_time_s
+                print(
+                    f"  {pkg:<10} {module_count} × {lane_count} lane(s) x {rate_gt:>2} GT/s = {capacity_gbps:.1f} Gbps: {power_avg:>5.2f} W {energy_mj:>5.2f} mJ"
+                )
+                power_results[(pkg, module_count, lane_count, rate_gt)] = energy_mj
+    else:
+        pcie_lanes = get_nearest_pcie_lane(comm_bandwidth_gbps, pcie_spec)
+        capacity_gbps = pcie_lanes * pcie_spec["rate_gt"]
+        energy_mj = calculate_pcie_dynamic_energy(total_comm_tx_bytes, pcie_spec)
+        power_avg = energy_mj * 1e-3 / total_comm_tx_time_s
+        print(
+            f"  {pcie_lanes} x {pcie_spec['rate_gt']} GT/s = {capacity_gbps:.1f} Gbps: {power_avg:>5.2f} W {energy_mj:>5.2f} mJ"
+        )
+        pcie_switch_dynamic_power = pcie_spec["switch_power_k"] * pcie_lanes
+        print(f"  Additional PCIe switch power: {pcie_switch_dynamic_power:.2f} W")
+        energy_mj += pcie_switch_dynamic_power * total_comm_tx_time_s * 1000
+        power_results[pcie_lanes] = energy_mj
+
+    return non_overlapped_ms, power_results
 
 
 def run_matmul(M, K, N, act_dt, wt_dt, mid_dt, out_dt, device, pcb, l2_prev=None):
@@ -201,7 +263,6 @@ def run_layer(
     parallelism="none",
     degree=1,
     comm_bandwidth_gbps=0.0,
-    comm_latency_us=0.0,
 ):
     """Simulate in one pass: QKV -> FA -> O -> LN -> GateUp -> Down -> LN -> QKV.
     Returns (lat_first, lat_rest):
@@ -534,16 +595,9 @@ def run_layer(
         ),
     )
 
-    first_ops = [
-        "qkv_proj",
-        "flash_attn",
-        "o_proj",
-        "post_attn_ln",
-        "gate_up_proj",
-        "down_proj",
-        "post_ffn_ln",
-    ]
-    rest_ops = [
+    print()
+    print("  Layer summary:")
+    op_names = [
         "flash_attn",
         "o_proj",
         "post_attn_ln",
@@ -552,22 +606,95 @@ def run_layer(
         "post_ffn_ln",
         "qkv_proj_2",
     ]
-    lat_first, lat_rest, power_avg = print_layer_summary(
+    results = {}
+    lat, power_avg = print_layer_summary_comp(
         lat_breakdown,
         power_breakdown,
-        comm_breakdown,
-        first_ops,
-        rest_ops,
-        comm_bandwidth_gbps=comm_bandwidth_gbps,
-        comm_latency_us=comm_latency_us,
+        op_names,
     )
-    return lat_first, lat_rest, power_avg
+    results["lat_comp"] = lat
+    results["power_avg_comp"] = power_avg
+    if comm_bandwidth_gbps > 0:
+        lat_ucie, power_results_ucie = print_layer_summary_comm(
+            lat_breakdown,
+            comm_breakdown,
+            comm_bandwidth_gbps,
+            device,
+            ucie_or_pcie="ucie",
+        )
+        results["lat_ucie"] = lat_ucie
+        results["power_results_ucie"] = power_results_ucie
+        lat_pcie, power_results_pcie = print_layer_summary_comm(
+            lat_breakdown,
+            comm_breakdown,
+            comm_bandwidth_gbps,
+            device,
+            ucie_or_pcie="pcie",
+        )
+        results["lat_pcie"] = lat_pcie
+        results["power_results_pcie"] = power_results_pcie
+    print("  " + "=" * 57)
+    return results
 
 
 def resolve_dims(args, is_prefill):
     if is_prefill:
         return args.seq_len, args.seq_len, args.seq_len
     return args.spec_tokens, args.spec_tokens, args.seq_len
+
+
+def print_final_results(num_layers, results, has_comm_results):
+    lat_comp = results["lat_comp"]
+    power_avg_comp = results["power_avg_comp"]
+    if not has_comm_results:
+        lat_total = num_layers * lat_comp
+        print(f"  Layer: {lat_comp:.4f} ms")
+        print(f"  Total ({num_layers} layers): {lat_total:.4f} ms")
+        print(f"  Est. avg power:   {power_avg_comp:.2f} W")
+        print("=" * 57)
+        return
+
+    lat_ucie = results["lat_ucie"]
+    power_results_ucie = results["power_results_ucie"]
+    lat_pcie = results["lat_pcie"]
+    power_results_pcie = results["power_results_pcie"]
+    print()
+    print("  Overall summary:")
+    print("  " + "+" * 57)
+    print(f"  Layer [Compute]: {lat_comp:.4f} ms")
+    print(f"  Total [Compute] ({num_layers} layers): {num_layers * lat_comp:.4f} ms")
+
+    # UCIE results
+    print(f"  Layer [Compute + Communication]: {lat_comp + lat_ucie:.4f} ms")
+    print(
+        f"  Total [Compute + Communication] ({num_layers} layers): {num_layers * (lat_comp + lat_ucie):.4f} ms"
+    )
+    print("  " + "+" * 57)
+    print("  UCIE Est. avg power:")
+    for (
+        pkg,
+        module_count,
+        lane_count,
+        rate_gt,
+    ), energy_mj_comm in power_results_ucie.items():
+        capacity_gbps = module_count * lane_count * rate_gt
+        power_avg = (power_avg_comp * lat_comp + energy_mj_comm) / (lat_comp + lat_ucie)
+        print(
+            f"  {pkg:<10} {module_count} × {lane_count} lane(s) x {rate_gt:>2} GT/s = {capacity_gbps:.1f} Gbps : {power_avg:.2f} W"
+        )
+
+    # PCIE results
+    pcie_spec = load_json_data(f"{file_dir}/../icnt_model/configs/PCIE.json")
+    pcie_switch_static_power = pcie_spec["switch_power_intercept"]
+    print("  " + "+" * 57)
+    print("  PCIE Est. avg power:")
+    assert len(power_results_pcie) == 1
+    for pcie_lanes, energy_mj_comm in power_results_pcie.items():
+        capacity_gbps = pcie_lanes * pcie_spec["rate_gt"]
+        power_avg = (power_avg_comp * lat_comp + energy_mj_comm) / (lat_comp + lat_ucie)
+        print(f"  {pcie_lanes} lane(s) {capacity_gbps:.1f} Gbps: {power_avg:.2f} W")
+        print(f"  Additional PCIe switch power: {pcie_switch_static_power:.2f} W")
+    print("  " + "+" * 57)
 
 
 def main():
@@ -602,12 +729,6 @@ def main():
         default=0.0,
         help="Comm bandwidth (GB/s), >0 to add non-overlapped comm latency",
     )
-    parser.add_argument(
-        "--comm_latency",
-        type=float,
-        default=0.0,
-        help="Comm latency (us) per collective call",
-    )
     args = parser.parse_args()
 
     is_prefill = args.phase == "prefill"
@@ -633,16 +754,14 @@ def main():
     M, seq_len_q, seq_len_kv = resolve_dims(args, is_prefill)
     if args.parallelism == "CP" and degree > 1:
         M = M // degree
-        # seq_len_q, seq_len_kv 不变，仅 FlashAttn 的 num_heads 缩减
-    print("=" * 56)
+    print("=" * 57)
     print("  LLM Inference Latency Simulator")
-    print("=" * 56)
+    print("=" * 57)
     print(f"  device:      {args.device}")
     print(f"  model:       {args.model}")
     print(f"  precision:   {args.precision}")
     print(f"  parallelism: {args.parallelism} (degree={degree})")
     print(f"  comm_bandwidth:   {args.comm_bandwidth} GB/s")
-    print(f"  comm_latency:   {args.comm_latency} us")
     print(f"  phase:       {args.phase}")
     print(f"  causal:       {args.is_causal}")
     print(f"  seq_len:     {args.seq_len}")
@@ -654,12 +773,12 @@ def main():
     print(f"  M:           {M}")
     print(f"  seq_len_q:   {seq_len_q}")
     print(f"  seq_len_kv:  {seq_len_kv}")
-    print("-" * 56)
+    print("-" * 57)
     print("  Simulating (QKV->FA->O->LN->GateUp->Down->LN->QKV)...")
-    effective_comm_bandwidth_gbps = (
+    effective_comm_bandwidth = (
         args.comm_bandwidth if degree == 2 else args.comm_bandwidth * 2
     )  # unidirection ring when degree == 2, bidirection ring when degree == 4
-    lat_first, lat_rest, power_avg = run_layer(
+    results = run_layer(
         args.model,
         test_model_dict[args.model],
         args.precision,
@@ -672,17 +791,9 @@ def main():
         args.is_causal if is_prefill else False,
         parallelism=args.parallelism,
         degree=degree,
-        comm_bandwidth_gbps=effective_comm_bandwidth_gbps,
-        comm_latency_us=args.comm_latency,
+        comm_bandwidth_gbps=effective_comm_bandwidth * 8,  # GB/s to Gbps
     )
-    total = lat_first + (num_layers - 1) * lat_rest
-    print("-" * 56)
-    print(f"  Layer 1 (cold):  {lat_first * 1000:.4f} ms")
-    print(f"  Layer 2+ (warm): {lat_rest * 1000:.4f} ms")
-    print(f"  Total ({num_layers} layers): {total * 1000:.4f} ms")
-    if power_avg is not None:
-        print(f"  Est. avg power:   {power_avg:.2f} W")
-    print("=" * 56)
+    print_final_results(num_layers, results, degree > 1)
 
 
 if __name__ == "__main__":
