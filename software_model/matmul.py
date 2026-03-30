@@ -662,6 +662,7 @@ class Matmul(Operator):
                 )
                 * pcb_module.compute_module.l2_bandwidth_per_cycle
             )
+        total_cycle_count += pending_epilogue_io_cycle
         return total_cycle_count
 
     class L2TileSimulator:
