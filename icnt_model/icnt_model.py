@@ -173,7 +173,8 @@ if __name__ == "__main__":
         data_size_gigabytes * 1024**3, pcie_spec
     )
     avg_p_pcie = energy_pcie_mj * 1000 / time_s
-    avg_p_pcie += (
+    p_pcie_switch = (
         pcie_spec["switch_power_k"] * pcie_lanes + pcie_spec["switch_power_intercept"]
     )
     print(f"Average power of PCIe: {avg_p_pcie:.4f} W")
+    print(f"PCIE switch power: {p_pcie_switch}")

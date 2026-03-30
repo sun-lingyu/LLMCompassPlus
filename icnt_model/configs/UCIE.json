@@ -1,7 +1,7 @@
 {
   "spec_version": "1.0/1.1",
   "description": "UCIe Physical Layer with Voltage-Dependent Power Modeling",
-  "latency": 330e-9,
+  "latency": 10e-9,
   "bandwidth_efficiency": 0.9,
   "available_module_count": [
     1,

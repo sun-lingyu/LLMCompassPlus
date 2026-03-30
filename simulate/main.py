@@ -47,6 +47,8 @@ def _comm_tx_alltoall_transpose(per_rank_bytes: float, degree: int) -> float:
         # In our notation, degree = p, per_rank_bytes = mp.
         # See https://en.wikipedia.org/wiki/All-to-all_%28parallel_pattern%29
         return (degree - 1) * per_rank_bytes / 2
+        # If use bidirection ring for degree = 2 case, total TX = degree * per_rank_bytes / 4 = per_rank_bytes / 2.
+        # So the code is also correct for bidirection ring.
     elif degree == 4:
         # bidirection ring
         # Calculation:
@@ -58,41 +60,70 @@ def _comm_tx_alltoall_transpose(per_rank_bytes: float, degree: int) -> float:
         return degree * per_rank_bytes / 4
 
 
-def _compute_comm_time(
-    tx_bytes: float,
-    bandwidth_gbps: float,
-    latency_ns: float,
-    bandwidth_efficiency: float = 0.9,
-) -> float:
-    """Comm time (s) = bytes/bandwidth + latency."""
-    if bandwidth_gbps <= 0:
-        return 0.0
-    return (
-        tx_bytes * 8 / (bandwidth_gbps * bandwidth_efficiency * 1e9) + latency_ns * 1e-9
-    )
-
-
 def _compute_non_overlapped_comm(
     comm_breakdown: dict[str, float],
     bandwidth_gbps: float,
     latency_ns: float,
     lat_breakdown_ms: dict[str, float],
+    dram_access_breakdown_bytes: dict[str, float],
+    launch_lat_breakdown_ms: dict[str, float],
     overlap_config: dict[str, str],
-) -> tuple[float, dict[str, float]]:
-    """Non-overlapped comm latency (s) and per-collective breakdown (ms)."""
-    if bandwidth_gbps <= 0:
-        return 0.0, {}
-    total_ms = 0.0
+    io_module,
+    comm_bandwidth_efficiency: float = 0.9,
+) -> tuple[float, float, dict[str, float]]:
+    """Non-overlapped comm latency (s) and per-collective breakdown (ms).
+
+    Models: (1) comm does not start until after the overlap op's launch latency;
+    (2) during effective compute (total op time minus launch), DRAM contention:
+    comm uses min(link Gbps, DRAM leftover after compute's average DRAM BW);
+    (3) after the overlap op finishes, comm uses full link bandwidth_gbps.
+    """
+    assert bandwidth_gbps > 0
+    eff_bandwidth_gbps = bandwidth_gbps * comm_bandwidth_efficiency
+    dram_peak_gbps = io_module.bandwidth * io_module.bandwidth_efficiency * 8 / 1e9
+    t_lat_s = latency_ns * 1e-9
+    total_comm_tx_time_ms = 0.0
+    total_non_overlapped_ms = 0.0
     breakdown_ms = {}
+
     for name, tx_bytes in comm_breakdown.items():
-        comm_time = _compute_comm_time(tx_bytes, bandwidth_gbps, latency_ns)
-        overlap_op = overlap_config.get(name)
-        overlap_s = lat_breakdown_ms[overlap_op] / 1000
-        non_overlapped_s = max(0.0, comm_time - overlap_s)
-        total_ms += non_overlapped_s * 1000
-        if non_overlapped_s > 0:
-            breakdown_ms[name] = non_overlapped_s * 1000
-    return total_ms, breakdown_ms
+        overlap_op = overlap_config[name]
+        T_comp_s = lat_breakdown_ms[overlap_op] / 1000.0
+        Launch_s = launch_lat_breakdown_ms[overlap_op] / 1000.0
+        assert Launch_s >= 0 and T_comp_s > Launch_s
+        T_comp_eff_s = T_comp_s - Launch_s
+        dram_access_size_byte = float(dram_access_breakdown_bytes[overlap_op])
+        assert dram_access_size_byte > 0
+
+        overlap_mem_bw_gbps = dram_access_size_byte / T_comp_eff_s * 8 / 1e9
+        assert dram_peak_gbps > overlap_mem_bw_gbps, (
+            f"{overlap_op}| T_comp_s: {T_comp_s}, Launch_s: {Launch_s} dram_peak_gbps: {dram_peak_gbps}, overlap_mem_bw_gbps: {overlap_mem_bw_gbps}"
+        )
+
+        bw_ov_gbps = min(
+            eff_bandwidth_gbps,
+            dram_peak_gbps - overlap_mem_bw_gbps,
+        )
+        if dram_peak_gbps - overlap_mem_bw_gbps < eff_bandwidth_gbps:
+            print(
+                f"WARNING: Comm & Comp overlap: Mem BW contention dominates! Effective BW is {bw_ov_gbps / 8:.2f} GB/s"
+            )
+
+        tx_giga_bytes = tx_bytes / 1e9
+        cap_giga_bytes = bw_ov_gbps * T_comp_eff_s / 8
+        if tx_giga_bytes <= cap_giga_bytes:
+            T_comm_eff_s = tx_giga_bytes * 8 / bw_ov_gbps
+        else:
+            rem_giga_bytes = tx_giga_bytes - cap_giga_bytes
+            T_comm_eff_s = T_comp_eff_s + rem_giga_bytes * 8 / eff_bandwidth_gbps
+        T_comm_s = t_lat_s + T_comm_eff_s
+        non_overlapped_ms = max(0, T_comm_s - T_comp_eff_s) * 1000
+        if non_overlapped_ms > 0:
+            breakdown_ms[name] = non_overlapped_ms
+
+        total_comm_tx_time_ms += T_comm_s * 1000
+        total_non_overlapped_ms += non_overlapped_ms
+    return total_comm_tx_time_ms, total_non_overlapped_ms, breakdown_ms
 
 
 def print_layer_summary_comp(
@@ -146,12 +177,14 @@ def print_layer_summary_comm(
     comm_breakdown,
     comm_bandwidth_gbps,
     device,
+    dram_access_breakdown_bytes,
+    launch_lat_breakdown_ms,
+    pcb,
     ucie_or_pcie,
     ucie_spec_path=f"{file_dir}/../icnt_model/configs/UCIE.json",
     pcie_spec_path=f"{file_dir}/../icnt_model/configs/PCIE.json",
 ):
     assert ucie_or_pcie in ("ucie", "pcie")
-    print(f"  {ucie_or_pcie.upper()} communication summary:")
     if ucie_or_pcie == "ucie":
         ucie_spec = load_json_data(ucie_spec_path)
         comm_latency_ns = ucie_spec["latency"]
@@ -160,9 +193,14 @@ def print_layer_summary_comm(
         comm_latency_ns = pcie_spec["latency"]
 
     total_comm_tx_bytes = sum(comm_breakdown.values())
-    total_comm_tx_time_s = _compute_comm_time(
-        total_comm_tx_bytes, comm_bandwidth_gbps, comm_latency_ns
-    )
+    if ucie_or_pcie == "ucie":
+        print("  " + "=" * 57)
+        print("  Communication size summary:")
+        print(f"  {'Operator':<35} {'Size(MB)':>12} {'Share':>8}")
+        for name, size_byte in sorted(comm_breakdown.items()):
+            pct = size_byte / total_comm_tx_bytes * 100
+            print(f"  *{name:<35} {size_byte / 1024**2:>12.4f} {pct:>7.1f}%")
+        print(f"  {'Total':<35} {total_comm_tx_bytes / 1024**2:>9.4f} MB")
 
     overlap_config = {
         "reducescatter_before_postattn_ln": "o_proj",
@@ -172,12 +210,17 @@ def print_layer_summary_comm(
         "alltoall_before_fa": "qkv_proj",
         "alltoall_after_fa": "o_proj",
     }
-    non_overlapped_ms, comm_non_overlapped_ms = _compute_non_overlapped_comm(
-        comm_breakdown,
-        comm_bandwidth_gbps,
-        comm_latency_ns,
-        lat_breakdown,
-        overlap_config,
+    total_comm_tx_time_ms, non_overlapped_ms, comm_non_overlapped_ms = (
+        _compute_non_overlapped_comm(
+            comm_breakdown,
+            comm_bandwidth_gbps,
+            comm_latency_ns,
+            lat_breakdown,
+            dram_access_breakdown_bytes,
+            launch_lat_breakdown_ms,
+            overlap_config,
+            pcb.io_module,
+        )
     )
 
     if non_overlapped_ms > 0:
@@ -185,7 +228,9 @@ def print_layer_summary_comm(
         print(f"  {ucie_or_pcie.upper()} Communication latency summary:")
         print(f"  {'Operator':<35} {'Latency(ms)':>12} {'Share':>8}")
         for name, lat_ms in sorted(comm_non_overlapped_ms.items()):
-            print(f"  *{name:<35} {lat_ms:>12.4f}")
+            pct = lat_ms / non_overlapped_ms * 100
+            print(f"  *{name:<35} {lat_ms:>12.4f} {pct:>7.1f}%")
+        print(f"  {'Total':<35} {non_overlapped_ms:>9.4f} ms")
 
     print("  " + "=" * 57)
     power_results = {}
@@ -209,7 +254,7 @@ def print_layer_summary_comm(
                     total_comm_tx_bytes,
                     ucie_spec,
                 )
-                power_avg = energy_mj * 1e-3 / total_comm_tx_time_s
+                power_avg = energy_mj / total_comm_tx_time_ms
                 print(
                     f"  {pkg:<10} {module_count} × {lane_count} lane(s) x {rate_gt:>2} GT/s = {capacity_gbps:.1f} Gbps: {power_avg:>5.2f} W {energy_mj:>5.2f} mJ"
                 )
@@ -218,13 +263,13 @@ def print_layer_summary_comm(
         pcie_lanes = get_nearest_pcie_lane(comm_bandwidth_gbps, pcie_spec)
         capacity_gbps = pcie_lanes * pcie_spec["rate_gt"]
         energy_mj = calculate_pcie_dynamic_energy(total_comm_tx_bytes, pcie_spec)
-        power_avg = energy_mj * 1e-3 / total_comm_tx_time_s
+        power_avg = energy_mj / total_comm_tx_time_ms
         print(
             f"  {pcie_lanes} x {pcie_spec['rate_gt']} GT/s = {capacity_gbps:.1f} Gbps: {power_avg:>5.2f} W {energy_mj:>5.2f} mJ"
         )
-        pcie_switch_dynamic_power = pcie_spec["switch_power_k"] * pcie_lanes
-        print(f"  Additional PCIe switch power: {pcie_switch_dynamic_power:.2f} W")
-        energy_mj += pcie_switch_dynamic_power * total_comm_tx_time_s * 1000
+        # pcie_switch_dynamic_power = pcie_spec["switch_power_k"] * pcie_lanes
+        # print(f"  Additional PCIe switch power: {pcie_switch_dynamic_power:.2f} W")
+        # energy_mj += pcie_switch_dynamic_power * total_comm_tx_time_ms
         power_results[pcie_lanes] = energy_mj
 
     return non_overlapped_ms, power_results
@@ -335,12 +380,23 @@ def run_layer(
     l2_prev = None
     lat_breakdown = {}
     power_breakdown = {}
+    dram_access_breakdown_bytes = {}
+    launch_lat_breakdown_ms = {}
     comm_breakdown = {}  # per-rank Tx bytes for each collective
     mode = "prefill" if is_prefill else "decode"
     fa_precision = "fp16" if precision in ("int4", "int8", "fp16") else "fp8"
 
-    def record_op(op_name, lat_s, power_fn):
+    def record_op(
+        op_name,
+        lat_s,
+        power_fn,
+        *,
+        mem_access_bytes: float,
+        launch_latency_s: float,
+    ):
         lat_breakdown[op_name] = lat_s * 1000
+        dram_access_breakdown_bytes[op_name] = float(mem_access_bytes)
+        launch_lat_breakdown_ms[op_name] = launch_latency_s * 1000
         r = power_fn()
         power_breakdown[op_name] = r["power_breakdown_watts"]["total"]
         print(
@@ -370,6 +426,8 @@ def run_layer(
         lambda: calculate_matmul_power(
             device, precision, mm.mem_access_size, mm.fma_count, lat
         ),
+        mem_access_bytes=mm.mem_access_size,
+        launch_latency_s=pcb.compute_module.launch_latency.matmul,
     )
     # CP: AlltoAll before FlashAttn
     if parallelism == "CP" and degree > 1:
@@ -389,6 +447,8 @@ def run_layer(
     lat_fa_combine = inf
     best_fa = None
     best_l2_prev = None
+    best_fa_dram_bytes = 0.0
+    best_fa_launch_s = 0.0
     for num_splits in num_splits_list:
         temp_out = fp32 if num_splits > 1 else attn_out_dt
         fa = FlashAttn(
@@ -399,14 +459,16 @@ def run_layer(
             Tensor([seq_len_kv, nkv, d], qkv_dt),
             Tensor([seq_len_kv, nkv, d], qkv_dt),
         )
-        launch = (
+        launch_fa = (
             pcb.compute_module.launch_latency.flashattn_prefill
             if is_prefill
             else pcb.compute_module.launch_latency.flashattn_decode
         )
         lat_fa_combine_temp = (
-            fa.compile_and_simulate(pcb, L2Cache_previous=l2_prev) + launch
+            fa.compile_and_simulate(pcb, L2Cache_previous=l2_prev) + launch_fa
         )
+        dram_bytes_this = fa.mem_access_size
+        launch_s_this = launch_fa
 
         if num_splits > 1:
             combine = FlashAttnCombine(fp32, attn_out_dt)
@@ -415,10 +477,14 @@ def run_layer(
                 combine.compile_and_simulate(pcb, L2Cache_previous=fa.l2_status)
                 + pcb.compute_module.launch_latency.flashattn_combine
             )
+            dram_bytes_this += combine.mem_access_size
+            launch_s_this += pcb.compute_module.launch_latency.flashattn_combine
         if lat_fa_combine_temp < lat_fa_combine:
             lat_fa_combine = lat_fa_combine_temp
             best_l2_prev = combine.l2_status if num_splits > 1 else fa.l2_status
             best_fa = fa
+            best_fa_dram_bytes = dram_bytes_this
+            best_fa_launch_s = launch_s_this
     l2_prev = best_l2_prev
     record_op(
         "flash_attn",
@@ -430,6 +496,8 @@ def run_layer(
             best_fa.fma_count,
             lat_fa_combine,
         ),
+        mem_access_bytes=best_fa_dram_bytes,
+        launch_latency_s=best_fa_launch_s,
     )
 
     # CP: AlltoAll after FlashAttn
@@ -463,6 +531,8 @@ def run_layer(
         lambda: calculate_matmul_power(
             device, precision, mm.mem_access_size, mm.fma_count, lat
         ),
+        mem_access_bytes=mm.mem_access_size,
+        launch_latency_s=pcb.compute_module.launch_latency.matmul,
     )
 
     # TP: ReduceScatter before PostAttn_LayerNorm
@@ -485,6 +555,8 @@ def run_layer(
         "post_attn_ln",
         lat,
         lambda: calculate_layernorm_power(device, mode, ln.mem_access_size, lat),
+        mem_access_bytes=ln.mem_access_size,
+        launch_latency_s=pcb.compute_module.launch_latency.layernorm,
     )
 
     # TP: Allgather after PostAttn_LayerNorm
@@ -517,6 +589,8 @@ def run_layer(
         lambda: calculate_matmul_power(
             device, precision, mm.mem_access_size, mm.fma_count, lat
         ),
+        mem_access_bytes=mm.mem_access_size,
+        launch_latency_s=pcb.compute_module.launch_latency.matmul,
     )
 
     # 6. Down proj
@@ -542,6 +616,8 @@ def run_layer(
         lambda: calculate_matmul_power(
             device, precision, mm.mem_access_size, mm.fma_count, lat
         ),
+        mem_access_bytes=mm.mem_access_size,
+        launch_latency_s=pcb.compute_module.launch_latency.matmul,
     )
 
     # TP: ReduceScatter before PostFFN_LayerNorm
@@ -563,6 +639,8 @@ def run_layer(
         "post_ffn_ln",
         lat,
         lambda: calculate_layernorm_power(device, mode, ln.mem_access_size, lat),
+        mem_access_bytes=ln.mem_access_size,
+        launch_latency_s=pcb.compute_module.launch_latency.layernorm,
     )
 
     # TP: Allgather after PostFFN_LayerNorm
@@ -593,6 +671,8 @@ def run_layer(
         lambda: calculate_matmul_power(
             device, precision, mm.mem_access_size, mm.fma_count, lat
         ),
+        mem_access_bytes=mm.mem_access_size,
+        launch_latency_s=pcb.compute_module.launch_latency.matmul,
     )
 
     print()
@@ -620,6 +700,9 @@ def run_layer(
             comm_breakdown,
             comm_bandwidth_gbps,
             device,
+            dram_access_breakdown_bytes,
+            launch_lat_breakdown_ms,
+            pcb,
             ucie_or_pcie="ucie",
         )
         results["lat_ucie"] = lat_ucie
@@ -629,6 +712,9 @@ def run_layer(
             comm_breakdown,
             comm_bandwidth_gbps,
             device,
+            dram_access_breakdown_bytes,
+            launch_lat_breakdown_ms,
+            pcb,
             ucie_or_pcie="pcie",
         )
         results["lat_pcie"] = lat_pcie
@@ -663,12 +749,16 @@ def print_final_results(num_layers, results, has_comm_results):
     print("  " + "+" * 57)
     print(f"  Layer [Compute]: {lat_comp:.4f} ms")
     print(f"  Total [Compute] ({num_layers} layers): {num_layers * lat_comp:.4f} ms")
+    print(f"  Layer [Compute + Communication (UCIE)]: {lat_comp + lat_ucie:.4f} ms")
+    print(
+        f"  Total [Compute + Communication (UCIE)] ({num_layers} layers): {num_layers * (lat_comp + lat_ucie):.4f} ms"
+    )
+    print(f"  Layer [Compute + Communication (PCIE)]: {lat_comp + lat_pcie:.4f} ms")
+    print(
+        f"  Total [Compute + Communication (PCIE)] ({num_layers} layers): {num_layers * (lat_comp + lat_pcie):.4f} ms"
+    )
 
     # UCIE results
-    print(f"  Layer [Compute + Communication]: {lat_comp + lat_ucie:.4f} ms")
-    print(
-        f"  Total [Compute + Communication] ({num_layers} layers): {num_layers * (lat_comp + lat_ucie):.4f} ms"
-    )
     print("  " + "+" * 57)
     print("  UCIE Est. avg power:")
     for (
@@ -685,7 +775,7 @@ def print_final_results(num_layers, results, has_comm_results):
 
     # PCIE results
     pcie_spec = load_json_data(f"{file_dir}/../icnt_model/configs/PCIE.json")
-    pcie_switch_static_power = pcie_spec["switch_power_intercept"]
+    # pcie_switch_static_power = pcie_spec["switch_power_intercept"]
     print("  " + "+" * 57)
     print("  PCIE Est. avg power:")
     assert len(power_results_pcie) == 1
@@ -693,7 +783,7 @@ def print_final_results(num_layers, results, has_comm_results):
         capacity_gbps = pcie_lanes * pcie_spec["rate_gt"]
         power_avg = (power_avg_comp * lat_comp + energy_mj_comm) / (lat_comp + lat_ucie)
         print(f"  {pcie_lanes} lane(s) {capacity_gbps:.1f} Gbps: {power_avg:.2f} W")
-        print(f"  Additional PCIe switch power: {pcie_switch_static_power:.2f} W")
+        # print(f"  Additional PCIe switch power: {pcie_switch_static_power:.2f} W")
     print("  " + "+" * 57)
 
 
@@ -776,8 +866,8 @@ def main():
     print("-" * 57)
     print("  Simulating (QKV->FA->O->LN->GateUp->Down->LN->QKV)...")
     effective_comm_bandwidth = (
-        args.comm_bandwidth if degree == 2 else args.comm_bandwidth * 2
-    )  # unidirection ring when degree == 2, bidirection ring when degree == 4
+        args.comm_bandwidth * 2
+    )  # bidirection ring with two ports
     results = run_layer(
         args.model,
         test_model_dict[args.model],
