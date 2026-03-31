@@ -1112,6 +1112,8 @@ def main():
             # unidirection ring when degree = 2, bidirection ring when degree = 4
         else:
             assert False
+    else:
+        effective_comm_bandwidth = args.comm_bandwidth
     results = run_layer(
         args.model,
         test_model_dict[args.model],
