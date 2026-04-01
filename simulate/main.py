@@ -2,7 +2,9 @@ import argparse
 import json
 import os
 from math import inf
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
+
+from filelock import FileLock
 
 from hardware_model.device import device_dict
 from icnt_model.icnt_model import (
@@ -73,14 +75,16 @@ def layer_cache_key_tuple_from_record(r: dict) -> tuple:
 
 def load_layer_compute_cache(
     path: str,
-) -> Tuple[List[Any], Dict[Tuple[Any, ...], Dict[str, dict]]]:
+) -> Dict[Tuple[Any, ...], Dict[str, dict]]:
     """Load JSON list of layer records; return (records, key -> {op_name: {lat, dram_access, power}})."""
     assert os.path.exists(path)
-    with open(path, "r") as f:
-        try:
-            data = json.load(f)
-        except json.JSONDecodeError:
-            return [], {}
+    lock = FileLock(path + ".lock")
+    with lock:
+        with open(path, "r") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                return [], {}
     assert isinstance(data, list)
     cache_dict: Dict[Tuple[Any, ...], Dict[str, dict]] = {}
     for r in data:
@@ -95,20 +99,27 @@ def load_layer_compute_cache(
                 "dram_access_byte": float(entry["dram_access_byte"]),
                 "power_w": float(entry["power_w"]),
             }
-        assert kt not in cache_dict  # no duplicate keys
+        assert kt not in cache_dict, f"Duplicate key {kt}"  # no duplicate keys
         cache_dict[kt] = ops
-    return data, cache_dict
+    return cache_dict
 
 
-def update_layer_cache_record(records: list, flat_row: dict, path: str) -> None:
+def update_layer_cache_record(flat_row: dict, path: str) -> None:
     """Merge flat_row (meta + per-op metrics) into records by cache key and write JSON."""
     new_r = {mk: flat_row[mk] for mk in LAYER_CACHE_META_KEYS}
     for op in LAYER_COMPUTE_OP_NAMES:
         if op in flat_row:
             new_r[op] = flat_row[op]
-    records.append(new_r)
-    with open(path, "w") as f:
-        json.dump(records, f, indent=4, ensure_ascii=False)
+    lock = FileLock(path + ".lock")
+    with lock:
+        with open(path, "r") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                pass
+        data.append(new_r)
+        with open(path, "w") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
 
 
 def _launch_lat_ms_for_compute_op(op_name: str, pcb, is_prefill: bool) -> float:
@@ -500,7 +511,6 @@ def run_layer(
     no_contention=False,
     spec_tokens=64,
     seq_len=512,
-    layer_cache_records=None,
     layer_cache_dict=None,
     cache_path=None,
 ):
@@ -623,7 +633,7 @@ def run_layer(
     }
 
     use_cached_layer = False
-    if cache_path and layer_cache_dict is not None and layer_cache_records is not None:
+    if cache_path and layer_cache_dict is not None and layer_cache_dict is not None:
         ops_cached = layer_cache_dict.get(cache_key)
         if ops_cached:
             use_cached_layer = True
@@ -657,7 +667,7 @@ def run_layer(
         print(
             f"    {op_name:<18} {lat_s * 1000:>8.4f} ms {power_breakdown[op_name]:>8.2f} W"
         )
-        if cache_path and layer_cache_records is not None:
+        if cache_path and layer_cache_dict is not None:
             layer_cache_row[op_name] = {
                 "lat_ms": lat_breakdown[op_name],
                 "dram_access_byte": dram_access_breakdown_bytes[op_name],
@@ -893,8 +903,8 @@ def run_layer(
             launch_latency_s=pcb.compute_module.launch_latency.matmul,
         )
 
-        if cache_path and layer_cache_records is not None:
-            update_layer_cache_record(layer_cache_records, layer_cache_row, cache_path)
+        if cache_path and layer_cache_dict is not None:
+            update_layer_cache_record(layer_cache_row, cache_path)
         if layer_cache_dict is not None:
             layer_cache_dict[cache_key] = {
                 op: layer_cache_row[op]
@@ -964,33 +974,33 @@ def print_final_results(num_layers, results, icnt_type, has_comm_results):
 
     # Comm results
     print("  " + "+" * 57)
-    print("  Comm Est. avg power:")
+    print(f"  Est. avg power [Compute]:   {power_avg_comp:.2f} W")
+    print("  Est. avg power [Communication]:")
     if icnt_type.startswith("ucie"):
         for (
             pkg,
             module_count,
             lane_count,
             rate_gt,
-        ), energy_mj_comm in power_results_comm.items():
+            energy_mj_comm,
+        ) in power_results_comm.items():
             capacity_gbps = module_count * lane_count * rate_gt
-            power_avg = (power_avg_comp * lat_comp + energy_mj_comm) / (
-                lat_comp + lat_comm
-            )
+            power_avg = energy_mj_comm / lat_comm
             print(
                 f"  {pkg:<10} {module_count} × {lane_count} lane(s) x {rate_gt:>2} GT/s = {capacity_gbps:.1f} Gbps : {power_avg:.2f} W"
             )
     elif icnt_type == "pcie":
         pcie_spec = load_json_data(f"{file_dir}/../icnt_model/configs/PCIE.json")
         # pcie_switch_static_power = pcie_spec["switch_power_intercept"]
-        print("  " + "+" * 57)
-        print("  PCIE Est. avg power:")
         assert len(power_results_comm) == 1
         for pcie_lanes, energy_mj_comm in power_results_comm.items():
             capacity_gbps = pcie_lanes * pcie_spec["rate_gt"]
             power_avg = (power_avg_comp * lat_comp + energy_mj_comm) / (
                 lat_comp + lat_comm
             )
-            print(f"  {pcie_lanes} lane(s) {capacity_gbps:.1f} Gbps: {power_avg:.2f} W")
+            print(
+                f"    {pcie_lanes} lane(s) {capacity_gbps:.1f} Gbps: {power_avg:.2f} W"
+            )
             # print(f"  Additional PCIe switch power: {pcie_switch_static_power:.2f} W")
     else:
         assert False
@@ -1044,6 +1054,12 @@ def main():
     args = parser.parse_args()
 
     is_prefill = args.phase == "prefill"
+    if args.model == "InternVision" and args.is_causal:
+        parser.error("InternVision should not use --is_causal")
+        # This check can be removed if necessary
+    if args.model != "InternVision" and not args.is_causal:
+        parser.error("Only InternVision should be non-causal")
+        # This check can be removed if necessary
     if not is_prefill and args.is_causal:
         parser.error("decode does not support --is_causal")
     if args.seq_len < 1:
@@ -1067,9 +1083,7 @@ def main():
 
     pcb = device_dict[args.device]
 
-    layer_cache_records, layer_cache_dict = load_layer_compute_cache(
-        LAYER_COMPUTE_CACHE_PATH
-    )
+    layer_cache_dict = load_layer_compute_cache(LAYER_COMPUTE_CACHE_PATH)
 
     seq_len_kv = args.seq_len
     M = seq_len_q = args.seq_len if is_prefill else args.spec_tokens
@@ -1132,7 +1146,6 @@ def main():
         no_contention=args.no_contention,
         spec_tokens=args.spec_tokens,
         seq_len=args.seq_len,
-        layer_cache_records=layer_cache_records,
         layer_cache_dict=layer_cache_dict,
         cache_path=LAYER_COMPUTE_CACHE_PATH,
     )

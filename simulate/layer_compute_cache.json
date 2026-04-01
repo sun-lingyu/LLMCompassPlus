@@ -205,57 +205,6 @@
     },
     {
         "device": "Orin",
-        "model": "InternVision",
-        "precision": "fp16",
-        "phase": "prefill",
-        "spec_tokens": 64,
-        "seq_len": 1024,
-        "is_causal": true,
-        "parallelism": "TP",
-        "degree": 1,
-        "qkv_proj": {
-            "lat_ms": 0.24393970791698696,
-            "dram_access_byte": 14680064.0,
-            "power_w": 43.88
-        },
-        "flash_attn": {
-            "lat_ms": 0.12745272867025365,
-            "dram_access_byte": 8388608.0,
-            "power_w": 45.06
-        },
-        "o_proj": {
-            "lat_ms": 0.08502883935434281,
-            "dram_access_byte": 4980736.0,
-            "power_w": 43.14
-        },
-        "post_attn_ln": {
-            "lat_ms": 0.048196003074558035,
-            "dram_access_byte": 7340032.0,
-            "power_w": 31.36
-        },
-        "gate_up_proj": {
-            "lat_ms": 0.32339514219830906,
-            "dram_access_byte": 16777216.0,
-            "power_w": 43.65
-        },
-        "down_proj": {
-            "lat_ms": 0.23614951575710993,
-            "dram_access_byte": 27262976.0,
-            "power_w": 51.85
-        },
-        "post_ffn_ln": {
-            "lat_ms": 0.048196003074558035,
-            "dram_access_byte": 7340032.0,
-            "power_w": 31.36
-        },
-        "qkv_proj_2": {
-            "lat_ms": 0.24393970791698696,
-            "dram_access_byte": 12582912.0,
-            "power_w": 43.55
-        }
-    },
-    {
-        "device": "Orin",
         "model": "Qwen3_8B",
         "precision": "fp16",
         "phase": "prefill",
@@ -303,108 +252,6 @@
             "lat_ms": 1.389030069177556,
             "dram_access_byte": 162804736.0,
             "power_w": 52.34
-        }
-    },
-    {
-        "device": "Orin",
-        "model": "InternVision",
-        "precision": "fp16",
-        "phase": "prefill",
-        "spec_tokens": 64,
-        "seq_len": 1024,
-        "is_causal": true,
-        "parallelism": "TP",
-        "degree": 4,
-        "qkv_proj": {
-            "lat_ms": 0.06547858570330517,
-            "dram_access_byte": 5242880.0,
-            "power_w": 43.59
-        },
-        "flash_attn": {
-            "lat_ms": 0.04922213681783244,
-            "dram_access_byte": 524288.0,
-            "power_w": 35.02
-        },
-        "o_proj": {
-            "lat_ms": 0.047248670253651044,
-            "dram_access_byte": 2621440.0,
-            "power_w": 34.89
-        },
-        "post_attn_ln": {
-            "lat_ms": 0.01582782475019216,
-            "dram_access_byte": 1572864.0,
-            "power_w": 23.07
-        },
-        "gate_up_proj": {
-            "lat_ms": 0.08502883935434281,
-            "dram_access_byte": 5767168.0,
-            "power_w": 43.5
-        },
-        "down_proj": {
-            "lat_ms": 0.08502883935434281,
-            "dram_access_byte": 5242880.0,
-            "power_w": 43.26
-        },
-        "post_ffn_ln": {
-            "lat_ms": 0.017299000768639508,
-            "dram_access_byte": 1835008.0,
-            "power_w": 24.12
-        },
-        "qkv_proj_2": {
-            "lat_ms": 0.06547858570330517,
-            "dram_access_byte": 4718592.0,
-            "power_w": 43.28
-        }
-    },
-    {
-        "device": "Orin",
-        "model": "InternVision",
-        "precision": "fp16",
-        "phase": "prefill",
-        "spec_tokens": 64,
-        "seq_len": 1024,
-        "is_causal": true,
-        "parallelism": "TP",
-        "degree": 2,
-        "qkv_proj": {
-            "lat_ms": 0.12475655649500388,
-            "dram_access_byte": 8388608.0,
-            "power_w": 43.81
-        },
-        "flash_attn": {
-            "lat_ms": 0.07555265180630284,
-            "dram_access_byte": 3145728.0,
-            "power_w": 40.61
-        },
-        "o_proj": {
-            "lat_ms": 0.05984205995388163,
-            "dram_access_byte": 3145728.0,
-            "power_w": 38.63
-        },
-        "post_attn_ln": {
-            "lat_ms": 0.02465564950038432,
-            "dram_access_byte": 3145728.0,
-            "power_w": 27.49
-        },
-        "gate_up_proj": {
-            "lat_ms": 0.16448427363566492,
-            "dram_access_byte": 9437184.0,
-            "power_w": 43.6
-        },
-        "down_proj": {
-            "lat_ms": 0.1354023981552652,
-            "dram_access_byte": 14680064.0,
-            "power_w": 48.85
-        },
-        "post_ffn_ln": {
-            "lat_ms": 0.027598001537279017,
-            "dram_access_byte": 3670016.0,
-            "power_w": 28.34
-        },
-        "qkv_proj_2": {
-            "lat_ms": 0.12475655649500388,
-            "dram_access_byte": 7340032.0,
-            "power_w": 43.48
         }
     },
     {
@@ -864,6 +711,2862 @@
             "lat_ms": 0.13708126984126984,
             "dram_access_byte": 31457280.0,
             "power_w": 73.66
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_4B",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.03901142857142857,
+            "dram_access_byte": 8126464.0,
+            "power_w": 53.14
+        },
+        "flash_attn": {
+            "lat_ms": 0.026081269841269843,
+            "dram_access_byte": 1048576.0,
+            "power_w": 96.51
+        },
+        "o_proj": {
+            "lat_ms": 0.037478730158730156,
+            "dram_access_byte": 7864320.0,
+            "power_w": 46.78
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.017665396825396827,
+            "dram_access_byte": 2621440.0,
+            "power_w": 28.49
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.08571365079365079,
+            "dram_access_byte": 19398656.0,
+            "power_w": 65.07
+        },
+        "down_proj": {
+            "lat_ms": 0.052145396825396824,
+            "dram_access_byte": 11468800.0,
+            "power_w": 58.69
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.017665396825396827,
+            "dram_access_byte": 2621440.0,
+            "power_w": 28.49
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.03634476190476191,
+            "dram_access_byte": 7471104.0,
+            "power_w": 54.34
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_1_7B",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.02748,
+            "dram_access_byte": 5242880.0,
+            "power_w": 45.54
+        },
+        "flash_attn": {
+            "lat_ms": 0.016066031746031745,
+            "dram_access_byte": 524288.0,
+            "power_w": 83.42
+        },
+        "o_proj": {
+            "lat_ms": 0.026922539682539683,
+            "dram_access_byte": 5242880.0,
+            "power_w": 38.12
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.015532698412698411,
+            "dram_access_byte": 2097152.0,
+            "power_w": 27.14
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.05027873015873016,
+            "dram_access_byte": 11010048.0,
+            "power_w": 59.78
+        },
+        "down_proj": {
+            "lat_ms": 0.035760634920634915,
+            "dram_access_byte": 7340032.0,
+            "power_w": 49.99
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.015532698412698411,
+            "dram_access_byte": 2097152.0,
+            "power_w": 27.14
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.025346666666666667,
+            "dram_access_byte": 4718592.0,
+            "power_w": 46.28
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_1_7B",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 1,
+        "qkv_proj": {
+            "lat_ms": 0.06574666666666668,
+            "dram_access_byte": 14680064.0,
+            "power_w": 60.89
+        },
+        "flash_attn": {
+            "lat_ms": 0.04719492063492064,
+            "dram_access_byte": 2097152.0,
+            "power_w": 103.82
+        },
+        "o_proj": {
+            "lat_ms": 0.040179682539682536,
+            "dram_access_byte": 8388608.0,
+            "power_w": 53.97
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.04112952380952381,
+            "dram_access_byte": 8388608.0,
+            "power_w": 34.1
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.16165142857142858,
+            "dram_access_byte": 37748736.0,
+            "power_w": 68.26
+        },
+        "down_proj": {
+            "lat_ms": 0.08553396825396825,
+            "dram_access_byte": 18743296.0,
+            "power_w": 64.48
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.04112952380952381,
+            "dram_access_byte": 8388608.0,
+            "power_w": 34.1
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.05721333333333333,
+            "dram_access_byte": 12582912.0,
+            "power_w": 64.48
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_4B",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 1,
+        "qkv_proj": {
+            "lat_ms": 0.10704698412698413,
+            "dram_access_byte": 24641536.0,
+            "power_w": 65.95
+        },
+        "flash_attn": {
+            "lat_ms": 0.08808888888888888,
+            "dram_access_byte": 4194304.0,
+            "power_w": 109.32
+        },
+        "o_proj": {
+            "lat_ms": 0.06947873015873017,
+            "dram_access_byte": 15728640.0,
+            "power_w": 66.28
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.049661587301587304,
+            "dram_access_byte": 10485760.0,
+            "power_w": 34.83
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.29051365079365077,
+            "dram_access_byte": 69730304.0,
+            "power_w": 72.51
+        },
+        "down_proj": {
+            "lat_ms": 0.16867873015873017,
+            "dram_access_byte": 40108032.0,
+            "power_w": 67.13
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.05499428571428572,
+            "dram_access_byte": 11796480.0,
+            "power_w": 35.16
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.09638031746031746,
+            "dram_access_byte": 22020096.0,
+            "power_w": 69.18
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "InternVision",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": false,
+        "parallelism": "TP",
+        "degree": 1,
+        "qkv_proj": {
+            "lat_ms": 0.03534539682539682,
+            "dram_access_byte": 7340032.0,
+            "power_w": 50.54
+        },
+        "flash_attn": {
+            "lat_ms": 0.05977269841269841,
+            "dram_access_byte": 1048576.0,
+            "power_w": 86.79
+        },
+        "o_proj": {
+            "lat_ms": 0.018412063492063493,
+            "dram_access_byte": 3145728.0,
+            "power_w": 38.7
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.024064761904761905,
+            "dram_access_byte": 4194304.0,
+            "power_w": 31.1
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.0396120634920635,
+            "dram_access_byte": 8388608.0,
+            "power_w": 54.7
+        },
+        "down_proj": {
+            "lat_ms": 0.03214793650793651,
+            "dram_access_byte": 6291456.0,
+            "power_w": 57.74
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.024064761904761905,
+            "dram_access_byte": 4194304.0,
+            "power_w": 31.1
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.03107873015873016,
+            "dram_access_byte": 6291456.0,
+            "power_w": 52.43
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "InternVision",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": false,
+        "parallelism": "TP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.022545396825396823,
+            "dram_access_byte": 4194304.0,
+            "power_w": 43.5
+        },
+        "flash_attn": {
+            "lat_ms": 0.03526095238095238,
+            "dram_access_byte": 524288.0,
+            "power_w": 77.68
+        },
+        "o_proj": {
+            "lat_ms": 0.016271111111111115,
+            "dram_access_byte": 2621440.0,
+            "power_w": 32.11
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.015532698412698411,
+            "dram_access_byte": 2097152.0,
+            "power_w": 27.14
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.0249415873015873,
+            "dram_access_byte": 4718592.0,
+            "power_w": 46.98
+        },
+        "down_proj": {
+            "lat_ms": 0.02267873015873016,
+            "dram_access_byte": 4194304.0,
+            "power_w": 48.19
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.015532698412698411,
+            "dram_access_byte": 2097152.0,
+            "power_w": 27.14
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.020412063492063492,
+            "dram_access_byte": 3670016.0,
+            "power_w": 44.2
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "InternVision",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": false,
+        "parallelism": "TP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.016086984126984127,
+            "dram_access_byte": 2621440.0,
+            "power_w": 35.91
+        },
+        "flash_attn": {
+            "lat_ms": 0.019278730158730162,
+            "dram_access_byte": 262144.0,
+            "power_w": 73.34
+        },
+        "o_proj": {
+            "lat_ms": 0.015120634920634922,
+            "dram_access_byte": 2359296.0,
+            "power_w": 28.24
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.011266666666666666,
+            "dram_access_byte": 1048576.0,
+            "power_w": 22.9
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.017345396825396826,
+            "dram_access_byte": 2883584.0,
+            "power_w": 38.82
+        },
+        "down_proj": {
+            "lat_ms": 0.018412063492063493,
+            "dram_access_byte": 3145728.0,
+            "power_w": 38.7
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.011266666666666666,
+            "dram_access_byte": 1048576.0,
+            "power_w": 22.9
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.015020317460317463,
+            "dram_access_byte": 2359296.0,
+            "power_w": 35.85
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_4B",
+        "precision": "fp16",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.2380970637970792,
+            "dram_access_byte": 26738688.0,
+            "power_w": 50.23
+        },
+        "flash_attn": {
+            "lat_ms": 0.10233205226748654,
+            "dram_access_byte": 4194304.0,
+            "power_w": 49.6
+        },
+        "o_proj": {
+            "lat_ms": 0.20421199077632596,
+            "dram_access_byte": 10551296.0,
+            "power_w": 43.48
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.03495465026902383,
+            "dram_access_byte": 4980736.0,
+            "power_w": 29.83
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.7492342198308993,
+            "dram_access_byte": 86648832.0,
+            "power_w": 50.49
+        },
+        "down_proj": {
+            "lat_ms": 0.3773710991544966,
+            "dram_access_byte": 42598400.0,
+            "power_w": 50.23
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.03495465026902383,
+            "dram_access_byte": 4980736.0,
+            "power_w": 29.83
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.2380970637970792,
+            "dram_access_byte": 26093568.0,
+            "power_w": 50.13
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_4B",
+        "precision": "fp16",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.4706207225211376,
+            "dram_access_byte": 53477376.0,
+            "power_w": 50.52
+        },
+        "flash_attn": {
+            "lat_ms": 0.18137893927747886,
+            "dram_access_byte": 9961472.0,
+            "power_w": 53.72
+        },
+        "o_proj": {
+            "lat_ms": 0.33014588777863185,
+            "dram_access_byte": 36494336.0,
+            "power_w": 49.4
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.06290853189853958,
+            "dram_access_byte": 9961472.0,
+            "power_w": 32.31
+        },
+        "gate_up_proj": {
+            "lat_ms": 1.4782232436587242,
+            "dram_access_byte": 168209408.0,
+            "power_w": 50.69
+        },
+        "down_proj": {
+            "lat_ms": 0.6764641045349731,
+            "dram_access_byte": 79953920.0,
+            "power_w": 52.73
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.06290853189853958,
+            "dram_access_byte": 9961472.0,
+            "power_w": 32.31
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.4706207225211376,
+            "dram_access_byte": 52341760.0,
+            "power_w": 50.42
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_4B",
+        "precision": "fp16",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 1,
+        "qkv_proj": {
+            "lat_ms": 0.9356680399692545,
+            "dram_access_byte": 106954752.0,
+            "power_w": 50.66
+        },
+        "flash_attn": {
+            "lat_ms": 0.3392882398155265,
+            "dram_access_byte": 20971520.0,
+            "power_w": 56.16
+        },
+        "o_proj": {
+            "lat_ms": 0.5820136817832438,
+            "dram_access_byte": 68157440.0,
+            "power_w": 52.22
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.12024212144504227,
+            "dram_access_byte": 20176896.0,
+            "power_w": 33.79
+        },
+        "gate_up_proj": {
+            "lat_ms": 2.9508730822444242,
+            "dram_access_byte": 337316864.0,
+            "power_w": 50.75
+        },
+        "down_proj": {
+            "lat_ms": 1.2746501152959262,
+            "dram_access_byte": 154664960.0,
+            "power_w": 54.2
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.12024212144504227,
+            "dram_access_byte": 20176896.0,
+            "power_w": 33.79
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.9356680399692545,
+            "dram_access_byte": 105581568.0,
+            "power_w": 50.61
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "InternVision",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": false,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.026753650793650795,
+            "dram_access_byte": 5242880.0,
+            "power_w": 42.51
+        },
+        "flash_attn": {
+            "lat_ms": 0.035461587301587306,
+            "dram_access_byte": 1310720.0,
+            "power_w": 78.49
+        },
+        "o_proj": {
+            "lat_ms": 0.015020317460317463,
+            "dram_access_byte": 2359296.0,
+            "power_w": 32.13
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.015532698412698411,
+            "dram_access_byte": 2097152.0,
+            "power_w": 27.14
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.031020317460317463,
+            "dram_access_byte": 6291456.0,
+            "power_w": 45.32
+        },
+        "down_proj": {
+            "lat_ms": 0.026753650793650795,
+            "dram_access_byte": 5242880.0,
+            "power_w": 46.69
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.015532698412698411,
+            "dram_access_byte": 2097152.0,
+            "power_w": 27.14
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.024620317460317457,
+            "dram_access_byte": 4718592.0,
+            "power_w": 43.01
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "InternVision",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": false,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.022486984126984126,
+            "dram_access_byte": 4194304.0,
+            "power_w": 36.15
+        },
+        "flash_attn": {
+            "lat_ms": 0.019613968253968255,
+            "dram_access_byte": 851968.0,
+            "power_w": 74.04
+        },
+        "o_proj": {
+            "lat_ms": 0.012620317460317462,
+            "dram_access_byte": 1769472.0,
+            "power_w": 26.82
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.011266666666666666,
+            "dram_access_byte": 1048576.0,
+            "power_w": 22.9
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.026753650793650795,
+            "dram_access_byte": 5242880.0,
+            "power_w": 38.34
+        },
+        "down_proj": {
+            "lat_ms": 0.024620317460317457,
+            "dram_access_byte": 4718592.0,
+            "power_w": 38.47
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.011266666666666666,
+            "dram_access_byte": 1048576.0,
+            "power_w": 22.9
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.02142031746031746,
+            "dram_access_byte": 3932160.0,
+            "power_w": 36.12
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_1_7B",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.045953650793650797,
+            "dram_access_byte": 9961472.0,
+            "power_w": 42.54
+        },
+        "flash_attn": {
+            "lat_ms": 0.0170184126984127,
+            "dram_access_byte": 1310720.0,
+            "power_w": 82.55
+        },
+        "o_proj": {
+            "lat_ms": 0.028353650793650792,
+            "dram_access_byte": 5636096.0,
+            "power_w": 38.25
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.015532698412698411,
+            "dram_access_byte": 2097152.0,
+            "power_w": 27.14
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.12062031746031746,
+            "dram_access_byte": 28311552.0,
+            "power_w": 46.38
+        },
+        "down_proj": {
+            "lat_ms": 0.06088698412698413,
+            "dram_access_byte": 13631488.0,
+            "power_w": 44.8
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.015532698412698411,
+            "dram_access_byte": 2097152.0,
+            "power_w": 27.14
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.043820317460317455,
+            "dram_access_byte": 9437184.0,
+            "power_w": 42.83
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_1_7B",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.05235365079365079,
+            "dram_access_byte": 11534336.0,
+            "power_w": 50.37
+        },
+        "flash_attn": {
+            "lat_ms": 0.027033650793650794,
+            "dram_access_byte": 2097152.0,
+            "power_w": 95.98
+        },
+        "o_proj": {
+            "lat_ms": 0.03315365079365079,
+            "dram_access_byte": 6815744.0,
+            "power_w": 44.77
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.024064761904761905,
+            "dram_access_byte": 4194304.0,
+            "power_w": 31.1
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.1334203174603175,
+            "dram_access_byte": 31457280.0,
+            "power_w": 55.5
+        },
+        "down_proj": {
+            "lat_ms": 0.0651536507936508,
+            "dram_access_byte": 14680064.0,
+            "power_w": 54.56
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.024064761904761905,
+            "dram_access_byte": 4194304.0,
+            "power_w": 31.1
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.04808698412698413,
+            "dram_access_byte": 10485760.0,
+            "power_w": 51.58
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_4B",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.0875536507936508,
+            "dram_access_byte": 20185088.0,
+            "power_w": 53.83
+        },
+        "flash_attn": {
+            "lat_ms": 0.04814730158730159,
+            "dram_access_byte": 3670016.0,
+            "power_w": 103.92
+        },
+        "o_proj": {
+            "lat_ms": 0.06302031746031746,
+            "dram_access_byte": 14155776.0,
+            "power_w": 51.61
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.02833079365079365,
+            "dram_access_byte": 5242880.0,
+            "power_w": 32.19
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.24862031746031743,
+            "dram_access_byte": 59768832.0,
+            "power_w": 57.38
+        },
+        "down_proj": {
+            "lat_ms": 0.13595365079365082,
+            "dram_access_byte": 32079872.0,
+            "power_w": 54.95
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.02833079365079365,
+            "dram_access_byte": 5242880.0,
+            "power_w": 32.19
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.08222031746031745,
+            "dram_access_byte": 18874368.0,
+            "power_w": 54.94
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_4B",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.07848698412698413,
+            "dram_access_byte": 17956864.0,
+            "power_w": 45.13
+        },
+        "flash_attn": {
+            "lat_ms": 0.027033650793650794,
+            "dram_access_byte": 2228224.0,
+            "power_w": 96.22
+        },
+        "o_proj": {
+            "lat_ms": 0.056620317460317454,
+            "dram_access_byte": 12582912.0,
+            "power_w": 43.43
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.017665396825396827,
+            "dram_access_byte": 2621440.0,
+            "power_w": 28.49
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.2283536507936508,
+            "dram_access_byte": 54788096.0,
+            "power_w": 47.59
+        },
+        "down_proj": {
+            "lat_ms": 0.12008698412698413,
+            "dram_access_byte": 28180480.0,
+            "power_w": 46.3
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.017665396825396827,
+            "dram_access_byte": 2621440.0,
+            "power_w": 28.49
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.07582031746031746,
+            "dram_access_byte": 17301504.0,
+            "power_w": 45.43
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_8B",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.11848698412698414,
+            "dram_access_byte": 27787264.0,
+            "power_w": 46.55
+        },
+        "flash_attn": {
+            "lat_ms": 0.027033650793650794,
+            "dram_access_byte": 2228224.0,
+            "power_w": 96.22
+        },
+        "o_proj": {
+            "lat_ms": 0.08542031746031746,
+            "dram_access_byte": 19660800.0,
+            "power_w": 45.11
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.024064761904761905,
+            "dram_access_byte": 4194304.0,
+            "power_w": 31.1
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.4406203174603175,
+            "dram_access_byte": 106954752.0,
+            "power_w": 48.53
+        },
+        "down_proj": {
+            "lat_ms": 0.2315536507936508,
+            "dram_access_byte": 55574528.0,
+            "power_w": 47.56
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.026731428571428573,
+            "dram_access_byte": 4849664.0,
+            "power_w": 31.82
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.11422031746031747,
+            "dram_access_byte": 26738688.0,
+            "power_w": 46.92
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_8B",
+        "precision": "fp8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.12915365079365082,
+            "dram_access_byte": 30408704.0,
+            "power_w": 56.12
+        },
+        "flash_attn": {
+            "lat_ms": 0.04814730158730159,
+            "dram_access_byte": 3670016.0,
+            "power_w": 103.92
+        },
+        "o_proj": {
+            "lat_ms": 0.09502031746031746,
+            "dram_access_byte": 22020096.0,
+            "power_w": 53.67
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.04112952380952381,
+            "dram_access_byte": 8388608.0,
+            "power_w": 34.1
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.46622031746031745,
+            "dram_access_byte": 113246208.0,
+            "power_w": 59.38
+        },
+        "down_proj": {
+            "lat_ms": 0.2528869841269841,
+            "dram_access_byte": 60817408.0,
+            "power_w": 57.25
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.04912825396825397,
+            "dram_access_byte": 10354688.0,
+            "power_w": 34.79
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.12062031746031746,
+            "dram_access_byte": 28311552.0,
+            "power_w": 57.49
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_1_7B",
+        "precision": "fp16",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.14110877786318218,
+            "dram_access_byte": 20971520.0,
+            "power_w": 49.66
+        },
+        "flash_attn": {
+            "lat_ms": 0.06382321291314375,
+            "dram_access_byte": 3145728.0,
+            "power_w": 44.38
+        },
+        "o_proj": {
+            "lat_ms": 0.0726262567255957,
+            "dram_access_byte": 10223616.0,
+            "power_w": 48.85
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.02465564950038432,
+            "dram_access_byte": 3145728.0,
+            "power_w": 27.49
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.41097429669485014,
+            "dram_access_byte": 62477312.0,
+            "power_w": 50.32
+        },
+        "down_proj": {
+            "lat_ms": 0.179401045349731,
+            "dram_access_byte": 29360128.0,
+            "power_w": 53.44
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.02465564950038432,
+            "dram_access_byte": 3145728.0,
+            "power_w": 27.49
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.13990355111452732,
+            "dram_access_byte": 20534272.0,
+            "power_w": 49.74
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_1_7B",
+        "precision": "fp16",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.26523139123750966,
+            "dram_access_byte": 29360128.0,
+            "power_w": 49.33
+        },
+        "flash_attn": {
+            "lat_ms": 0.10312528823981552,
+            "dram_access_byte": 6291456.0,
+            "power_w": 50.16
+        },
+        "o_proj": {
+            "lat_ms": 0.1354023981552652,
+            "dram_access_byte": 13631488.0,
+            "power_w": 48.55
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.048196003074558035,
+            "dram_access_byte": 7340032.0,
+            "power_w": 31.36
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.7845473635664874,
+            "dram_access_byte": 86829056.0,
+            "power_w": 49.6
+        },
+        "down_proj": {
+            "lat_ms": 0.3368966333589547,
+            "dram_access_byte": 39845888.0,
+            "power_w": 53.05
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.048196003074558035,
+            "dram_access_byte": 7340032.0,
+            "power_w": 31.36
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.26523139123750966,
+            "dram_access_byte": 28108800.0,
+            "power_w": 49.15
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_4B",
+        "precision": "fp16",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.248648946963874,
+            "dram_access_byte": 38535168.0,
+            "power_w": 51.04
+        },
+        "flash_attn": {
+            "lat_ms": 0.10270099923136049,
+            "dram_access_byte": 5242880.0,
+            "power_w": 49.89
+        },
+        "o_proj": {
+            "lat_ms": 0.1793206764027671,
+            "dram_access_byte": 26001408.0,
+            "power_w": 49.23
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.03495465026902383,
+            "dram_access_byte": 4980736.0,
+            "power_w": 29.83
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.7779882551883167,
+            "dram_access_byte": 122264576.0,
+            "power_w": 51.36
+        },
+        "down_proj": {
+            "lat_ms": 0.3956204458109147,
+            "dram_access_byte": 61079552.0,
+            "power_w": 50.93
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.03495465026902383,
+            "dram_access_byte": 4980736.0,
+            "power_w": 29.83
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.2474675480399693,
+            "dram_access_byte": 38116352.0,
+            "power_w": 51.1
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_4B",
+        "precision": "fp16",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.4706207225211376,
+            "dram_access_byte": 53477376.0,
+            "power_w": 50.52
+        },
+        "flash_attn": {
+            "lat_ms": 0.18156341275941582,
+            "dram_access_byte": 10485760.0,
+            "power_w": 53.8
+        },
+        "o_proj": {
+            "lat_ms": 0.2943162182936203,
+            "dram_access_byte": 35970048.0,
+            "power_w": 52.17
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.06290853189853958,
+            "dram_access_byte": 9961472.0,
+            "power_w": 32.31
+        },
+        "gate_up_proj": {
+            "lat_ms": 1.4782232436587242,
+            "dram_access_byte": 168209408.0,
+            "power_w": 50.69
+        },
+        "down_proj": {
+            "lat_ms": 0.6406344350499616,
+            "dram_access_byte": 82313216.0,
+            "power_w": 54.36
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.06290853189853958,
+            "dram_access_byte": 9961472.0,
+            "power_w": 32.31
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.4706207225211376,
+            "dram_access_byte": 52341760.0,
+            "power_w": 50.42
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_8B",
+        "precision": "fp16",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.3679663950807072,
+            "dram_access_byte": 59768832.0,
+            "power_w": 52.87
+        },
+        "flash_attn": {
+            "lat_ms": 0.10270099923136049,
+            "dram_access_byte": 5242880.0,
+            "power_w": 49.89
+        },
+        "o_proj": {
+            "lat_ms": 0.2459143120676403,
+            "dram_access_byte": 39370752.0,
+            "power_w": 52.73
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.048196003074558035,
+            "dram_access_byte": 7340032.0,
+            "power_w": 31.36
+        },
+        "gate_up_proj": {
+            "lat_ms": 1.4540200768639508,
+            "dram_access_byte": 238706688.0,
+            "power_w": 53.19
+        },
+        "down_proj": {
+            "lat_ms": 0.6714085472713298,
+            "dram_access_byte": 115343360.0,
+            "power_w": 55.2
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.048196003074558035,
+            "dram_access_byte": 7340032.0,
+            "power_w": 31.36
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.36684110684089166,
+            "dram_access_byte": 59400192.0,
+            "power_w": 52.91
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_8B",
+        "precision": "fp16",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.6973017371252883,
+            "dram_access_byte": 81788928.0,
+            "power_w": 52.26
+        },
+        "flash_attn": {
+            "lat_ms": 0.18156341275941582,
+            "dram_access_byte": 10485760.0,
+            "power_w": 53.8
+        },
+        "o_proj": {
+            "lat_ms": 0.46672562644119914,
+            "dram_access_byte": 54320128.0,
+            "power_w": 52.14
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.09527594158339737,
+            "dram_access_byte": 15728640.0,
+            "power_w": 33.37
+        },
+        "gate_up_proj": {
+            "lat_ms": 2.772486733282089,
+            "dram_access_byte": 326374400.0,
+            "power_w": 52.41
+        },
+        "down_proj": {
+            "lat_ms": 1.2727025672559569,
+            "dram_access_byte": 155189248.0,
+            "power_w": 54.51
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.09527594158339737,
+            "dram_access_byte": 15728640.0,
+            "power_w": 33.37
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.6973017371252883,
+            "dram_access_byte": 81007616.0,
+            "power_w": 52.22
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "InternVision",
+        "precision": "fp16",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": false,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.12475655649500388,
+            "dram_access_byte": 10485760.0,
+            "power_w": 44.46
+        },
+        "flash_attn": {
+            "lat_ms": 0.1121967717140661,
+            "dram_access_byte": 4194304.0,
+            "power_w": 47.0
+        },
+        "o_proj": {
+            "lat_ms": 0.04530112221368179,
+            "dram_access_byte": 3670016.0,
+            "power_w": 43.1
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.02465564950038432,
+            "dram_access_byte": 3145728.0,
+            "power_w": 27.49
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.16448427363566492,
+            "dram_access_byte": 12582912.0,
+            "power_w": 44.34
+        },
+        "down_proj": {
+            "lat_ms": 0.12086146041506535,
+            "dram_access_byte": 13631488.0,
+            "power_w": 51.25
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.02465564950038432,
+            "dram_access_byte": 3145728.0,
+            "power_w": 27.49
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.12475655649500388,
+            "dram_access_byte": 9437184.0,
+            "power_w": 44.13
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "InternVision",
+        "precision": "fp16",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": false,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.06841171406610301,
+            "dram_access_byte": 8781824.0,
+            "power_w": 44.84
+        },
+        "flash_attn": {
+            "lat_ms": 0.0659031514219831,
+            "dram_access_byte": 1703936.0,
+            "power_w": 42.77
+        },
+        "o_proj": {
+            "lat_ms": 0.02714671790930054,
+            "dram_access_byte": 3014656.0,
+            "power_w": 41.97
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.01582782475019216,
+            "dram_access_byte": 1572864.0,
+            "power_w": 23.07
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.08682438124519601,
+            "dram_access_byte": 11059200.0,
+            "power_w": 45.5
+        },
+        "down_proj": {
+            "lat_ms": 0.07188153727901614,
+            "dram_access_byte": 11010048.0,
+            "power_w": 49.5
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.01582782475019216,
+            "dram_access_byte": 1572864.0,
+            "power_w": 23.07
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.06665921598770178,
+            "dram_access_byte": 7864320.0,
+            "power_w": 44.8
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_1_7B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 1,
+        "qkv_proj": {
+            "lat_ms": 0.2887948039969255,
+            "dram_access_byte": 18874368.0,
+            "power_w": 54.76
+        },
+        "flash_attn": {
+            "lat_ms": 0.17696079938508838,
+            "dram_access_byte": 10485760.0,
+            "power_w": 54.67
+        },
+        "o_proj": {
+            "lat_ms": 0.14718410453497313,
+            "dram_access_byte": 9519104.0,
+            "power_w": 54.26
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.07173635664873174,
+            "dram_access_byte": 11534336.0,
+            "power_w": 32.7
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.784694942352037,
+            "dram_access_byte": 37748736.0,
+            "power_w": 56.71
+        },
+        "down_proj": {
+            "lat_ms": 0.3486783397386626,
+            "dram_access_byte": 41943040.0,
+            "power_w": 62.98
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.07173635664873174,
+            "dram_access_byte": 11534336.0,
+            "power_w": 32.7
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.2887948039969255,
+            "dram_access_byte": 16777216.0,
+            "power_w": 54.48
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_1_7B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.14718410453497313,
+            "dram_access_byte": 10485760.0,
+            "power_w": 54.51
+        },
+        "flash_attn": {
+            "lat_ms": 0.1003674096848578,
+            "dram_access_byte": 4489216.0,
+            "power_w": 50.29
+        },
+        "o_proj": {
+            "lat_ms": 0.09681054573405073,
+            "dram_access_byte": 6373376.0,
+            "power_w": 48.39
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.03642582628747117,
+            "dram_access_byte": 5242880.0,
+            "power_w": 30.05
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.3951341737125289,
+            "dram_access_byte": 19922944.0,
+            "power_w": 56.61
+        },
+        "down_proj": {
+            "lat_ms": 0.1975576633358955,
+            "dram_access_byte": 23068672.0,
+            "power_w": 59.17
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.03936817832436587,
+            "dram_access_byte": 5767168.0,
+            "power_w": 30.46
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.14718410453497313,
+            "dram_access_byte": 9437184.0,
+            "power_w": 54.24
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_1_7B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.14718410453497313,
+            "dram_access_byte": 13631488.0,
+            "power_w": 55.34
+        },
+        "flash_attn": {
+            "lat_ms": 0.10055188316679478,
+            "dram_access_byte": 5242880.0,
+            "power_w": 50.52
+        },
+        "o_proj": {
+            "lat_ms": 0.07637875480399693,
+            "dram_access_byte": 6897664.0,
+            "power_w": 54.35
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.03642582628747117,
+            "dram_access_byte": 5242880.0,
+            "power_w": 30.05
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.3951341737125289,
+            "dram_access_byte": 31457280.0,
+            "power_w": 57.74
+        },
+        "down_proj": {
+            "lat_ms": 0.17712587240584166,
+            "dram_access_byte": 20971520.0,
+            "power_w": 62.42
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.03642582628747117,
+            "dram_access_byte": 5242880.0,
+            "power_w": 30.05
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.14718410453497313,
+            "dram_access_byte": 12582912.0,
+            "power_w": 55.07
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_1_7B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.07637875480399693,
+            "dram_access_byte": 6291456.0,
+            "power_w": 54.05
+        },
+        "flash_attn": {
+            "lat_ms": 0.06216295157571099,
+            "dram_access_byte": 1572864.0,
+            "power_w": 44.05
+        },
+        "o_proj": {
+            "lat_ms": 0.07162376633358955,
+            "dram_access_byte": 5242880.0,
+            "power_w": 42.6
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.020242121445042276,
+            "dram_access_byte": 2359296.0,
+            "power_w": 25.76
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.20035378939277482,
+            "dram_access_byte": 11010048.0,
+            "power_w": 56.4
+        },
+        "down_proj": {
+            "lat_ms": 0.12199732513451193,
+            "dram_access_byte": 8912896.0,
+            "power_w": 52.24
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.0224488854727133,
+            "dram_access_byte": 2752512.0,
+            "power_w": 26.71
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.07637875480399693,
+            "dram_access_byte": 5767168.0,
+            "power_w": 53.78
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_1_7B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.07923194465795542,
+            "dram_access_byte": 11534336.0,
+            "power_w": 55.64
+        },
+        "flash_attn": {
+            "lat_ms": 0.06234742505764797,
+            "dram_access_byte": 2621440.0,
+            "power_w": 44.63
+        },
+        "o_proj": {
+            "lat_ms": 0.0420452574942352,
+            "dram_access_byte": 5636096.0,
+            "power_w": 53.87
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.018770176787086857,
+            "dram_access_byte": 2097152.0,
+            "power_w": 25.01
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.2026066717909301,
+            "dram_access_byte": 30091264.0,
+            "power_w": 59.72
+        },
+        "down_proj": {
+            "lat_ms": 0.09543265180630285,
+            "dram_access_byte": 15204352.0,
+            "power_w": 61.79
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.018770176787086857,
+            "dram_access_byte": 2097152.0,
+            "power_w": 25.01
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.07802364335126827,
+            "dram_access_byte": 11067392.0,
+            "power_w": 55.85
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_4B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.25576962336664105,
+            "dram_access_byte": 29884416.0,
+            "power_w": 58.23
+        },
+        "flash_attn": {
+            "lat_ms": 0.17642582628747117,
+            "dram_access_byte": 7340032.0,
+            "power_w": 54.09
+        },
+        "o_proj": {
+            "lat_ms": 0.1825867794004612,
+            "dram_access_byte": 11272192.0,
+            "power_w": 54.34
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.048196003074558035,
+            "dram_access_byte": 7340032.0,
+            "power_w": 31.36
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.7420151575710993,
+            "dram_access_byte": 83361792.0,
+            "power_w": 60.49
+        },
+        "down_proj": {
+            "lat_ms": 0.3557458877786318,
+            "dram_access_byte": 42598400.0,
+            "power_w": 62.02
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.048196003074558035,
+            "dram_access_byte": 7340032.0,
+            "power_w": 31.36
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.25576962336664105,
+            "dram_access_byte": 28573696.0,
+            "power_w": 58.03
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_4B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.25576962336664105,
+            "dram_access_byte": 29884416.0,
+            "power_w": 58.23
+        },
+        "flash_attn": {
+            "lat_ms": 0.17682244427363566,
+            "dram_access_byte": 8388608.0,
+            "power_w": 54.24
+        },
+        "o_proj": {
+            "lat_ms": 0.15732375096079942,
+            "dram_access_byte": 16252928.0,
+            "power_w": 59.93
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.04525288239815526,
+            "dram_access_byte": 6815744.0,
+            "power_w": 31.1
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.7420151575710993,
+            "dram_access_byte": 83361792.0,
+            "power_w": 60.49
+        },
+        "down_proj": {
+            "lat_ms": 0.33048285933897004,
+            "dram_access_byte": 37486592.0,
+            "power_w": 64.09
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.04525288239815526,
+            "dram_access_byte": 6815744.0,
+            "power_w": 31.1
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.25576962336664105,
+            "dram_access_byte": 28573696.0,
+            "power_w": 58.03
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_4B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 1,
+        "qkv_proj": {
+            "lat_ms": 0.5059658416602614,
+            "dram_access_byte": 59768832.0,
+            "power_w": 58.57
+        },
+        "flash_attn": {
+            "lat_ms": 0.33017524980784013,
+            "dram_access_byte": 16777216.0,
+            "power_w": 56.67
+        },
+        "o_proj": {
+            "lat_ms": 0.30852067640276715,
+            "dram_access_byte": 36503040.0,
+            "power_w": 61.09
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.09081629515757109,
+            "dram_access_byte": 14934016.0,
+            "power_w": 33.27
+        },
+        "gate_up_proj": {
+            "lat_ms": 1.478456910069176,
+            "dram_access_byte": 166723584.0,
+            "power_w": 60.61
+        },
+        "down_proj": {
+            "lat_ms": 0.6548388931591085,
+            "dram_access_byte": 79953920.0,
+            "power_w": 64.73
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.09081629515757109,
+            "dram_access_byte": 14934016.0,
+            "power_w": 33.27
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.5059658416602614,
+            "dram_access_byte": 57147392.0,
+            "power_w": 58.37
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_4B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.13067151421983092,
+            "dram_access_byte": 14942208.0,
+            "power_w": 57.56
+        },
+        "flash_attn": {
+            "lat_ms": 0.10009069946195234,
+            "dram_access_byte": 3145728.0,
+            "power_w": 49.85
+        },
+        "o_proj": {
+            "lat_ms": 0.11961983089930824,
+            "dram_access_byte": 7864320.0,
+            "power_w": 48.61
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.026126825518831668,
+            "dram_access_byte": 3407872.0,
+            "power_w": 27.94
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.377163996925442,
+            "dram_access_byte": 34922496.0,
+            "power_w": 59.25
+        },
+        "down_proj": {
+            "lat_ms": 0.20619938508839358,
+            "dram_access_byte": 23920640.0,
+            "power_w": 57.72
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.027598001537279017,
+            "dram_access_byte": 3670016.0,
+            "power_w": 28.34
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.13067151421983092,
+            "dram_access_byte": 14286848.0,
+            "power_w": 57.37
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_4B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.13223338970023063,
+            "dram_access_byte": 20185088.0,
+            "power_w": 58.74
+        },
+        "flash_attn": {
+            "lat_ms": 0.10045964642582629,
+            "dram_access_byte": 4194304.0,
+            "power_w": 50.15
+        },
+        "o_proj": {
+            "lat_ms": 0.09404196771714066,
+            "dram_access_byte": 12582912.0,
+            "power_w": 56.4
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.021713297463489625,
+            "dram_access_byte": 2621440.0,
+            "power_w": 26.42
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.3807543120676403,
+            "dram_access_byte": 59046912.0,
+            "power_w": 61.4
+        },
+        "down_proj": {
+            "lat_ms": 0.1979520368946964,
+            "dram_access_byte": 28704768.0,
+            "power_w": 59.93
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.021713297463489625,
+            "dram_access_byte": 2621440.0,
+            "power_w": 26.42
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.13193131437355882,
+            "dram_access_byte": 19872768.0,
+            "power_w": 58.72
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_8B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.36911013066871645,
+            "dram_access_byte": 44040192.0,
+            "power_w": 61.21
+        },
+        "flash_attn": {
+            "lat_ms": 0.17642582628747117,
+            "dram_access_byte": 7340032.0,
+            "power_w": 54.09
+        },
+        "o_proj": {
+            "lat_ms": 0.2887948039969255,
+            "dram_access_byte": 17563648.0,
+            "power_w": 54.59
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.07504611837048424,
+            "dram_access_byte": 12124160.0,
+            "power_w": 32.82
+        },
+        "gate_up_proj": {
+            "lat_ms": 1.3891776479631046,
+            "dram_access_byte": 162331136.0,
+            "power_w": 62.97
+        },
+        "down_proj": {
+            "lat_ms": 0.6917832744043044,
+            "dram_access_byte": 83886080.0,
+            "power_w": 63.27
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.07504611837048424,
+            "dram_access_byte": 12124160.0,
+            "power_w": 32.82
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.36911013066871645,
+            "dram_access_byte": 42793472.0,
+            "power_w": 61.08
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_8B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.36911013066871645,
+            "dram_access_byte": 44040192.0,
+            "power_w": 61.21
+        },
+        "flash_attn": {
+            "lat_ms": 0.17682244427363566,
+            "dram_access_byte": 8388608.0,
+            "power_w": 54.24
+        },
+        "o_proj": {
+            "lat_ms": 0.24793122213681784,
+            "dram_access_byte": 28311552.0,
+            "power_w": 60.8
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.07173635664873174,
+            "dram_access_byte": 11534336.0,
+            "power_w": 32.7
+        },
+        "gate_up_proj": {
+            "lat_ms": 1.3891776479631046,
+            "dram_access_byte": 162331136.0,
+            "power_w": 62.97
+        },
+        "down_proj": {
+            "lat_ms": 0.6509196925441968,
+            "dram_access_byte": 79691776.0,
+            "power_w": 65.29
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.07173635664873174,
+            "dram_access_byte": 11534336.0,
+            "power_w": 32.7
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.36911013066871645,
+            "dram_access_byte": 42793472.0,
+            "power_w": 61.08
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_8B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 1,
+        "qkv_proj": {
+            "lat_ms": 0.7326468562644121,
+            "dram_access_byte": 88080384.0,
+            "power_w": 61.47
+        },
+        "flash_attn": {
+            "lat_ms": 0.33017524980784013,
+            "dram_access_byte": 16777216.0,
+            "power_w": 56.67
+        },
+        "o_proj": {
+            "lat_ms": 0.49028903920061495,
+            "dram_access_byte": 58523136.0,
+            "power_w": 61.33
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.1456671790930054,
+            "dram_access_byte": 24707072.0,
+            "power_w": 34.08
+        },
+        "gate_up_proj": {
+            "lat_ms": 2.772781890853187,
+            "dram_access_byte": 325284864.0,
+            "power_w": 63.05
+        },
+        "down_proj": {
+            "lat_ms": 1.2962659800153724,
+            "dram_access_byte": 159383552.0,
+            "power_w": 65.46
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.1456671790930054,
+            "dram_access_byte": 24707072.0,
+            "power_w": 34.08
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.7326468562644121,
+            "dram_access_byte": 86209536.0,
+            "power_w": 61.38
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_8B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.1873417678708686,
+            "dram_access_byte": 22020096.0,
+            "power_w": 60.71
+        },
+        "flash_attn": {
+            "lat_ms": 0.10009069946195234,
+            "dram_access_byte": 3145728.0,
+            "power_w": 49.85
+        },
+        "o_proj": {
+            "lat_ms": 0.18804768639508074,
+            "dram_access_byte": 12582912.0,
+            "power_w": 48.99
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.03936817832436587,
+            "dram_access_byte": 5767168.0,
+            "power_w": 30.46
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.697375526518063,
+            "dram_access_byte": 81121792.0,
+            "power_w": 62.83
+        },
+        "down_proj": {
+            "lat_ms": 0.3895419215987702,
+            "dram_access_byte": 46137344.0,
+            "power_w": 59.63
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.040839354342813224,
+            "dram_access_byte": 6029312.0,
+            "power_w": 30.63
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.1873417678708686,
+            "dram_access_byte": 21352960.0,
+            "power_w": 60.57
+        }
+    },
+    {
+        "device": "Orin",
+        "model": "Qwen3_8B",
+        "precision": "int8",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.18964153727901617,
+            "dram_access_byte": 30408704.0,
+            "power_w": 62.01
+        },
+        "flash_attn": {
+            "lat_ms": 0.10045964642582629,
+            "dram_access_byte": 4194304.0,
+            "power_w": 50.15
+        },
+        "o_proj": {
+            "lat_ms": 0.13157245196003076,
+            "dram_access_byte": 20709376.0,
+            "power_w": 60.77
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.03642582628747117,
+            "dram_access_byte": 5242880.0,
+            "power_w": 30.05
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.706127255956956,
+            "dram_access_byte": 115048448.0,
+            "power_w": 64.24
+        },
+        "down_proj": {
+            "lat_ms": 0.34438182936202927,
+            "dram_access_byte": 58720256.0,
+            "power_w": 65.31
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.03642582628747117,
+            "dram_access_byte": 5242880.0,
+            "power_w": 30.05
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.18934176787086857,
+            "dram_access_byte": 30113792.0,
+            "power_w": 62.01
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_1_7B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 1,
+        "qkv_proj": {
+            "lat_ms": 0.04652698412698413,
+            "dram_access_byte": 10092544.0,
+            "power_w": 93.06
+        },
+        "flash_attn": {
+            "lat_ms": 0.04673269841269841,
+            "dram_access_byte": 1179648.0,
+            "power_w": 103.61
+        },
+        "o_proj": {
+            "lat_ms": 0.03212444444444444,
+            "dram_access_byte": 6553600.0,
+            "power_w": 80.02
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.03259746031746032,
+            "dram_access_byte": 6291456.0,
+            "power_w": 32.99
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.11876190476190474,
+            "dram_access_byte": 21364736.0,
+            "power_w": 92.23
+        },
+        "down_proj": {
+            "lat_ms": 0.05137523809523809,
+            "dram_access_byte": 11272192.0,
+            "power_w": 107.12
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.03259746031746032,
+            "dram_access_byte": 6291456.0,
+            "power_w": 32.99
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.042260317460317456,
+            "dram_access_byte": 9043968.0,
+            "power_w": 96.29
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_1_7B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.028391111111111113,
+            "dram_access_byte": 5636096.0,
+            "power_w": 82.51
+        },
+        "flash_attn": {
+            "lat_ms": 0.02585015873015873,
+            "dram_access_byte": 589824.0,
+            "power_w": 96.25
+        },
+        "o_proj": {
+            "lat_ms": 0.02731174603174603,
+            "dram_access_byte": 5373952.0,
+            "power_w": 67.27
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.019798730158730158,
+            "dram_access_byte": 3145728.0,
+            "power_w": 29.55
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.06426989206349207,
+            "dram_access_byte": 11272192.0,
+            "power_w": 87.94
+        },
+        "down_proj": {
+            "lat_ms": 0.036937142857142856,
+            "dram_access_byte": 7733248.0,
+            "power_w": 89.44
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.019798730158730158,
+            "dram_access_byte": 3145728.0,
+            "power_w": 29.55
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.026257777777777776,
+            "dram_access_byte": 5111808.0,
+            "power_w": 84.26
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_1_7B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.03557142857142857,
+            "dram_access_byte": 7405568.0,
+            "power_w": 78.2
+        },
+        "flash_attn": {
+            "lat_ms": 0.026802539682539685,
+            "dram_access_byte": 1638400.0,
+            "power_w": 95.73
+        },
+        "o_proj": {
+            "lat_ms": 0.02476,
+            "dram_access_byte": 4751360.0,
+            "power_w": 67.95
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.019798730158730158,
+            "dram_access_byte": 3145728.0,
+            "power_w": 29.55
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.07784190476190476,
+            "dram_access_byte": 17760256.0,
+            "power_w": 91.41
+        },
+        "down_proj": {
+            "lat_ms": 0.042768888888888884,
+            "dram_access_byte": 9175040.0,
+            "power_w": 85.61
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.019798730158730158,
+            "dram_access_byte": 3145728.0,
+            "power_w": 29.55
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.03343809523809524,
+            "dram_access_byte": 6881280.0,
+            "power_w": 79.3
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_1_7B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.019466666666666667,
+            "dram_access_byte": 3407872.0,
+            "power_w": 69.39
+        },
+        "flash_attn": {
+            "lat_ms": 0.015950476190476192,
+            "dram_access_byte": 294912.0,
+            "power_w": 83.12
+        },
+        "o_proj": {
+            "lat_ms": 0.024905396825396824,
+            "dram_access_byte": 4784128.0,
+            "power_w": 59.04
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.01339936507936508,
+            "dram_access_byte": 1572864.0,
+            "power_w": 25.36
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.037300622222222225,
+            "dram_access_byte": 6225920.0,
+            "power_w": 80.54
+        },
+        "down_proj": {
+            "lat_ms": 0.029718095238095238,
+            "dram_access_byte": 5963776.0,
+            "power_w": 74.16
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.01339936507936508,
+            "dram_access_byte": 1572864.0,
+            "power_w": 25.36
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.0184,
+            "dram_access_byte": 3145728.0,
+            "power_w": 69.87
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_1_7B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.030095873015873013,
+            "dram_access_byte": 6062080.0,
+            "power_w": 66.71
+        },
+        "flash_attn": {
+            "lat_ms": 0.016902857142857143,
+            "dram_access_byte": 1081344.0,
+            "power_w": 82.26
+        },
+        "o_proj": {
+            "lat_ms": 0.020194920634920635,
+            "dram_access_byte": 3629056.0,
+            "power_w": 58.61
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.01339936507936508,
+            "dram_access_byte": 1572864.0,
+            "power_w": 25.36
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.0703904761904762,
+            "dram_access_byte": 15958016.0,
+            "power_w": 75.94
+        },
+        "down_proj": {
+            "lat_ms": 0.03850222222222222,
+            "dram_access_byte": 8126464.0,
+            "power_w": 71.18
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.01339936507936508,
+            "dram_access_byte": 1572864.0,
+            "power_w": 25.36
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.029029206349206346,
+            "dram_access_byte": 5799936.0,
+            "power_w": 66.92
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_4B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 1,
+        "qkv_proj": {
+            "lat_ms": 0.07307047619047619,
+            "dram_access_byte": 16613376.0,
+            "power_w": 102.5
+        },
+        "flash_attn": {
+            "lat_ms": 0.08774222222222222,
+            "dram_access_byte": 2359296.0,
+            "power_w": 108.61
+        },
+        "o_proj": {
+            "lat_ms": 0.050793650793650794,
+            "dram_access_byte": 11141120.0,
+            "power_w": 99.03
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.038996190476190476,
+            "dram_access_byte": 7864320.0,
+            "power_w": 33.87
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.20405561904761896,
+            "dram_access_byte": 39387136.0,
+            "power_w": 101.63
+        },
+        "down_proj": {
+            "lat_ms": 0.09204825396825396,
+            "dram_access_byte": 21274624.0,
+            "power_w": 114.87
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.038996190476190476,
+            "dram_access_byte": 7864320.0,
+            "power_w": 33.87
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.06773714285714286,
+            "dram_access_byte": 15302656.0,
+            "power_w": 105.76
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_4B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.042257777777777776,
+            "dram_access_byte": 9043968.0,
+            "power_w": 93.69
+        },
+        "flash_attn": {
+            "lat_ms": 0.04673269841269841,
+            "dram_access_byte": 1179648.0,
+            "power_w": 103.61
+        },
+        "o_proj": {
+            "lat_ms": 0.03878603174603174,
+            "dram_access_byte": 8192000.0,
+            "power_w": 82.43
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.022998095238095238,
+            "dram_access_byte": 3932160.0,
+            "power_w": 30.77
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.1082373333333333,
+            "dram_access_byte": 20430848.0,
+            "power_w": 97.83
+        },
+        "down_proj": {
+            "lat_ms": 0.055296507936507935,
+            "dram_access_byte": 12247040.0,
+            "power_w": 103.4
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.022998095238095238,
+            "dram_access_byte": 3932160.0,
+            "power_w": 30.77
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.03959111111111111,
+            "dram_access_byte": 8388608.0,
+            "power_w": 95.89
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_4B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.057242539682539686,
+            "dram_access_byte": 12730368.0,
+            "power_w": 85.15
+        },
+        "flash_attn": {
+            "lat_ms": 0.04768507936507936,
+            "dram_access_byte": 2752512.0,
+            "power_w": 103.71
+        },
+        "o_proj": {
+            "lat_ms": 0.0425047619047619,
+            "dram_access_byte": 9109504.0,
+            "power_w": 80.58
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.022998095238095238,
+            "dram_access_byte": 3932160.0,
+            "power_w": 30.77
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.1430888888888889,
+            "dram_access_byte": 33701888.0,
+            "power_w": 95.49
+        },
+        "down_proj": {
+            "lat_ms": 0.07349015873015873,
+            "dram_access_byte": 16719872.0,
+            "power_w": 92.91
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.022998095238095238,
+            "dram_access_byte": 3932160.0,
+            "power_w": 30.77
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.054575873015873015,
+            "dram_access_byte": 12075008.0,
+            "power_w": 86.33
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_8B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 1,
+        "qkv_proj": {
+            "lat_ms": 0.09837079365079365,
+            "dram_access_byte": 22806528.0,
+            "power_w": 111.92
+        },
+        "flash_attn": {
+            "lat_ms": 0.08774222222222222,
+            "dram_access_byte": 2359296.0,
+            "power_w": 108.61
+        },
+        "o_proj": {
+            "lat_ms": 0.07800888888888889,
+            "dram_access_byte": 17825792.0,
+            "power_w": 102.69
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.05819428571428571,
+            "dram_access_byte": 12582912.0,
+            "power_w": 35.34
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.32940751746031743,
+            "dram_access_byte": 71041024.0,
+            "power_w": 119.11
+        },
+        "down_proj": {
+            "lat_ms": 0.18384,
+            "dram_access_byte": 43778048.0,
+            "power_w": 116.96
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.06619301587301586,
+            "dram_access_byte": 14548992.0,
+            "power_w": 35.7
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.08983746031746032,
+            "dram_access_byte": 20709376.0,
+            "power_w": 116.75
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_4B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.026854603174603173,
+            "dram_access_byte": 5259264.0,
+            "power_w": 81.7
+        },
+        "flash_attn": {
+            "lat_ms": 0.02585015873015873,
+            "dram_access_byte": 589824.0,
+            "power_w": 96.25
+        },
+        "o_proj": {
+            "lat_ms": 0.03277968253968254,
+            "dram_access_byte": 6717440.0,
+            "power_w": 69.58
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.014999365079365078,
+            "dram_access_byte": 1966080.0,
+            "power_w": 26.74
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.05981513650793651,
+            "dram_access_byte": 10952704.0,
+            "power_w": 92.1
+        },
+        "down_proj": {
+            "lat_ms": 0.04116,
+            "dram_access_byte": 8765440.0,
+            "power_w": 86.16
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.014999365079365078,
+            "dram_access_byte": 1966080.0,
+            "power_w": 26.74
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.02552126984126984,
+            "dram_access_byte": 4931584.0,
+            "power_w": 82.78
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_4B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.04933142857142857,
+            "dram_access_byte": 10788864.0,
+            "power_w": 72.3
+        },
+        "flash_attn": {
+            "lat_ms": 0.026802539682539685,
+            "dram_access_byte": 1769472.0,
+            "power_w": 95.97
+        },
+        "o_proj": {
+            "lat_ms": 0.03657460317460317,
+            "dram_access_byte": 7651328.0,
+            "power_w": 68.7
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.014999365079365078,
+            "dram_access_byte": 1966080.0,
+            "power_w": 26.74
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.13105333333333335,
+            "dram_access_byte": 30859264.0,
+            "power_w": 78.89
+        },
+        "down_proj": {
+            "lat_ms": 0.06778984126984126,
+            "dram_access_byte": 15319040.0,
+            "power_w": 76.31
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.014999365079365078,
+            "dram_access_byte": 1966080.0,
+            "power_w": 26.74
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.04799809523809524,
+            "dram_access_byte": 10461184.0,
+            "power_w": 72.61
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_8B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.05666539682539682,
+            "dram_access_byte": 12582912.0,
+            "power_w": 102.86
+        },
+        "flash_attn": {
+            "lat_ms": 0.04673269841269841,
+            "dram_access_byte": 1179648.0,
+            "power_w": 103.61
+        },
+        "o_proj": {
+            "lat_ms": 0.058793650793650794,
+            "dram_access_byte": 13107200.0,
+            "power_w": 86.37
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.03259746031746032,
+            "dram_access_byte": 6291456.0,
+            "power_w": 32.99
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.1734223492063492,
+            "dram_access_byte": 36700160.0,
+            "power_w": 115.07
+        },
+        "down_proj": {
+            "lat_ms": 0.10022412698412698,
+            "dram_access_byte": 23281664.0,
+            "power_w": 111.02
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.03259746031746032,
+            "dram_access_byte": 6291456.0,
+            "power_w": 32.99
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.05239873015873016,
+            "dram_access_byte": 11534336.0,
+            "power_w": 106.27
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_8B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 2,
+        "qkv_proj": {
+            "lat_ms": 0.08065587301587301,
+            "dram_access_byte": 18481152.0,
+            "power_w": 90.42
+        },
+        "flash_attn": {
+            "lat_ms": 0.04768507936507936,
+            "dram_access_byte": 2752512.0,
+            "power_w": 103.71
+        },
+        "o_proj": {
+            "lat_ms": 0.06332,
+            "dram_access_byte": 14221312.0,
+            "power_w": 84.57
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.03259746031746032,
+            "dram_access_byte": 6291456.0,
+            "power_w": 32.99
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.265615873015873,
+            "dram_access_byte": 63832064.0,
+            "power_w": 99.7
+        },
+        "down_proj": {
+            "lat_ms": 0.1512926984126984,
+            "dram_access_byte": 35823616.0,
+            "power_w": 94.13
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.03259746031746032,
+            "dram_access_byte": 6291456.0,
+            "power_w": 32.99
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.07638920634920635,
+            "dram_access_byte": 17432576.0,
+            "power_w": 92.06
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_8B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "CP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.07183809523809524,
+            "dram_access_byte": 16318464.0,
+            "power_w": 75.66
+        },
+        "flash_attn": {
+            "lat_ms": 0.026802539682539685,
+            "dram_access_byte": 1769472.0,
+            "power_w": 95.97
+        },
+        "o_proj": {
+            "lat_ms": 0.054169523809523806,
+            "dram_access_byte": 11976704.0,
+            "power_w": 72.3
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.019798730158730158,
+            "dram_access_byte": 3145728.0,
+            "power_w": 29.55
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.25059111111111115,
+            "dram_access_byte": 60227584.0,
+            "power_w": 81.01
+        },
+        "down_proj": {
+            "lat_ms": 0.1352031746031746,
+            "dram_access_byte": 31883264.0,
+            "power_w": 78.55
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.019798730158730158,
+            "dram_access_byte": 3145728.0,
+            "power_w": 29.55
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.06970476190476191,
+            "dram_access_byte": 15794176.0,
+            "power_w": 76.1
+        }
+    },
+    {
+        "device": "Thor",
+        "model": "Qwen3_8B",
+        "precision": "fp4",
+        "phase": "prefill",
+        "spec_tokens": 64,
+        "seq_len": 1024,
+        "is_causal": true,
+        "parallelism": "TP",
+        "degree": 4,
+        "qkv_proj": {
+            "lat_ms": 0.03586793650793651,
+            "dram_access_byte": 7471104.0,
+            "power_w": 90.29
+        },
+        "flash_attn": {
+            "lat_ms": 0.02585015873015873,
+            "dram_access_byte": 589824.0,
+            "power_w": 96.25
+        },
+        "o_proj": {
+            "lat_ms": 0.04918603174603175,
+            "dram_access_byte": 10747904.0,
+            "power_w": 73.43
+        },
+        "post_attn_ln": {
+            "lat_ms": 0.019798730158730158,
+            "dram_access_byte": 3145728.0,
+            "power_w": 29.55
+        },
+        "gate_up_proj": {
+            "lat_ms": 0.09448119365079363,
+            "dram_access_byte": 19529728.0,
+            "power_w": 109.06
+        },
+        "down_proj": {
+            "lat_ms": 0.06840126984126983,
+            "dram_access_byte": 15466496.0,
+            "power_w": 95.68
+        },
+        "post_ffn_ln": {
+            "lat_ms": 0.019798730158730158,
+            "dram_access_byte": 3145728.0,
+            "power_w": 29.55
+        },
+        "qkv_proj_2": {
+            "lat_ms": 0.033734603174603174,
+            "dram_access_byte": 6946816.0,
+            "power_w": 92.14
         }
     }
 ]
