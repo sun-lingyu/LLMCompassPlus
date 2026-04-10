@@ -1,0 +1,4 @@
+Latency (ms),Qwen3_1.7B,Qwen3_4B,Qwen3_8B
+No Parallelism,7.73,17.62,31.38
+TP=2,4.65,9.78,16.68
+TP=4,3.16,5.97,9.46
