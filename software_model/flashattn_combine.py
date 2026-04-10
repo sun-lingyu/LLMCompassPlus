@@ -155,7 +155,7 @@ class FlashAttnCombine(Operator):
             mem_access_size += self.l2_status.access(
                 L2AccessType.OUTPUT_SCALE,
                 (0, 0),
-                (self.M, self.N / self.output_dtype.scale_block_size),
+                (self.M, self.N // self.output_dtype.scale_block_size),
             )
         mem_access_cycle = ceil(
             mem_access_size

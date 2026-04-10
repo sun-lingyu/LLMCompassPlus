@@ -975,7 +975,7 @@ def print_final_results(num_layers, results, icnt_type, has_comm_results):
     # Comm results
     print("  " + "+" * 57)
     print(f"  Est. avg power [Compute]:   {power_avg_comp:.2f} W")
-    print("  Est. avg power [Communication]:")
+    print("  Est. avg power [Compute + Communication]:")
     if icnt_type.startswith("ucie"):
         for (
             pkg,
@@ -1054,12 +1054,18 @@ def main():
     args = parser.parse_args()
 
     is_prefill = args.phase == "prefill"
-    if args.model == "InternVision" and args.is_causal:
-        parser.error("InternVision should not use --is_causal")
+    if args.model == "InternVision":
+        if args.is_causal:
+            parser.error("InternVision should not use --is_causal")
+            # This check can be removed if necessary
+        if args.precision not in ("fp16", "fp8"):
+            parser.error("InternVision should be fp16/fp8")
+            # This check can be removed if necessary
+    if args.model != "InternVision" and is_prefill and not args.is_causal:
+        parser.error("Only InternVision should be non-causal in prefill")
         # This check can be removed if necessary
-    if args.model != "InternVision" and not args.is_causal:
-        parser.error("Only InternVision should be non-causal")
-        # This check can be removed if necessary
+    if not is_prefill and args.parallelism == "CP":
+        parser.error("decode should not use CP")
     if not is_prefill and args.is_causal:
         parser.error("decode does not support --is_causal")
     if args.seq_len < 1:
