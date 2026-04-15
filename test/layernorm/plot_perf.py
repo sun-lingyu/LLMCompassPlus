@@ -52,3 +52,6 @@ if __name__ == "__main__":
         f"{file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.model}.png",
         dpi=300,
     )
+    print(
+        f"saved to {file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.model}.png"
+    )

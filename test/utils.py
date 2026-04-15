@@ -5,6 +5,7 @@ import subprocess
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.lines import Line2D
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
 from sklearn.preprocessing import StandardScaler
@@ -121,54 +122,80 @@ DEVICE = "{device}"
 
 
 def plot_fitting_results(
-    y_true, y_pred, feature_names, coefs, intercept, r2, mape, save_dir, title_suffix=""
+    y_true,
+    y_pred,
+    feature_names,
+    coefs,
+    intercept,
+    r2,
+    mape,
+    save_dir,
+    title_suffix="",
+    fontsize=13,
 ):
     try:
-        plt.style.use("seaborn-v0_8")
+        plt.style.use("seaborn-v0_8-white")
     except:
         plt.style.use("ggplot")
 
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    fig, ax = plt.subplots(1, 1, figsize=(2.2, 2.2))
 
-    ax1 = axes[0]
-    ax1.scatter(y_true, y_pred, color="navy", alpha=0.6, s=60, label="Records")
+    ax.scatter(y_true, y_pred, color="navy", alpha=0.6, s=15, label="Records")
     min_val, max_val = min(y_true.min(), y_pred.min()), max(y_true.max(), y_pred.max())
-    ax1.plot(
+    ax.plot(
         [min_val, max_val], [min_val, max_val], "r--", linewidth=2, label="Ideal (y=x)"
     )
-    ax1.set_title(
-        f"Physical Power Model (NNLS)\n$R^2={r2:.4f}, MAPE={mape * 100:.2f}\\%$",
-        fontsize=14,
+    fig.suptitle(
+        f"$R^2={r2:.2f}, MAPE={mape * 100:.2f}\\%$",
+        fontsize=fontsize - 2,
+        x=0.5,
+        ha="center",
+        y=0.98,
     )
-    ax1.set_xlabel("Measured Power (W)", fontsize=12)
-    ax1.set_ylabel("Predicted Power (W)", fontsize=12)
-    ax1.legend()
-    ax1.grid(True, linestyle="--", alpha=0.5)
+    fig.supxlabel(
+        "Measurement (W)",
+        fontsize=fontsize,
+        fontweight="bold",
+        x=1.0,
+        ha="right",
+        va="bottom",
+    )
+    ax.set_ylabel("Prediction (W)", fontsize=fontsize, fontweight="bold")
+    leg = ax.legend(
+        loc="upper left",
+        fontsize=fontsize - 2,
+        borderaxespad=0.4,
+        handletextpad=0.2,
+        labelspacing=0.3,
+        handlelength=1.5,
+        frameon=True,
+        borderpad=0.2,
+    )
+    leg.set_zorder(0)
+    ax.grid(True, linestyle="--", alpha=0.5)
+    ax.tick_params(axis="both", labelsize=fontsize - 1)
 
-    ax2 = axes[1]
-    y_pos = np.arange(len(feature_names))
-
-    bars = ax2.barh(y_pos, coefs, color="forestgreen", alpha=0.8, edgecolor="k")
-
-    ax2.set_yticks(y_pos)
-    ax2.set_yticklabels(feature_names, fontsize=12)
-    ax2.set_xlabel("Energy Cost (Joules / Op or Byte)", fontsize=12)
-    ax2.set_title("Estimated Energy Per Operation (Must be >= 0)", fontsize=14)
-
+    text = ""
     for i, v in enumerate(coefs):
-        ax2.text(v, i, f" {v:.2e} J", va="center", fontsize=10, fontweight="bold")
+        if v != 0:
+            if feature_names[i] == "FMA":
+                text += f" FMA = {v * 1e12:.2f} pJ/op\n"
+            elif feature_names[i] == "DRAM Access Byte":
+                text += f" DRAM R/W = {v * 1e12:.2f} pJ/B\n"
+    text += f"Intercept = {intercept:.2f} W"
 
     plt.figtext(
-        0.5,
-        0.02,
-        f"Static Power (Intercept) = {intercept:.4f} W",
-        ha="center",
-        fontsize=12,
-        bbox={"facecolor": "orange", "alpha": 0.2, "pad": 5},
+        0.95,
+        0.17,
+        text,
+        ha="right",
+        va="bottom",
+        fontsize=fontsize - 3,
     )
 
-    plt.tight_layout()
-    plt.subplots_adjust(bottom=0.15)
+    plt.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.1)
+    plt.subplots_adjust(bottom=0.17)
+    plt.subplots_adjust(top=0.9)
     save_path = f"{save_dir}/power_nnls_fitting_{title_suffix}.png"
     plt.savefig(save_path, dpi=300)
     print(f"\n[Info] Plot saved to: {save_path}")
@@ -244,51 +271,118 @@ def plot_latency(
     is_first=False,
     is_last=False,
     has_baseline=False,
+    fontsize=14,
 ):
     sorted_table = latency_table.sort_values(by="Measurement")
 
     x = sorted_table["Measurement"]
 
-    ax.scatter(x, sorted_table["Ours"], color="navy", alpha=0.6, s=8, label="Ours")
+    ax.scatter(x, sorted_table["Ours"], color="navy", alpha=0.6, s=15, label="Ours")
     ax.scatter(
-        x, sorted_table["Roofline"], marker="x", alpha=0.6, s=8, label="Roofline"
+        x, sorted_table["Roofline"], marker="x", alpha=0.6, s=15, label="Roofline"
     )
     if has_baseline:
         ax.scatter(
-            x, sorted_table["Baseline"], marker="^", alpha=0.6, s=8, label="LLMCompass"
+            x, sorted_table["Baseline"], marker="^", alpha=0.6, s=15, label="LLMCompass"
         )
     ax.plot(x, x, "r--", linewidth=1, label="Ideal (y=x)")
 
-    ax.set_title(title)
-    ax.set_xlabel("Measured Latency (ms)", fontsize=6)
+    # ax.set_title(title)
+    fig = ax.figure
+    fig.supxlabel(
+        "Measurement (ms)",
+        fontsize=fontsize,
+        fontweight="bold",
+        x=1.0,
+        ha="right",
+        va="bottom",
+    )
+    ax.tick_params(axis="both", labelsize=fontsize)
 
     if is_first:
-        ax.set_ylabel("Predicted Latency (ms)")
+        ax.set_ylabel("Prediction (ms)", fontsize=fontsize, fontweight="bold")
     if is_last:
-        ax.legend(loc="best")
+        leg = ax.legend(
+            loc="upper left",
+            fontsize=fontsize - 3,
+            borderaxespad=0.4,
+            handletextpad=0.2,
+            labelspacing=0.3,
+            handlelength=1.2,
+            frameon=True,
+            borderpad=0.2,
+        )
+        leg.set_zorder(0)
+        leg.get_frame().set_linewidth(0.8)
 
     ax.grid(True, linestyle="--", alpha=0.5)
 
 
-def add_mape_annotation(df, ax, precision, fontsize=6, has_baseline=False):
+def add_mape_annotation(df, ax, precision, fontsize=11, has_baseline=False):
     def calc_mape(pred, true):
         return np.mean(np.abs((pred - true) / true)) * 100
 
     mape_ours = calc_mape(df["Ours"], df["Measurement"])
     mape_roofline = calc_mape(df["Roofline"], df["Measurement"])
 
+    # Line2D proxies match plot_latency scatter styles (implicit cycle: Roofline=C0, Baseline=C1)
+    ms = max(3.0, fontsize * 0.45)
+    h_ours = Line2D(
+        [0],
+        [0],
+        color="navy",
+        marker="o",
+        linestyle="None",
+        markersize=ms,
+        alpha=0.6,
+    )
+    h_roofline = Line2D(
+        [0],
+        [0],
+        color="C0",
+        marker="x",
+        linestyle="None",
+        markersize=ms,
+        alpha=0.6,
+        markeredgewidth=1.2,
+    )
     if has_baseline:
         mape_baseline = calc_mape(df["Baseline"], df["Measurement"])
-        text_str = f"MAPE: Ours {mape_ours:.1f}%, LLMCompass {mape_baseline:.1f}%, Roofline {mape_roofline:.1f}%"
+        h_baseline = Line2D(
+            [0],
+            [0],
+            color="C1",
+            marker="^",
+            linestyle="None",
+            markersize=ms,
+            alpha=0.6,
+        )
+        handles = [h_ours, h_baseline, h_roofline]
+        labels = [
+            f"{mape_ours:.1f}%",
+            f"{mape_baseline:.1f}%",
+            f"{mape_roofline:.1f}%",
+        ]
     else:
-        text_str = f"MAPE: Ours {mape_ours:.1f}%, Roofline {mape_roofline:.1f}%"
+        handles = [h_ours, h_roofline]
+        labels = [f"{mape_ours:.1f}%", f"{mape_roofline:.1f}%"]
 
-    ax.text(
-        0.5,
-        0.01,
-        text_str,
-        ha="center",
-        va="bottom",
-        transform=ax.transAxes,
+    old_legend = ax.get_legend()
+    mape_legend = ax.legend(
+        handles,
+        labels,
+        loc="lower right",
+        bbox_to_anchor=(0.98, 0.0),
+        borderaxespad=0,
+        handletextpad=-0.2,
+        labelspacing=0.3,
         fontsize=fontsize,
+        title="MAPE:",
+        title_fontsize=fontsize,
+        frameon=False,
     )
+    if old_legend is not None:
+        ax.add_artist(old_legend)
+    # Keep MAPE legend on top of the main legend when they overlap
+    if mape_legend is not None:
+        mape_legend.set_zorder(old_legend.get_zorder() + 1 if old_legend else 10)

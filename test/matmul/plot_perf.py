@@ -38,12 +38,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        plt.style.use("seaborn-v0_8")
+        plt.style.use("seaborn-v0_8-white")
     except:
         plt.style.use("ggplot")
 
     # Plot one figure
-    fig, axes = plt.subplots(1, 1, figsize=(3, 2.8), sharey=True)
+    fig, axes = plt.subplots(1, 1, figsize=(2.2, 2.2), sharey=True)
     csv_files = glob.glob(
         str(
             Path(
@@ -75,9 +75,12 @@ if __name__ == "__main__":
         args.precision,
         has_baseline=has_baseline,
     )
-
     fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.1)
+
     fig.savefig(
         f"{file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.mode}.png",
         dpi=300,
+    )
+    print(
+        f"saved to {file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.mode}.png"
     )
