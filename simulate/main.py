@@ -1122,16 +1122,9 @@ def main():
     print("-" * 57)
     print("  Simulating (QKV->FA->O->LN->GateUp->Down->LN->QKV)...")
     if degree > 1:
-        if args.icnt_type in ("pcie", "ucie_std"):
-            effective_comm_bandwidth = args.comm_bandwidth * 2
-            # always bidirection ring with two ports
-        elif args.icnt_type == "ucie_adv":
-            effective_comm_bandwidth = (
-                args.comm_bandwidth * 2 if degree == 4 else args.comm_bandwidth
-            )
-            # unidirection ring when degree = 2, bidirection ring when degree = 4
-        else:
-            assert False
+        effective_comm_bandwidth = (
+            args.comm_bandwidth * 2 if degree == 4 else args.comm_bandwidth
+        )
     else:
         effective_comm_bandwidth = args.comm_bandwidth
     results = run_layer(
