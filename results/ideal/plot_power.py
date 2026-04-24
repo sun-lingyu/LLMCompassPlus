@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 
 DEVICE_CONFIG = {
-    "Thor": {"precisions": ["fp8", "fp4"]},
-    "Orin": {"precisions": ["fp16", "int8"]},
+    "Thor": {"precisions": {"prefill": ["fp8", "fp4"], "decode": ["fp8", "fp4"]}},
+    "Orin": {"precisions": {"prefill": ["fp16", "int8"], "decode": ["int4", "int8"]}},
 }
 
 MODELS = ["Qwen3_1.7B", "Qwen3_4B", "Qwen3_8B"]
@@ -17,12 +17,14 @@ DEGREES = [1, 2, 4]
 def build_filename(device, precision, phase, seq_len, spec_tokens):
     if spec_tokens == "-1":
         return f"{device}_{precision}_{phase}_{seq_len}_power.csv"
+    if precision == "fp4" and phase == "decode" and int(spec_tokens) <= 128:
+        spec_tokens = 128
     return f"{device}_{precision}_{phase}_{seq_len}_{spec_tokens}_power.csv"
 
 
 def load_heatmap_data(device, strategy, phase, seq_len, spec_tokens):
     cfg = DEVICE_CONFIG[device]
-    precisions = cfg["precisions"]
+    precisions = cfg["precisions"][phase]
 
     # heatmap shape: (3 rows=degrees, 6 cols=models x precisions)
     data = np.full((len(DEGREES), len(MODELS) * len(precisions)), np.nan)
@@ -208,7 +210,7 @@ def main():
     print(f"Heatmap saved to: {out_filename}")
 
     # --- Standalone colorbar ---
-    fig_cb, ax_cb = plt.subplots(figsize=(0.2, 3))
+    fig_cb, ax_cb = plt.subplots(figsize=(0.2, 1.5))
     fig_cb.subplots_adjust(left=0.3, right=0.55, top=0.97, bottom=0.03)
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -217,7 +219,7 @@ def main():
     cbar.set_label("Power (W)", fontsize=7, fontweight="bold")
     cbar.ax.tick_params(labelsize=6)
     cb_filename = "power_colorbar.png"
-    fig_cb.savefig(cb_filename, dpi=300, facecolor="white", bbox_inches="tight")
+    fig_cb.savefig(cb_filename, dpi=1200, facecolor="white", bbox_inches="tight")
     print(f"Colorbar saved to: {cb_filename}")
 
 

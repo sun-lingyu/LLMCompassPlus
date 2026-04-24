@@ -85,7 +85,17 @@ def _plot_ideal_hlines(ax, ideal_row, series_cols, include_cp):
 
 
 def _configure_bw_axes(
-    ax, x, df_plot, ylim_cols, ideal_row, series_cols, include_cp, phase
+    ax,
+    x,
+    df_plot,
+    ylim_cols,
+    ideal_row,
+    series_cols,
+    include_cp,
+    phase,
+    df_nc_plot=None,
+    nc_ideal_row=None,
+    nc_ylim_cols=None,
 ):
     ax.set_xscale("log", base=2)
     x_ticks = np.unique(np.sort(x.astype(float)))
@@ -105,10 +115,23 @@ def _configure_bw_axes(
     ax.set_xlim(xmin / 2**0.25, xmax * 2**0.25)
 
     ymax = df_plot[ylim_cols].astype(float).to_numpy().max() if ylim_cols else 1.0
+    if df_nc_plot is not None and nc_ylim_cols:
+        ymax = max(
+            ymax,
+            float(df_nc_plot[nc_ylim_cols].astype(float).to_numpy().max()),
+        )
     if ideal_row is not None:
         for col in ylim_cols:
             try:
                 v = float(ideal_row[col])
+                if np.isfinite(v):
+                    ymax = max(ymax, v)
+            except (TypeError, ValueError, KeyError):
+                pass
+    if nc_ideal_row is not None and nc_ylim_cols:
+        for col in nc_ylim_cols:
+            try:
+                v = float(nc_ideal_row[col])
                 if np.isfinite(v):
                     ymax = max(ymax, v)
             except (TypeError, ValueError, KeyError):
@@ -121,7 +144,9 @@ def _configure_bw_axes(
     _plot_ideal_hlines(ax, ideal_row, series_cols, include_cp)
 
 
-def _plot_bw_data_series(ax, x, df_plot, model_groups, ungrouped_cols, include_cp):
+def _plot_bw_data_series(
+    ax, x, df_plot, model_groups, ungrouped_cols, include_cp, df_nc_plot=None
+):
     for _model, cols in model_groups:
         series_styles = (("TP", COLOR_TP, LINE_TP),)
         if include_cp:
@@ -147,6 +172,23 @@ def _plot_bw_data_series(ax, x, df_plot, model_groups, ungrouped_cols, include_c
                 markeredgewidth=MARKER_EDGEWIDTH,
                 zorder=2,
             )
+        if df_nc_plot is not None:
+            col = cols.get("TP")
+            if col is not None and col in df_nc_plot.columns:
+                y_nc = df_nc_plot[col].astype(float).values
+                ax.plot(
+                    x,
+                    y_nc,
+                    color=LINE_TP,
+                    linestyle="--",
+                    linewidth=1.2,
+                    marker="x",
+                    markersize=3,
+                    markerfacecolor=COLOR_TP,
+                    markeredgecolor=COLOR_TP,
+                    markeredgewidth=MARKER_EDGEWIDTH,
+                    zorder=2,
+                )
 
     for col in ungrouped_cols:
         y = df_plot[col].astype(float).values
@@ -208,10 +250,32 @@ def _tp_cp_legend_handles():
     return tp_h, cp_h
 
 
-def _add_bw_legend(ax, include_cp):
+def _tp_nocontention_legend_handle():
+    return Line2D(
+        [0],
+        [0],
+        color=LINE_TP,
+        linewidth=1.2,
+        linestyle="--",
+        marker="x",
+        markersize=3,
+        markerfacecolor=COLOR_TP,
+        markeredgecolor=COLOR_TP,
+        markeredgewidth=MARKER_EDGEWIDTH,
+    )
+
+
+def _add_bw_legend(ax, include_cp, show_nocontention=False):
     tp_h, cp_h = _tp_cp_legend_handles()
-    handles = [tp_h, cp_h] if include_cp else [tp_h]
-    labels = ["TP", "CP"] if include_cp else ["TP"]
+    if include_cp:
+        handles = [tp_h, cp_h]
+        labels = ["TP", "CP"]
+    else:
+        handles = [tp_h]
+        labels = ["TP"]
+    if show_nocontention:
+        handles.append(_tp_nocontention_legend_handle())
+        labels.append("TP (no-cont.)")
     leg = ax.legend(
         handles,
         labels,
@@ -324,6 +388,17 @@ def main():
     input_filename, out_filename = _resolve_bw_csv_paths(bw_dir, args)
 
     df = pd.read_csv(input_filename)
+    df_nc_plot = None
+    nc_ideal_row = None
+    if _is_thor_device(args.device):
+        nc_path = os.path.splitext(input_filename)[0] + "_nocontention.csv"
+        if os.path.isfile(nc_path):
+            df_nc = pd.read_csv(nc_path)
+            nc_bw = df_nc.columns[0]
+            df_nc_plot, nc_ideal_row = _split_data_and_ideal(df_nc, nc_bw)
+            if df_nc_plot.empty:
+                df_nc_plot = None
+                nc_ideal_row = None
     if df.shape[1] < 2:
         raise ValueError(
             "CSV must have bandwidth column plus at least one series column"
@@ -340,17 +415,41 @@ def main():
     model_groups, ungrouped_cols = _group_series_by_model(series_cols)
     include_cp = not _is_thor_device(args.device) and args.phase == "prefill"
 
+    nc_ylim_cols = None
+    if df_nc_plot is not None:
+        nc_ylim_cols = [
+            g["TP"]
+            for _m, g in model_groups
+            if g.get("TP") is not None and g["TP"] in df_nc_plot.columns
+        ]
+        if not nc_ylim_cols:
+            df_nc_plot = None
+            nc_ideal_row = None
+            nc_ylim_cols = None
+
     plt.style.use("seaborn-v0_8-white")
     if args.phase == "prefill":
         fig, ax = plt.subplots(figsize=(1.7, 2.2))
     else:
         fig, ax = plt.subplots(figsize=(1.7, 1.9))
 
-    _plot_bw_data_series(ax, x, df_plot, model_groups, ungrouped_cols, include_cp)
+    _plot_bw_data_series(
+        ax, x, df_plot, model_groups, ungrouped_cols, include_cp, df_nc_plot=df_nc_plot
+    )
 
     ylim_cols = _series_cols_for_ylim(model_groups, ungrouped_cols, include_cp)
     _configure_bw_axes(
-        ax, x, df_plot, ylim_cols, ideal_row, series_cols, include_cp, args.phase
+        ax,
+        x,
+        df_plot,
+        ylim_cols,
+        ideal_row,
+        series_cols,
+        include_cp,
+        args.phase,
+        df_nc_plot=df_nc_plot,
+        nc_ideal_row=nc_ideal_row,
+        nc_ylim_cols=nc_ylim_cols,
     )
 
     x_last = float(x[-1])
@@ -381,9 +480,14 @@ def main():
         spine.set_linewidth(0.9)
 
     if args.legend:
-        _add_bw_legend(ax, include_cp)
+        _add_bw_legend(
+            ax,
+            include_cp,
+            show_nocontention=df_nc_plot is not None,
+        )
 
-    plt.tight_layout()
+    # plt.tight_layout()
+    fig.subplots_adjust(left=0.34, right=0.93, top=0.93, bottom=0.27)
     plt.savefig(out_filename, dpi=300, facecolor="white")
     print(f"Chart successfully saved to: {out_filename}")
 

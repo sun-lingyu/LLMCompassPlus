@@ -219,9 +219,7 @@ def test_and_save_latency(
             latency_this = 1000 * (model.compile_and_simulate(pcb) + launch_latency)
             roofline_latency_this = 1000 * model.roofline_model(pcb)
             if num_splits > 1:
-                model1 = FlashAttnCombine(
-                    intermediate_dtype, output_dtype, L2Cache_previous=model.l2_status
-                )
+                model1 = FlashAttnCombine(intermediate_dtype, output_dtype)
                 _ = model1(
                     Tensor(
                         [seq_len_q, num_heads_q * head_dim, num_splits],

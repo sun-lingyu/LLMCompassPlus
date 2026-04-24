@@ -28,7 +28,7 @@ def plot_element_based_roofline():
             "linestyle": "-",
         },
         {
-            "name": "Orin INT4",
+            "name": "Orin W4A16",
             "bw_gbps": 204.8,
             "compute_tops": 68.75,
             "bytes_per_elem": 0.5,
@@ -54,7 +54,7 @@ def plot_element_based_roofline():
     ]
 
     plt.style.use("seaborn-v0_8-white")
-    fig, ax = plt.subplots(figsize=(4, 2))
+    fig, ax = plt.subplots(figsize=(3.5, 2))
 
     bw_gelems = []
     bw_telems = []
@@ -104,11 +104,12 @@ def plot_element_based_roofline():
             y_position = cfg["compute_tops"] - 18
         else:
             y_position = cfg["compute_tops"] + 18
-        if not cfg["name"].endswith("INT4"):
+        if not cfg["name"].endswith("W4A16"):
+            text_suffix = "TOPS" if cfg["name"].endswith("INT8") else "TFLOPS"
             ax.text(
                 x_position,
                 y_position,
-                f"{cfg['compute_tops']} TOPS/TFLOPS",
+                f"{cfg['compute_tops']} {text_suffix}",
                 color="black",
                 fontsize=7,
                 fontweight="bold",

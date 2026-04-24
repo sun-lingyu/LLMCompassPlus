@@ -1,7 +1,7 @@
 {
   "spec_version": "5.0",
   "description": "PCIE 5.0 PHY and switch Power Modeling",
-  "latency": 379,
+  "latency": 1000,
   "bandwidth_efficiency": 0.9,
   "rate_gt": 32,
   "efficiency_pj_per_bit": 7,

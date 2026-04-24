@@ -978,14 +978,13 @@ def print_final_results(num_layers, results, icnt_type, has_comm_results):
     print("  Est. avg power [Compute + Communication]:")
     if icnt_type.startswith("ucie"):
         for (
-            pkg,
-            module_count,
-            lane_count,
-            rate_gt,
+            (pkg, module_count, lane_count, rate_gt),
             energy_mj_comm,
         ) in power_results_comm.items():
             capacity_gbps = module_count * lane_count * rate_gt
-            power_avg = energy_mj_comm / lat_comm
+            power_avg = (power_avg_comp * lat_comp + energy_mj_comm) / (
+                lat_comp + lat_comm
+            )
             print(
                 f"  {pkg:<10} {module_count} × {lane_count} lane(s) x {rate_gt:>2} GT/s = {capacity_gbps:.1f} Gbps : {power_avg:.2f} W"
             )
