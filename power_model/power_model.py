@@ -28,7 +28,17 @@ def load_power_data(hardware_name):
         return None
 
 
-def calculate_matmul_power(hw_name, precision, mem_access_bytes, total_fma, runtime):
+def _sm_scale(hw_name, pcb):
+    """Return soc_intercept scaling factor based on actual vs. reference SM count."""
+    if pcb is None:
+        return 1.0
+    ref_sm = device_dict[hw_name].compute_module.core_count
+    return pcb.compute_module.core_count / ref_sm
+
+
+def calculate_matmul_power(
+    hw_name, precision, mem_access_bytes, total_fma, runtime, pcb=None
+):
     mem_access_bytes /= runtime
     total_fma /= runtime
 
@@ -50,7 +60,7 @@ def calculate_matmul_power(hw_name, precision, mem_access_bytes, total_fma, runt
         )
         return None
 
-    soc_intercept = soc_intercept_map[precision]
+    soc_intercept = soc_intercept_map[precision] * _sm_scale(hw_name, pcb)
     k_soc_fma = k_soc_fma_map[precision]
     k_soc_dram = dram_map.get(precision, 0)
 
@@ -76,7 +86,7 @@ def calculate_matmul_power(hw_name, precision, mem_access_bytes, total_fma, runt
 
 
 def calculate_layernorm_power(
-    hw_name, mode, mem_access_bytes, runtime, precision="fp16"
+    hw_name, mode, mem_access_bytes, runtime, precision="fp16", pcb=None
 ):
     mem_access_bytes /= runtime
 
@@ -97,7 +107,7 @@ def calculate_layernorm_power(
         )
         return None
 
-    soc_intercept = soc_intercept_map[precision]
+    soc_intercept = soc_intercept_map[precision] * _sm_scale(hw_name, pcb)
     k_soc_dram = dram_map.get(precision, 0)
     soc_power = soc_intercept + (k_soc_dram * mem_access_bytes)
     total_power = mem_power + soc_power
@@ -118,7 +128,9 @@ def calculate_layernorm_power(
     }
 
 
-def calculate_flashattn_power(hw_name, precision, mem_access_bytes, fma_count, runtime):
+def calculate_flashattn_power(
+    hw_name, precision, mem_access_bytes, fma_count, runtime, pcb=None
+):
     mem_access_bytes /= runtime
     fma_count /= runtime
 
@@ -140,7 +152,7 @@ def calculate_flashattn_power(hw_name, precision, mem_access_bytes, fma_count, r
         )
         return None
 
-    soc_intercept = soc_intercept_map[precision]
+    soc_intercept = soc_intercept_map[precision] * _sm_scale(hw_name, pcb)
     k_soc_fma = k_soc_fma_map[precision]
     k_soc_dram = dram_map.get(precision, 0)
 
