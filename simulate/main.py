@@ -117,6 +117,10 @@ def update_layer_cache_record(flat_row: dict, path: str) -> None:
                 data = json.load(f)
             except json.JSONDecodeError:
                 pass
+        new_key = layer_cache_key_tuple_from_record(new_r)
+        for existing in data:
+            if layer_cache_key_tuple_from_record(existing) == new_key:
+                return  # already exists, skip writing
         data.append(new_r)
         with open(path, "w") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
@@ -476,6 +480,8 @@ def print_layer_summary_comm(
 
 def run_matmul(M, K, N, act_dt, wt_dt, mid_dt, out_dt, device, pcb, l2_prev=None):
     """Run [M,K]x[K,N] matmul. Falls back to roofline if M or K too small."""
+    if wt_dt.name == "fp4" and M < 128:
+        assert False, "M < 128 for fp4 is not supported"
     if K < 256:
         assert False, "too small"
     if device == "Orin":
@@ -633,7 +639,7 @@ def run_layer(
     }
 
     use_cached_layer = False
-    if cache_path and layer_cache_dict is not None and layer_cache_dict is not None:
+    if layer_cache_dict is not None:
         ops_cached = layer_cache_dict.get(cache_key)
         if ops_cached:
             use_cached_layer = True
@@ -667,7 +673,7 @@ def run_layer(
         print(
             f"    {op_name:<18} {lat_s * 1000:>8.4f} ms {power_breakdown[op_name]:>8.2f} W"
         )
-        if cache_path and layer_cache_dict is not None:
+        if layer_cache_dict is not None:
             layer_cache_row[op_name] = {
                 "lat_ms": lat_breakdown[op_name],
                 "dram_access_byte": dram_access_breakdown_bytes[op_name],
@@ -696,7 +702,7 @@ def run_layer(
             "qkv_proj",
             lat,
             lambda: calculate_matmul_power(
-                device, precision, mm.mem_access_size, mm.fma_count, lat
+                device, precision, mm.mem_access_size, mm.fma_count, lat, pcb=pcb
             ),
             mem_access_bytes=mm.mem_access_size,
             launch_latency_s=pcb.compute_module.launch_latency.matmul,
@@ -757,6 +763,7 @@ def run_layer(
                 best_fa.mem_access_size,
                 best_fa.fma_count,
                 lat_fa_combine,
+                pcb=pcb,
             ),
             mem_access_bytes=best_fa_dram_bytes,
             launch_latency_s=best_fa_launch_s,
@@ -783,7 +790,7 @@ def run_layer(
             "o_proj",
             lat,
             lambda: calculate_matmul_power(
-                device, precision, mm.mem_access_size, mm.fma_count, lat
+                device, precision, mm.mem_access_size, mm.fma_count, lat, pcb=pcb
             ),
             mem_access_bytes=mm.mem_access_size,
             launch_latency_s=pcb.compute_module.launch_latency.matmul,
@@ -801,7 +808,9 @@ def run_layer(
         record_op(
             "post_attn_ln",
             lat,
-            lambda: calculate_layernorm_power(device, mode, ln.mem_access_size, lat),
+            lambda: calculate_layernorm_power(
+                device, mode, ln.mem_access_size, lat, pcb=pcb
+            ),
             mem_access_bytes=ln.mem_access_size,
             launch_latency_s=pcb.compute_module.launch_latency.layernorm,
         )
@@ -827,7 +836,7 @@ def run_layer(
             "gate_up_proj",
             lat,
             lambda: calculate_matmul_power(
-                device, precision, mm.mem_access_size, mm.fma_count, lat
+                device, precision, mm.mem_access_size, mm.fma_count, lat, pcb=pcb
             ),
             mem_access_bytes=mm.mem_access_size,
             launch_latency_s=pcb.compute_module.launch_latency.matmul,
@@ -854,7 +863,7 @@ def run_layer(
             "down_proj",
             lat,
             lambda: calculate_matmul_power(
-                device, precision, mm.mem_access_size, mm.fma_count, lat
+                device, precision, mm.mem_access_size, mm.fma_count, lat, pcb=pcb
             ),
             mem_access_bytes=mm.mem_access_size,
             launch_latency_s=pcb.compute_module.launch_latency.matmul,
@@ -872,7 +881,9 @@ def run_layer(
         record_op(
             "post_ffn_ln",
             lat,
-            lambda: calculate_layernorm_power(device, mode, ln.mem_access_size, lat),
+            lambda: calculate_layernorm_power(
+                device, mode, ln.mem_access_size, lat, pcb=pcb
+            ),
             mem_access_bytes=ln.mem_access_size,
             launch_latency_s=pcb.compute_module.launch_latency.layernorm,
         )
@@ -897,7 +908,7 @@ def run_layer(
             "qkv_proj_2",
             lat,
             lambda: calculate_matmul_power(
-                device, precision, mm.mem_access_size, mm.fma_count, lat
+                device, precision, mm.mem_access_size, mm.fma_count, lat, pcb=pcb
             ),
             mem_access_bytes=mm.mem_access_size,
             launch_latency_s=pcb.compute_module.launch_latency.matmul,
