@@ -33,6 +33,8 @@
   "io_module": {
     "bandwidth": 273100000000,
     "bandwidth_efficiency": 0.9,
-    "latency_cycles": 470
+    "latency_cycles": 470,
+    "frequency": 8533,
+    "bitwidth": 256
   }
 }
