@@ -11,19 +11,21 @@ minimum-area passing config found in Phase 1.
 
 Inference configurations
 ------------------------
-Robo_S : 2 × InternVision (seq 1024, prefill)
-         + LLM prefill (seq 512)
+Seq-len values differ by model size: Qwen3_8B uses the full token budget;
+Qwen3_4B and Qwen3_1_7B use a reduced budget (ViT 576, shorter LLM context).
 
-Robo_L : 4 × InternVision (seq 1024, prefill)
-         + LLM prefill (seq 1024)
-
-AD_S   : 6 × InternVision (seq 1024, prefill)
-         + LLM prefill (seq 768)
-         + 3 × LLM decode (spec_tokens 64, seq_kv 768)
-
-AD_L   : 12 × InternVision (seq 1024, prefill)
-         + LLM prefill (seq 1024)
-         + 6 × LLM decode (spec_tokens 64, seq_kv 1024)
+                 Qwen3_8B          Qwen3_4B / Qwen3_1_7B
+                 ────────────────  ─────────────────────────────
+Robo_S : 2×ViT  seq 1024          seq 576
+         LLM prefill seq 512       seq 288
+Robo_L : 4×ViT  seq 1024          seq 576
+         LLM prefill seq 1024      seq 576
+AD_S   : 6×ViT  seq 1024          seq 576
+         LLM prefill seq 768       seq 768  (unchanged)
+         3×LLM decode spec_tokens 64, seq_kv 768
+AD_L   : 12×ViT seq 1024          seq 576
+         LLM prefill seq 1024      seq 1024 (unchanged)
+         6×LLM decode spec_tokens 64, seq_kv 1024
 
 LLM model / degree mapping (fixed)
 -----------------------------------
@@ -42,7 +44,6 @@ python -m dse.dse \\
 """
 
 import argparse
-import copy
 import io
 import json
 import os
@@ -153,13 +154,12 @@ def _create_modified_device(
     base_hw: str, sm_count: int, l2_mb: float, mem_freq: int, mem_bitwidth: int
 ):
     """
-    Load the base JSON config, deep-copy it, apply SM / L2 / BW overrides,
+    Load the base JSON config, apply SM / L2 / BW overrides,
     and return a Device object.
     """
     config_path = os.path.join(_HW_CONFIG_DIR, f"{base_hw}.json")
     with open(config_path, "r", encoding="utf-8") as f:
         config = json.load(f)
-    config = copy.deepcopy(config)
     config["compute_module"]["core_count"] = sm_count
     config["compute_module"]["l2_size"] = int(l2_mb * 1024 * 1024)
     config["io_module"]["bandwidth"] = mem_freq * mem_bitwidth * 1e6 / 8
@@ -494,8 +494,7 @@ def _compute_vit_stats(
         has_half = True
     else:
         raise ValueError(
-            f"num_vits={num_vits} is not evenly distributable across degree={degree} devices "
-            f"(remainder={remainder})."
+            f"num_vits={num_vits} on degree={degree} devices (remainder={remainder}). Support half-ViT remainder only."
         )
 
     total_lat = 0.0
@@ -867,7 +866,7 @@ def run_dse(
     )
     total = len(sm_desc) * len(l2_desc)
 
-    mem_bw_gbps = mem_freq * mem_bitwidth / 8 / 1000  # GB/s
+    mem_bw = mem_freq * mem_bitwidth / 8 / 1000  # GB/s
 
     print("=" * 72)
     print("  DSE: ViT + LLM Hardware Configuration Search")
@@ -878,7 +877,7 @@ def run_dse(
         f"  (GPU budget ≤ {soc_area_mm2 * GPU_AREA_FRACTION:.0f} mm²)"
     )
     print(
-        f"  Memory           : {mem_freq} MT/s  ×  {mem_bitwidth}-bit  ({mem_bw_gbps:.1f} GB/s)"
+        f"  Memory           : {mem_freq} MT/s  ×  {mem_bitwidth}-bit  ({mem_bw:.1f} GB/s)"
     )
     print(f"  Inference config : {inference_config}")
     print(f"  LLM model        : {llm_model}  (degree={llm_degree})")
@@ -1083,10 +1082,12 @@ def main() -> None:
         required=True,
         choices=["Robo_S", "Robo_L", "AD_S", "AD_L"],
         help=(
-            "Robo_S: 2×ViT (seq 1024) + LLM prefill (seq 512).  "
-            "Robo_L: 4×ViT (seq 1024) + LLM prefill (seq 1024).  "
-            "AD_S:   6×ViT (seq 1024) + LLM prefill (seq 768) + 3×decode.  "
-            "AD_L:  12×ViT (seq 1024) + LLM prefill (seq 1024) + 6×decode."
+            "Robo_S: 2×ViT + LLM prefill.  "
+            "Robo_L: 4×ViT + LLM prefill.  "
+            "AD_S:   6×ViT + LLM prefill (seq 768) + 3×decode.  "
+            "AD_L:  12×ViT + LLM prefill (seq 1024) + 6×decode.  "
+            "Seq-lens for ViT and Robo prefill vary by --llm_model; "
+            "see module docstring for details."
         ),
     )
     parser.add_argument(
@@ -1172,7 +1173,7 @@ def main() -> None:
     # ── Guard against wide-bus config on a small SoC ───────────────────────────
     if args.area < 400 and mem_bitwidth in {256, 288}:
         print(
-            f"[ERROR] area={args.area} mm² (≤100) is not compatible with mem_bitwidth={mem_bitwidth}-bit: no enough shoreline to accomodate PHYs."
+            f"[ERROR] area={args.area} mm² (< 400) is not compatible with mem_bitwidth={mem_bitwidth}-bit: not enough shoreline to accommodate PHYs."
         )
         sys.exit(1)
 
