@@ -16,14 +16,14 @@ Qwen3_4B and Qwen3_1_7B use a reduced budget (ViT 576, shorter LLM context).
 
                  Qwen3_8B          Qwen3_4B / Qwen3_1_7B
                  ────────────────  ─────────────────────────────
-Robo_S : 2×ViT  seq 1024          seq 576
+Robo-S : 2×ViT  seq 1024          seq 576
          LLM prefill seq 512       seq 288
-Robo_L : 4×ViT  seq 1024          seq 576
+Robo-L : 4×ViT  seq 1024          seq 576
          LLM prefill seq 1024      seq 576
-AD_S   : 6×ViT  seq 1024          seq 576
+AD-S   : 6×ViT  seq 1024          seq 576
          LLM prefill seq 768       seq 768  (unchanged)
          3×LLM decode spec_tokens 64, seq_kv 768
-AD_L   : 12×ViT seq 1024          seq 576
+AD-L   : 12×ViT seq 1024          seq 576
          LLM prefill seq 1024      seq 1024 (unchanged)
          6×LLM decode spec_tokens 64, seq_kv 1024
 
@@ -36,10 +36,11 @@ Qwen3_1_7B → degree=1 (single-card)
 Usage
 -----
 python -m dse.dse \\
-    --area 400 --base_hw Orin --inference_config Robo_S --precision fp16_int4
+    --area 400 --base_hw Orin --inference_config Robo-S --precision fp16_int4
 
 python -m dse.dse \\
-    --area 400 --base_hw Thor --inference_config AD_S --precision fp8 \\
+    --base_hw Thor --inference_config AD-S --precision fp8 \\
+    --area 200 --mem_freq 10667 --mem_bitwidth 144 \\
     --llm_model Qwen3_4B --latency_limit 120
 """
 
@@ -618,9 +619,9 @@ def compute_inference_latency(
         "comm_bw_gbps": llm_comm_bw,
     }
 
-    # ── Robo_S: 2 × ViT  +  LLM prefill ─────────────────────────────────────
+    # ── Robo-S: 2 × ViT  +  LLM prefill ─────────────────────────────────────
     # seq: ViT 576/1024, LLM 288/512 (small / full model)
-    if inference_config == "Robo_S":
+    if inference_config == "Robo-S":
         LLM_SEQ = 288 if _small_model else 512
 
         vit_lat, vit_energy = _compute_vit_stats(
@@ -657,9 +658,9 @@ def compute_inference_latency(
             "llm_prefill_para": llm_prefill_para,
         }
 
-    # ── Robo_L: 4 × ViT  +  LLM prefill ─────────────────────────────────────
+    # ── Robo-L: 4 × ViT  +  LLM prefill ─────────────────────────────────────
     # seq: ViT 576/1024, LLM 576/1024 (small / full model)
-    elif inference_config == "Robo_L":
+    elif inference_config == "Robo-L":
         LLM_SEQ = 576 if _small_model else 1024
 
         vit_lat, vit_energy = _compute_vit_stats(
@@ -696,9 +697,9 @@ def compute_inference_latency(
             "llm_prefill_para": llm_prefill_para,
         }
 
-    # ── AD_S: 6 × ViT  +  LLM prefill (seq 768)  +  3 × decode ─────────────
+    # ── AD-S: 6 × ViT  +  LLM prefill (seq 768)  +  3 × decode ─────────────
     # ViT seq: 576 (small model) / 1024 (8B); LLM seq unchanged at 768.
-    elif inference_config == "AD_S":
+    elif inference_config == "AD-S":
         LLM_SEQ = 768
         SPEC_TOKENS = 64 if llm_precision != "fp4" else 128
         NUM_DECODE_STEPS = 3
@@ -758,9 +759,9 @@ def compute_inference_latency(
             "llm_decode_lat_ms": llm_decode_lat,
         }
 
-    # ── AD_L: 12 × ViT  +  LLM prefill (seq 1024)  +  6 × decode ───────────
+    # ── AD-L: 12 × ViT  +  LLM prefill (seq 1024)  +  6 × decode ───────────
     # ViT seq: 576 (small model) / 1024 (8B); LLM seq unchanged at 1024.
-    elif inference_config == "AD_L":
+    elif inference_config == "AD-L":
         LLM_SEQ = 1024
         SPEC_TOKENS = 64 if llm_precision != "fp4" else 128
         NUM_DECODE_STEPS = 6
@@ -1007,7 +1008,7 @@ def _print_summary(
         print("  No feasible configurations found.")
         return
 
-    if inference_config in ("AD_S", "AD_L"):
+    if inference_config in ("AD-S", "AD-L"):
         lat_cols = ["vit_lat_ms", "llm_prefill_lat_ms", "llm_decode_lat_ms"]
         lat_hdr = (
             f"  {'ViT(ms)':>10}  {'LLMpre(ms)':>11}  {'Para':>4}  {'LLMdec(ms)':>11}"
@@ -1080,12 +1081,12 @@ def main() -> None:
     parser.add_argument(
         "--inference_config",
         required=True,
-        choices=["Robo_S", "Robo_L", "AD_S", "AD_L"],
+        choices=["Robo-S", "Robo-L", "AD-S", "AD-L"],
         help=(
-            "Robo_S: 2×ViT + LLM prefill.  "
-            "Robo_L: 4×ViT + LLM prefill.  "
-            "AD_S:   6×ViT + LLM prefill (seq 768) + 3×decode.  "
-            "AD_L:  12×ViT + LLM prefill (seq 1024) + 6×decode.  "
+            "Robo-S: 2×ViT + LLM prefill.  "
+            "Robo-L: 4×ViT + LLM prefill.  "
+            "AD-S:   6×ViT + LLM prefill (seq 768) + 3×decode.  "
+            "AD-L:  12×ViT + LLM prefill (seq 1024) + 6×decode.  "
             "Seq-lens for ViT and Robo prefill vary by --llm_model; "
             "see module docstring for details."
         ),
