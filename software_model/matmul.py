@@ -489,6 +489,7 @@ class Matmul(Operator):
         cta_m = mapping.cta_m
         cta_n = mapping.cta_n
         cta_k = mapping.cta_k
+        stages = mapping.stages
         raster_order = mapping.raster_order
         swizzle_size = (
             mapping.swizzle_size
@@ -560,11 +561,17 @@ class Matmul(Operator):
                         tail_l1_tile if k_size < cta_k else normal_l1_tile,
                         ceil(len(cta_chunk) / execution_unit_num),
                         l2_status,
+                        self.activation_dtype,
                         self.weight_dtype,
                         self.output_dtype,
                         pcb_module,
                     )
                 )
+                if (
+                    curr_wave[-1].l2_working_set_size * stages
+                    > pcb_module.compute_module.l2_size
+                ):  # Check L2 usage
+                    return inf
             waves.append(curr_wave)
         # print("total waves: ", len(waves))
 
@@ -678,6 +685,7 @@ class Matmul(Operator):
             l1_tile: "Matmul.L1TileSimulator",
             active_ctas_per_core: int,
             l2_status: L2CacheMatmul,
+            activation_dtype: DataType,
             weight_dtype: DataType,
             output_dtype: DataType,
             pcb_module: Device,
@@ -691,9 +699,14 @@ class Matmul(Operator):
             self.cta_chunk = cta_chunk
             self.l1_tile = l1_tile
             self.l2_status = l2_status
+            self.activation_dtype = activation_dtype
             self.weight_dtype = weight_dtype
             self.output_dtype = output_dtype
             self.pcb_module = pcb_module
+            self.l2_working_set_size = (
+                M * K * self.activation_dtype.word_size
+                + K * N * self.weight_dtype.word_size
+            )
 
             self.l1_input_io_cycle_count = self.l1_tile.input_io_cycle_count * len(
                 self.cta_chunk
