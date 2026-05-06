@@ -81,10 +81,18 @@ GPU_AREA_FRACTION = 0.35  # GPU ≤ 35% of total SoC area
 
 # ── SM / L2 search grids ────────────────────────────────────────────────────────
 ORIN_SM_CANDIDATES = [4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32]
-ORIN_L2_MB_CANDIDATES = [0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
+ORIN_L2_MB_CANDIDATES = [1.0, 2.0, 4.0, 8.0]
 
-THOR_SM_CANDIDATES = [4, 8, 12, 16, 20, 24, 28, 32, 40, 48]
-THOR_L2_MB_CANDIDATES = [4.0, 8.0, 16.0, 24.0, 32.0, 48.0, 64.0]
+THOR_SM_CANDIDATES = [2, 4, 8, 12, 16, 20, 24, 28, 32, 40, 48]
+THOR_L2_MB_CANDIDATES = [8.0, 16.0, 32.0, 64.0]
+
+# ── L2 bandwidth sub-unit parameters (per platform) ─────────────────────────
+_SM_BW_PER_CYCLE: Dict[str, int] = {"Orin": 32, "Thor": 64}  # B/clk/SM
+_FBP_BW_PER_UNIT: int = 256  # B/clk/FBP
+_BASE_FBP_COUNT: Dict[str, int] = {"Orin": 2, "Thor": 4}
+_BASE_L2_MB: Dict[str, float] = {"Orin": 4.0, "Thor": 32.0}
+_L2S_BW_PER_CYCLE: Dict[str, int] = {"Orin": 32, "Thor": 64}  # B/clk/slice
+_BASE_L2S_COUNT: Dict[str, int] = {"Orin": 16, "Thor": 24}
 
 # ── Precision rules ─────────────────────────────────────────────────────────────
 # ViT precision is fixed per platform (not controlled by CLI)
@@ -99,9 +107,9 @@ LLM_PRECISION_CHOICES: Dict[str, list] = {
 # ── LLM / ViT interconnect ───────────────────────────────────────────────────
 _LLM_ICNT_TYPE = "ucie_std"
 _LLM_NO_CONTENTION = True
-# Single UCIe link: 128 GB/s → 1024 Gbps.  _comm_bw_for_degree() scales this
+# Single UCIe link: 128 GB/s → 128 * 8 Gbps.  _comm_bw_for_degree() scales this
 # by the number of active links (×1 for degree=2, ×2 for degree=4).
-_LINK_BW_GBPS: float = 128 * 8  # 1024 Gbps per link
+_LINK_BW_GBPS: float = 128 * 8  # 128 * 8 Gbps per link
 # CP chosen over TP when CP latency is within this factor of TP latency
 _CP_VS_TP_THRESHOLD = 1.05
 
@@ -151,20 +159,53 @@ def _area_model_cwd():
         os.chdir(original)
 
 
+def _compute_l2_bw_per_cycle(base_hw: str, sm_count: int, l2_mb: float) -> int:
+    """
+    Compute l2_bandwidth_per_cycle (B/clk) as the minimum of three limits:
+      - SM-side  : SM_BW_PER_CYCLE[hw] × sm_count
+      - FBP-side : FBP_BW_PER_UNIT × FBP_COUNT  (FBP_COUNT ∝ l2_mb, min 1)
+      - L2S-side : L2S_BW_PER_CYCLE[hw] × L2S_COUNT  (L2S_COUNT ∝ l2_mb)
+    """
+    base_l2_mb = _BASE_L2_MB[base_hw]
+    sm_bw = _SM_BW_PER_CYCLE[base_hw] * sm_count
+    FBP_COUNT = max(1.0, _BASE_FBP_COUNT[base_hw] * l2_mb / base_l2_mb)
+    assert FBP_COUNT.is_integer(), f"FBP_COUNT is not an integer: {FBP_COUNT}"
+    fbp_bw = _FBP_BW_PER_UNIT * FBP_COUNT
+    L2S_COUNT = _BASE_L2S_COUNT[base_hw] * l2_mb / base_l2_mb
+    assert L2S_COUNT.is_integer(), f"L2S_COUNT is not an integer: {L2S_COUNT}"
+    l2s_bw = _L2S_BW_PER_CYCLE[base_hw] * L2S_COUNT
+    return int(min(sm_bw, fbp_bw, l2s_bw))
+
+
 def _create_modified_device(
     base_hw: str, sm_count: int, l2_mb: float, mem_freq: int, mem_bitwidth: int
 ):
-    """
-    Load the base JSON config, apply SM / L2 / BW overrides,
-    and return a Device object.
-    """
     config_path = os.path.join(_HW_CONFIG_DIR, f"{base_hw}.json")
     with open(config_path, "r", encoding="utf-8") as f:
         config = json.load(f)
     config["compute_module"]["core_count"] = sm_count
     config["compute_module"]["l2_size"] = int(l2_mb * 1024 * 1024)
     config["io_module"]["bandwidth"] = mem_freq * mem_bitwidth * 1e6 / 8
+    config["compute_module"]["l2_bandwidth_per_cycle"] = _compute_l2_bw_per_cycle(
+        base_hw, sm_count, l2_mb
+    )
     return _create_device_from_config(config)
+
+
+def _check_l2_bw_constraint(
+    base_hw: str, sm_count: int, l2_mb: float, mem_freq: int, mem_bitwidth: int
+) -> bool:
+    """
+    Return True when L2 bandwidth (B/s) ≥ memory bandwidth (B/s).
+    Configs where L2 is slower than the memory bus are physically unsound.
+    """
+    config_path = os.path.join(_HW_CONFIG_DIR, f"{base_hw}.json")
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+    clock_freq: int = config["compute_module"]["clock_freq"]
+    l2_bw_bps = _compute_l2_bw_per_cycle(base_hw, sm_count, l2_mb) * clock_freq
+    mem_bw_bps = mem_freq * mem_bitwidth * 1e6 / 8
+    return l2_bw_bps >= mem_bw_bps
 
 
 def _check_area_constraint(
@@ -913,6 +954,11 @@ def run_dse(
             idx += 1
             tag = f"[{idx:3d}/{total}] SM={sm:2d}  L2={l2:5.1f} MB"
 
+            # ── Step 0: L2 BW vs mem BW (fast) ───────────────────────
+            if not _check_l2_bw_constraint(base_hw, sm, l2, mem_freq, mem_bitwidth):
+                print(f"{tag} | L2 BW < mem BW  [l2bw skip]")
+                continue
+
             # ── Step 1: area constraint (fast) ─────────────────────────────
             area_ok, gpu_area = _check_area_constraint(base_hw, sm, l2, soc_area_mm2)
             if not area_ok:
@@ -960,6 +1006,7 @@ def run_dse(
                 {
                     "sm_count": sm,
                     "l2_mb": l2,
+                    "l2_bw_per_cycle": _compute_l2_bw_per_cycle(base_hw, sm, l2),
                     "gpu_area_mm2": round(gpu_area, 2),
                     "total_lat_ms": round(lat, 4),
                     "avg_power_w": round(pwr, 2),
@@ -1018,7 +1065,7 @@ def _print_summary(
         lat_hdr = f"  {'ViT(ms)':>10}  {'LLMpre(ms)':>11}  {'Para':>4}"
 
     main_hdr = (
-        f"  {'SM':>4}  {'L2(MB)':>7}  {'GPU(mm²)':>9}  "
+        f"  {'SM':>4}  {'L2(MB)':>7}  {'L2BW(B/clk)':>12}  {'GPU(mm²)':>9}  "
         f"{'Total(ms)':>10}  {'Power(W)':>9}"
     )
     print(main_hdr + lat_hdr)
@@ -1026,7 +1073,7 @@ def _print_summary(
 
     for r in sorted(passing, key=lambda x: x["total_lat_ms"]):
         row = (
-            f"  {r['sm_count']:>4}  {r['l2_mb']:>7.1f}  {r['gpu_area_mm2']:>9.1f}  "
+            f"  {r['sm_count']:>4}  {r['l2_mb']:>7.1f}  {r['l2_bandwidth_per_cycle']:>12d}  {r['gpu_area_mm2']:>9.1f}  "
             f"{r['total_lat_ms']:>10.2f}  {r['avg_power_w']:>9.1f}"
         )
         for col in lat_cols:
@@ -1231,6 +1278,7 @@ def main() -> None:
     comparison_models = [
         (m, d) for m, d in _MODEL_DEFAULT_DEGREE.items() if m != llm_model
     ]
+    comparison_results = {}
     for cmp_model, cmp_degree in comparison_models:
         print(f"\n  Simulating {cmp_model} (degree={cmp_degree}) …", flush=True)
         try:
@@ -1257,6 +1305,7 @@ def main() -> None:
         cmp_row = {
             "sm_count": sm_min,
             "l2_mb": l2_min,
+            "l2_bw_per_cycle": _compute_l2_bw_per_cycle(args.base_hw, sm_min, l2_min),
             "gpu_area_mm2": area_min,
             "total_lat_ms": round(cmp_result["total_lat_ms"], 4),
             "avg_power_w": round(cmp_result["avg_power_w"], 2),
@@ -1269,6 +1318,8 @@ def main() -> None:
             args.latency_limit,
             label=f"Phase 2  ({cmp_model}, degree={cmp_degree})",
         )
+        comparison_results[cmp_model] = cmp_result
+    return results, comparison_results
 
 
 if __name__ == "__main__":
