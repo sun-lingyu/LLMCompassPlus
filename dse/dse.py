@@ -40,7 +40,7 @@ python -m dse.dse \\
 
 python -m dse.dse \\
     --base_hw Thor --inference_config AD-S --precision fp8 \\
-    --area 200 --mem_freq 10667 --mem_bitwidth 144 \\
+    --area 200 --mem_freq 10667 --mem_bitwidth 128 \\
     --llm_model Qwen3_4B --latency_limit 120
 """
 
@@ -81,10 +81,10 @@ GPU_AREA_FRACTION = 0.35  # GPU ≤ 35% of total SoC area
 
 # ── SM / L2 search grids ────────────────────────────────────────────────────────
 ORIN_SM_CANDIDATES = [4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32]
-ORIN_L2_MB_CANDIDATES = [1.0, 2.0, 4.0, 8.0]
+ORIN_L2_MB_CANDIDATES = [2.0, 4.0, 8.0]
 
 THOR_SM_CANDIDATES = [2, 4, 8, 12, 16, 20, 24, 28, 32, 40, 48]
-THOR_L2_MB_CANDIDATES = [8.0, 16.0, 32.0, 64.0]
+THOR_L2_MB_CANDIDATES = [16.0, 32.0, 64.0]
 
 # ── L2 bandwidth sub-unit parameters (per platform) ─────────────────────────
 _SM_BW_PER_CYCLE: Dict[str, int] = {"Orin": 32, "Thor": 64}  # B/clk/SM
@@ -1073,7 +1073,7 @@ def _print_summary(
 
     for r in sorted(passing, key=lambda x: x["total_lat_ms"]):
         row = (
-            f"  {r['sm_count']:>4}  {r['l2_mb']:>7.1f}  {r['l2_bandwidth_per_cycle']:>12d}  {r['gpu_area_mm2']:>9.1f}  "
+            f"  {r['sm_count']:>4}  {r['l2_mb']:>7.1f}  {r['l2_bw_per_cycle']:>12d}  {r['gpu_area_mm2']:>9.1f}  "
             f"{r['total_lat_ms']:>10.2f}  {r['avg_power_w']:>9.1f}"
         )
         for col in lat_cols:
@@ -1090,14 +1090,14 @@ def _print_summary(
 
 
 _MEM_FREQ_CHOICES = [6400, 8533, 9600, 10667, 12800]
-_MEM_BITWIDTH_CHOICES = [128, 144, 256, 288]
+_MEM_BITWIDTH_CHOICES = [128, 256]
 
 # LPDDR5/LPDDR5x: [6400, 8533, 9600] ↔ [128, 256]
-# LPDDR6:         [10667, 12800]      ↔ [144, 288]
+# LPDDR6:         [10667, 12800]      ↔ [128, 256]
 _LPDDR5_FREQS = {6400, 8533, 9600}
 _LPDDR6_FREQS = {10667, 12800}
 _LPDDR5_BITWIDTHS = {128, 256}
-_LPDDR6_BITWIDTHS = {144, 288}
+_LPDDR6_BITWIDTHS = {128, 256}
 
 _DEFAULT_MEM: Dict[str, Tuple[int, int]] = {
     "Orin": (6400, 256),
@@ -1150,7 +1150,7 @@ def main() -> None:
     parser.add_argument(
         "--latency_limit",
         type=float,
-        default=100.0,
+        default=110.0,
         help="End-to-end latency constraint in ms (default: 100 ms).",
     )
     parser.add_argument(
@@ -1161,7 +1161,7 @@ def main() -> None:
         help=(
             "Memory frequency in MT/s.  "
             "LPDDR5/5x: 6400 | 8533 | 9600 (bitwidth must be 128 or 256).  "
-            "LPDDR6:    10667 | 12800       (bitwidth must be 144 or 288).  "
+            "LPDDR6:    10667 | 12800       (bitwidth must be 128 or 256).  "
             "Default: 6400 for Orin, 8533 for Thor."
         ),
     )
@@ -1172,7 +1172,7 @@ def main() -> None:
         default=None,
         help=(
             "Memory bus width in bits.  "
-            "LPDDR5/5x: 128 | 256.  LPDDR6: 144 | 288.  "
+            "LPDDR5/5x: 128 | 256.  LPDDR6: 128 | 256.  "
             "Default: 256 for both Orin and Thor."
         ),
     )
@@ -1219,11 +1219,15 @@ def main() -> None:
         )
 
     # ── Guard against wide-bus config on a small SoC ───────────────────────────
-    if args.area < 400 and mem_bitwidth in {256, 288}:
+    if args.area < 400 and mem_bitwidth in {256}:
         print(
             f"[ERROR] area={args.area} mm² (< 400) is not compatible with mem_bitwidth={mem_bitwidth}-bit: not enough shoreline to accommodate PHYs."
         )
         sys.exit(1)
+
+    if args.area < 400:
+        ORIN_L2_MB_CANDIDATES.insert(0, 1.0)
+        THOR_L2_MB_CANDIDATES.insert(0, 8.0)
 
     # ── Resolve degree from model name (fixed mapping) ─────────────────────────
     llm_model: str = args.llm_model
