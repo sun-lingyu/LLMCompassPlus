@@ -156,11 +156,11 @@ def plot_fitting_results(
         "Measurement (W)",
         fontsize=fontsize,
         fontweight="bold",
-        x=1.0,
-        ha="right",
+        x=0.6,
+        ha="center",
         va="bottom",
     )
-    ax.set_ylabel("Prediction (W)", fontsize=fontsize, fontweight="bold")
+    # ax.set_ylabel("Prediction (W)", fontsize=fontsize, fontweight="bold")
     leg = ax.legend(
         loc="upper left",
         fontsize=fontsize - 2,
@@ -272,20 +272,44 @@ def plot_latency(
     is_last=False,
     has_baseline=False,
     fontsize=14,
+    log_scale=False,
 ):
     sorted_table = latency_table.sort_values(by="Measurement")
 
     x = sorted_table["Measurement"]
 
-    ax.scatter(x, sorted_table["Ours"], color="navy", alpha=0.6, s=15, label="Ours")
     ax.scatter(
-        x, sorted_table["Roofline"], marker="x", alpha=0.6, s=15, label="Roofline"
+        x,
+        sorted_table["Roofline"],
+        marker="x",
+        alpha=0.4,
+        s=15,
+        label="Roofline",
+        zorder=2,
+        linewidths=0.8,
     )
     if has_baseline:
         ax.scatter(
-            x, sorted_table["Baseline"], marker="^", alpha=0.6, s=15, label="LLMCompass"
+            x,
+            sorted_table["Baseline"],
+            marker="^",
+            alpha=0.4,
+            s=15,
+            label="LLMCompass",
+            zorder=3,
+            edgecolors="none",
         )
-    ax.plot(x, x, "r--", linewidth=1, label="Ideal (y=x)")
+    ax.scatter(
+        x,
+        sorted_table["Ours"],
+        color="navy",
+        alpha=0.4,
+        s=15,
+        label="Ours",
+        zorder=4,
+        edgecolors="none",
+    )
+    ax.plot(x, x, "r--", linewidth=1, label="Ideal (y=x)", zorder=5)
 
     # ax.set_title(title)
     fig = ax.figure
@@ -312,10 +336,49 @@ def plot_latency(
             frameon=True,
             borderpad=0.2,
         )
-        leg.set_zorder(0)
+        leg.set_zorder(1.5)
         leg.get_frame().set_linewidth(0.8)
+        leg.get_frame().set_alpha(0.5)
 
     ax.grid(True, linestyle="--", alpha=0.5)
+    ax.set_axisbelow(True)
+
+    if log_scale:
+        import math
+
+        from matplotlib.ticker import (
+            FixedLocator,
+            FuncFormatter,
+            LogLocator,
+            NullFormatter,
+        )
+
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+
+        def _nice_ticks(vmin, vmax, subs):
+            d0 = math.floor(math.log10(vmin)) - 1
+            d1 = math.ceil(math.log10(vmax)) + 1
+            ticks = []
+            for d in range(d0, d1 + 1):
+                for s in subs:
+                    v = s * 10**d
+                    if vmin <= v <= vmax:
+                        ticks.append(v)
+            return sorted(set(ticks))
+
+        _fmt = FuncFormatter(lambda v, _: f"{v:g}")
+        xmin, xmax = ax.get_xlim()
+        ax.xaxis.set_major_locator(FixedLocator(_nice_ticks(xmin, xmax, [1.0])))
+        ax.xaxis.set_major_formatter(_fmt)
+        ax.xaxis.set_minor_locator(FixedLocator(_nice_ticks(xmin, xmax, [5.0])))
+        ax.xaxis.set_minor_formatter(NullFormatter())
+        ax.tick_params(axis="x", which="minor", length=0)
+        ax.xaxis.grid(True, which="minor", linestyle="--", alpha=0.5)
+        # y axis: 1/2/5 subdivisions for denser grid
+        ax.yaxis.set_major_locator(LogLocator(subs=[1.0, 2.0, 5.0], numticks=15))
+        ax.yaxis.set_major_formatter(_fmt)
+        ax.yaxis.set_minor_formatter(NullFormatter())
 
 
 def add_mape_annotation(df, ax, precision, fontsize=11, has_baseline=False):
@@ -334,7 +397,8 @@ def add_mape_annotation(df, ax, precision, fontsize=11, has_baseline=False):
         marker="o",
         linestyle="None",
         markersize=ms,
-        alpha=0.6,
+        alpha=0.4,
+        markeredgewidth=0,
     )
     h_roofline = Line2D(
         [0],
@@ -343,8 +407,8 @@ def add_mape_annotation(df, ax, precision, fontsize=11, has_baseline=False):
         marker="x",
         linestyle="None",
         markersize=ms,
-        alpha=0.6,
-        markeredgewidth=1.2,
+        alpha=0.3,
+        markeredgewidth=0.8,
     )
     if has_baseline:
         mape_baseline = calc_mape(df["Baseline"], df["Measurement"])
@@ -355,7 +419,8 @@ def add_mape_annotation(df, ax, precision, fontsize=11, has_baseline=False):
             marker="^",
             linestyle="None",
             markersize=ms,
-            alpha=0.6,
+            alpha=0.3,
+            markeredgewidth=0,
         )
         handles = [h_ours, h_baseline, h_roofline]
         labels = [
@@ -379,8 +444,10 @@ def add_mape_annotation(df, ax, precision, fontsize=11, has_baseline=False):
         fontsize=fontsize,
         title="MAPE:",
         title_fontsize=fontsize,
-        frameon=False,
+        frameon=True,
     )
+    mape_legend.get_frame().set_alpha(0)
+    mape_legend.get_frame().set_linewidth(0.8)
     if old_legend is not None:
         ax.add_artist(old_legend)
     # Keep MAPE legend on top of the main legend when they overlap

@@ -431,7 +431,7 @@ if __name__ == "__main__":
     pcb = device_dict[args.device]
     K_shapes, N_shapes = get_model_shape(args.model)
     if args.mode == "prefill":
-        M_list = [512, 768, 1024, 1280, 1536]
+        M_list = [256, 512, 768, 1024, 1280, 1536]
         if args.model == "InternVision":
             M_list = [576, 1024]  # 336x336/448x448 with patch 14x14
     elif args.mode == "decode":

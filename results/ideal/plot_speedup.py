@@ -191,6 +191,27 @@ def main():
     _draw_lines(ax)
     _style_ax(ax)
 
+    if args.legend:
+        handles, labels = _build_legend_handles(
+            parallelisms, models, color_map, line_color_map
+        )
+        leg = ax.legend(
+            handles,
+            labels,
+            fontsize=6,
+            loc="lower center",
+            frameon=True,
+            fancybox=False,
+            edgecolor="#888888",
+            facecolor="white",
+            labelspacing=0.2,
+            handlelength=1.5,
+            handletextpad=0.3,
+            borderpad=0.4,
+            ncol=len(parallelisms),
+        )
+        leg.get_frame().set_linewidth(0.8)
+
     out_stem = (
         f"{args.device}_{args.precision}_{args.phase}_degree{args.degree}_speedup"
     )
@@ -198,32 +219,6 @@ def main():
     plt.tight_layout()
     plt.savefig(out_path, dpi=300, facecolor="white")
     print(f"Chart successfully saved to: {out_path}")
-
-    # --- Standalone legend figure ---
-    handles, labels = _build_legend_handles(
-        parallelisms, models, color_map, line_color_map
-    )
-    fig_leg = plt.figure(figsize=(1.1, 1.5))
-    ax_leg = fig_leg.add_axes([0, 0, 1, 1])
-    ax_leg.set_axis_off()
-    leg = ax_leg.legend(
-        handles,
-        labels,
-        fontsize=8,
-        loc="center",
-        frameon=True,
-        fancybox=False,
-        edgecolor="#888888",
-        facecolor="white",
-        labelspacing=0.3,
-        handlelength=1.8,
-        handletextpad=0.4,
-        borderpad=0.5,
-    )
-    leg.get_frame().set_linewidth(0.8)
-    leg_path = os.path.join(script_dir, f"{out_stem}_legend.png")
-    fig_leg.savefig(leg_path, dpi=300, facecolor="white", bbox_inches="tight")
-    print(f"Legend saved to: {leg_path}")
 
 
 if __name__ == "__main__":

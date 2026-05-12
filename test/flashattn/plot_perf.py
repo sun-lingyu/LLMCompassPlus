@@ -25,6 +25,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model",
         type=str,
+        nargs="+",
         choices=["InternVision", "Qwen3_0_6B", "Qwen3_1_7B", "Qwen3_4B", "Qwen3_8B"],
     )
     parser.add_argument(
@@ -35,6 +36,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--precision", type=str, choices=["fp16", "int8", "int4", "fp8", "fp4"]
     )
+    parser.add_argument(
+        "--log",
+        action="store_true",
+        help="Use log scale for both axes",
+    )
     args = parser.parse_args()
 
     try:
@@ -42,38 +48,50 @@ if __name__ == "__main__":
     except:
         plt.style.use("ggplot")
 
-    # Plot one figure
-    fig, axes = plt.subplots(1, 1, figsize=(2.2, 2.2), sharey=True)
-    csv_files = glob.glob(
-        str(
-            Path(
-                f"{file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.mode}"
+    # Load and concatenate data from all specified models
+    per_model_dfs = []
+    for model in args.model:
+        csv_files = glob.glob(
+            str(
+                Path(
+                    f"{file_dir}/results_perf/{model}/{args.device}/{args.precision}/{args.mode}"
+                )
+                / "*.csv"
             )
-            / "*.csv"
         )
-    )
-    dfs = [pd.read_csv(f) for f in csv_files]
-    latency_table = pd.concat(dfs, ignore_index=True)
-    latency_table = latency_table.drop_duplicates(
-        subset=["Ours", "Roofline"],
-        keep="first",
-    )
+        if not csv_files:
+            print(f"Warning: no CSV files found for model={model}, skipping.")
+            continue
+        dfs = [pd.read_csv(f) for f in csv_files]
+        model_df = pd.concat(dfs, ignore_index=True)
+        model_df = model_df.drop_duplicates(
+            subset=["Ours", "Roofline"],
+            keep="first",
+        )
+        per_model_dfs.append(model_df)
+
+    latency_table = pd.concat(per_model_dfs, ignore_index=True)
     latency_table = latency_table.sort_values(by="Measurement", ascending=False)
+
+    # Determine output path
+    model_tag = "+".join(args.model)
+    out_dir = Path(f"{file_dir}/results_perf")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"{model_tag}_{args.device}_{args.precision}_{args.mode}.png"
+
+    # Plot one figure
+    fig, axes = plt.subplots(1, 1, figsize=(2.5, 2), sharey=True)
     plot_latency(
         latency_table,
         axes,
-        title=args.model,
+        title="+".join(args.model),
         precision=args.precision,
         is_first=True,
         is_last=True,
+        log_scale=args.log,
     )
     add_mape_annotation(latency_table, axes, args.precision)
 
     fig.tight_layout(pad=0.2, w_pad=0.2, h_pad=0.1)
-    fig.savefig(
-        f"{file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.mode}.png",
-        dpi=300,
-    )
-    print(
-        f"saved to {file_dir}/results_perf/{args.model}/{args.device}/{args.precision}/{args.mode}.png"
-    )
+    fig.savefig(out_path, dpi=300, bbox_inches="tight")
+    print(f"saved to {out_path}")
