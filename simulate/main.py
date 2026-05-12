@@ -18,6 +18,7 @@ from power_model.power_model import (
     calculate_flashattn_power,
     calculate_layernorm_power,
     calculate_matmul_power,
+    load_power_data,
 )
 from software_model.flashattn import FlashAttn
 from software_model.flashattn_combine import FlashAttnCombine
@@ -286,7 +287,7 @@ def _compute_non_overlapped_comm(
                 (dram_peak_gbps - overlap_mem_bw_gbps)
                 / 2,  # Remaining BW is used for Tx + Rx, so divide by 2
             )
-            if dram_peak_gbps - overlap_mem_bw_gbps < eff_bandwidth_gbps:
+            if (dram_peak_gbps - overlap_mem_bw_gbps) / 2 < eff_bandwidth_gbps:
                 print(
                     f"WARNING: Comm & Comp overlap: Mem BW contention dominates! Effective BW is {bw_ov_gbps / 8:.2f} GB/s"
                 )
@@ -610,6 +611,8 @@ def run_layer(
     l2_prev = None
     lat_breakdown = {}
     power_breakdown = {}
+    power_breakdown_chip = {}
+    power_breakdown_dram = {}
     dram_access_breakdown_bytes = {}
     launch_lat_breakdown_ms = {}
     mode = "prefill" if is_prefill else "decode"
@@ -656,6 +659,21 @@ def run_layer(
                 print(
                     f"    {op:<18} {lat_breakdown[op]:>8.4f} ms {power_breakdown[op]:>8.2f} W  [cache]"
                 )
+            # Derive chip/DRAM split from cached data:
+            # mem_power = mem_intercept + k_mem * (dram_access_byte / lat_s)
+            # chip_power = total_power - mem_power   (exact by construction)
+            _pdata = load_power_data(device)
+            if _pdata:
+                _k_mem = _pdata["k_mem"]
+                _mem_intercept = _pdata["intercept"]["mem"]
+                for op in LAYER_COMPUTE_OP_NAMES:
+                    _lat_s = lat_breakdown[op] / 1000.0
+                    _rate = (
+                        dram_access_breakdown_bytes[op] / _lat_s if _lat_s > 0 else 0.0
+                    )
+                    _dram = _mem_intercept + _k_mem * _rate
+                    power_breakdown_dram[op] = _dram
+                    power_breakdown_chip[op] = power_breakdown[op] - _dram
 
     def record_op(
         op_name,
@@ -670,6 +688,8 @@ def run_layer(
         launch_lat_breakdown_ms[op_name] = launch_latency_s * 1000
         r = power_fn()
         power_breakdown[op_name] = r["power_breakdown_watts"]["total"]
+        power_breakdown_chip[op_name] = r["power_breakdown_watts"]["soc_power"]
+        power_breakdown_dram[op_name] = r["power_breakdown_watts"]["memory_power"]
         print(
             f"    {op_name:<18} {lat_s * 1000:>8.4f} ms {power_breakdown[op_name]:>8.2f} W"
         )
@@ -942,6 +962,24 @@ def run_layer(
     )
     results["lat_comp"] = lat
     results["power_avg_comp"] = power_avg
+    # Chip / DRAM power split (energy-weighted average, same formula as above)
+    if power_breakdown_chip and lat > 0:
+        _chip_e = sum(
+            power_breakdown_chip.get(op, 0.0) * lat_breakdown[op] for op in op_names
+        )
+        _dram_e = sum(
+            power_breakdown_dram.get(op, 0.0) * lat_breakdown[op] for op in op_names
+        )
+        results["power_avg_comp_chip"] = _chip_e / lat
+        results["power_avg_comp_dram"] = _dram_e / lat
+        results["peak_power_comp"] = max(
+            power_breakdown_chip.get(op, 0.0) + power_breakdown_dram.get(op, 0.0)
+            for op in op_names
+        )
+    elif power_breakdown:
+        results["peak_power_comp"] = max(
+            power_breakdown.get(op, 0.0) for op in op_names
+        )
     if degree > 1:
         lat_comm, power_results_comm = print_layer_summary_comm(
             lat_breakdown,

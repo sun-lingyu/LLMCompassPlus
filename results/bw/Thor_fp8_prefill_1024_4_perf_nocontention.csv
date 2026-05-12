@@ -1,4 +1,4 @@
-Latency (ms),InternVision TP,Qwen3_1.7B TP,Qwen3_4B TP,Qwen3_8B TP
+Bandwidth (GB/s),InternVision TP,Qwen3_1.7B TP,Qwen3_4B TP,Qwen3_8B TP
 16,5.47,11.12,18.19,28.33
 32,3.51,7.02,12.05,18.50
 64,2.70,5.36,9.91,15.34

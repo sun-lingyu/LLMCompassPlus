@@ -2,46 +2,35 @@
 """
 Design Space Exploration (DSE) for ViT+LLM inference on embedded GPUs.
 
-Phase 1: Grid search over SM count × L2 cache size to find hardware
-configurations satisfying latency and area constraints for the selected
-LLM model.  Memory bandwidth is determined by mem_freq and mem_bitwidth.
-
-Phase 2: Single-point simulation of the other two LLM models at the
-minimum-area passing config found in Phase 1.
+Grid search over SM count × L2 cache size for three workload sizes (L/M/S)
+sequentially.  A hardware configuration is considered feasible only when it
+meets the latency constraint for ALL three sizes simultaneously.
 
 Inference configurations
 ------------------------
-Seq-len values differ by model size: Qwen3_8B uses the full token budget;
-Qwen3_4B and Qwen3_1_7B use a reduced budget (ViT 576, shorter LLM context).
-
-                 Qwen3_8B          Qwen3_4B / Qwen3_1_7B
-                 ────────────────  ─────────────────────────────
-Robo-S : 2×ViT  seq 1024          seq 576
-         LLM prefill seq 512       seq 288
-Robo-L : 4×ViT  seq 1024          seq 576
-         LLM prefill seq 1024      seq 576
-AD-S   : 6×ViT  seq 1024          seq 576
-         LLM prefill seq 768       seq 768  (unchanged)
-         3×LLM decode spec_tokens 64, seq_kv 768
-AD-L   : 12×ViT seq 1024          seq 576
-         LLM prefill seq 1024      seq 1024 (unchanged)
-         6×LLM decode spec_tokens 64, seq_kv 1024
+inference_config (CLI)  size   num_ViT  ViT seq  LLM model   LLM seq  decode iters
+──────────────────────  ─────  ───────  ───────  ──────────  ───────  ────────────
+Robo                    L      2        1024      Qwen3_8B    512      –
+                        M      1        1024      Qwen3_4B    256      –
+                        S      1        576       Qwen3_1_7B  144      –
+AD                      L      12       1024      Qwen3_8B    1024     5
+                        M      6        1024      Qwen3_4B    768      5
+                        S      6        576       Qwen3_1_7B  512      5
 
 LLM model / degree mapping (fixed)
 -----------------------------------
-Qwen3_8B  → degree=4 (quad-card)
-Qwen3_4B  → degree=2 (dual-card)
-Qwen3_1_7B → degree=1 (single-card)
+Qwen3_8B   → degree=4  (quad-card,   L size)
+Qwen3_4B   → degree=2  (dual-card,   M size)
+Qwen3_1_7B → degree=1  (single-card, S size)
 
 Usage
 -----
 python -m dse.dse \\
-    --area 400 --base_hw Orin --inference_config Robo-S --precision fp16_int4
+    --area 400 --base_hw Orin --inference_config Robo --precision fp16_int4
 
 python -m dse.dse \\
-    --base_hw Thor --inference_config AD-S --precision fp8 \\
-    --area 200 --mem_freq 10667 --mem_bitwidth 128 \\
-    --llm_model Qwen3_4B --latency_limit 120
+    --base_hw Thor --inference_config AD --precision fp8 \\
+    --area 200 --mem_freq 10667 --mem_bitwidth 128 --latency_limit 120
 """
 
 import argparse
@@ -118,6 +107,64 @@ _MODEL_DEFAULT_DEGREE: Dict[str, int] = {
     "Qwen3_8B": 4,
     "Qwen3_4B": 2,
     "Qwen3_1_7B": 1,
+}
+
+# ── Inference configuration definitions ─────────────────────────────────────
+# Each (inference_config, size) tuple uniquely determines all workload params.
+# num_decode_steps=0 means prefill-only (Robo); >0 adds speculative-decode iters.
+_INFERENCE_CONFIGS: Dict[str, Dict[str, dict]] = {
+    "Robo": {
+        "L": {
+            "num_vits": 2,
+            "vit_seq": 1024,
+            "llm_model": "Qwen3_8B",
+            "llm_seq": 512,
+            "degree": 4,
+            "num_decode_steps": 0,
+        },
+        "M": {
+            "num_vits": 1,
+            "vit_seq": 1024,
+            "llm_model": "Qwen3_4B",
+            "llm_seq": 256,
+            "degree": 2,
+            "num_decode_steps": 0,
+        },
+        "S": {
+            "num_vits": 1,
+            "vit_seq": 576,
+            "llm_model": "Qwen3_1_7B",
+            "llm_seq": 144,
+            "degree": 1,
+            "num_decode_steps": 0,
+        },
+    },
+    "AD": {
+        "L": {
+            "num_vits": 12,
+            "vit_seq": 1024,
+            "llm_model": "Qwen3_8B",
+            "llm_seq": 1024,
+            "degree": 4,
+            "num_decode_steps": 5,
+        },
+        "M": {
+            "num_vits": 6,
+            "vit_seq": 1024,
+            "llm_model": "Qwen3_4B",
+            "llm_seq": 768,
+            "degree": 2,
+            "num_decode_steps": 5,
+        },
+        "S": {
+            "num_vits": 6,
+            "vit_seq": 576,
+            "llm_model": "Qwen3_1_7B",
+            "llm_seq": 512,
+            "degree": 1,
+            "num_decode_steps": 5,
+        },
+    },
 }
 
 
@@ -341,6 +388,7 @@ def _simulate_one_layer(
     comm_bandwidth_gbps: float = 0.0,
     icnt_type: str = "pcie",
     no_contention: bool = False,
+    _split_out: dict = None,
 ) -> Tuple[float, float]:
     """
     Simulate one transformer layer for the given hardware config.
@@ -392,7 +440,13 @@ def _simulate_one_layer(
     lat_comp: float = results["lat_comp"]
     power_comp: float = results["power_avg_comp"]
 
+    _peak_comp: float = results.get("peak_power_comp", power_comp)
+
     if degree == 1 or "lat_comm" not in results:
+        if _split_out is not None:
+            _split_out["chip"] = results.get("power_avg_comp_chip", power_comp)
+            _split_out["dram"] = results.get("power_avg_comp_dram", 0.0)
+            _split_out["peak"] = _peak_comp
         return lat_comp, power_comp
 
     # degree > 1: add non-overlapped comm latency and interconnect power
@@ -404,8 +458,19 @@ def _simulate_one_layer(
     if power_results_comm:
         min_comm_energy_mj = min(power_results_comm.values())
         avg_power = (power_comp * lat_comp + min_comm_energy_mj) / total_lat
+        if _split_out is not None:
+            _chip = results.get("power_avg_comp_chip", power_comp)
+            _dram = results.get("power_avg_comp_dram", 0.0)
+            # Interconnect energy is SoC-side signaling → attributed to chip
+            _split_out["chip"] = (_chip * lat_comp + min_comm_energy_mj) / total_lat
+            _split_out["dram"] = _dram * lat_comp / total_lat
+            _split_out["peak"] = _peak_comp
     else:
         avg_power = power_comp
+        if _split_out is not None:
+            _split_out["chip"] = results.get("power_avg_comp_chip", power_comp)
+            _split_out["dram"] = results.get("power_avg_comp_dram", 0.0)
+            _split_out["peak"] = _peak_comp
 
     return total_lat, avg_power
 
@@ -426,6 +491,7 @@ def _simulate_llm_layer(
     is_causal: bool,
     spec_tokens: int = 64,
     seq_len: int,
+    _split_out: dict = None,
 ) -> Tuple[float, float, str]:
     """
     Simulate one LLM layer across *degree* SoCs.
@@ -455,6 +521,7 @@ def _simulate_llm_layer(
     }
 
     # TP: M stays at seq_len_q (sequence not split across ranks)
+    tp_split: dict = {} if _split_out is not None else None
     tp_lat, tp_pow = _simulate_one_layer(
         model_name,
         precision,
@@ -462,14 +529,18 @@ def _simulate_llm_layer(
         M=seq_len_q,
         seq_len_q=seq_len_q,
         parallelism="TP",
+        _split_out=tp_split,
     )
 
     if not is_prefill or degree <= 1:
         # decode or single-device: CP unsupported / irrelevant
+        if _split_out is not None:
+            _split_out.update(tp_split)
         return tp_lat, tp_pow, "TP"
 
     # CP prefill: M is divided by degree (each rank handles a contiguous chunk)
     M_cp = seq_len_q // degree
+    cp_split: dict = {} if _split_out is not None else None
     cp_lat, cp_pow = _simulate_one_layer(
         model_name,
         precision,
@@ -477,10 +548,15 @@ def _simulate_llm_layer(
         M=M_cp,
         seq_len_q=seq_len_q,
         parallelism="CP",
+        _split_out=cp_split,
     )
 
     if cp_lat <= tp_lat * _CP_VS_TP_THRESHOLD:
+        if _split_out is not None:
+            _split_out.update(cp_split)
         return cp_lat, cp_pow, "CP"
+    if _split_out is not None:
+        _split_out.update(tp_split)
     return tp_lat, tp_pow, "TP"
 
 
@@ -517,6 +593,9 @@ def _compute_vit_stats(
     *,
     degree: int,
     vit_seq: int,
+    _chip_layer_pow: float = None,
+    _dram_layer_pow: float = None,
+    _split_out: dict = None,
 ) -> Tuple[float, float]:
     """
     Compute total ViT latency and energy when *num_vits* ViTs are distributed
@@ -528,19 +607,28 @@ def _compute_vit_stats(
     """
     VIT_SEQ = vit_seq
     full_steps = num_vits // degree
-    # "half" case:
     remainder = num_vits % degree
     if remainder == 0:
         has_half = False
+        has_quarter = False
     elif degree >= 2 and remainder == degree // 2:
         has_half = True
+        has_quarter = False
+    elif degree >= 4 and remainder == degree // 4:
+        has_half = False
+        has_quarter = True
     else:
         raise ValueError(
-            f"num_vits={num_vits} on degree={degree} devices (remainder={remainder}). Support half-ViT remainder only."
+            f"num_vits={num_vits} on degree={degree} devices (remainder={remainder}). "
+            f"Only remainder==0, degree//2 (half), or degree//4 (quarter) are supported."
         )
 
     total_lat = 0.0
     total_energy = 0.0
+    total_chip_energy = 0.0
+    total_dram_energy = 0.0
+    vit_peak = 0.0
+    _track = _split_out is not None
 
     if full_steps > 0:
         lat, energy = _segment_stats(
@@ -548,9 +636,14 @@ def _compute_vit_stats(
         )
         total_lat += lat
         total_energy += energy
+        if _track and _chip_layer_pow is not None:
+            total_chip_energy += _chip_layer_pow * vit_layer_lat * _VIT_NUM_LAYERS * full_steps
+            total_dram_energy += (_dram_layer_pow or 0.0) * vit_layer_lat * _VIT_NUM_LAYERS * full_steps
+            vit_peak = max(vit_peak, _chip_layer_pow + (_dram_layer_pow or 0.0))
 
     if has_half:
         # One ViT shared across 2 devices → simulate with degree=2 TP
+        _half_split: dict = {} if _track else None
         half_vit_lat, half_vit_pow = _simulate_one_layer(
             _VIT_MODEL,
             vit_precision,
@@ -569,16 +662,58 @@ def _compute_vit_stats(
             comm_bandwidth_gbps=_LINK_BW_GBPS,
             icnt_type=_LLM_ICNT_TYPE,
             no_contention=_LLM_NO_CONTENTION,
+            _split_out=_half_split,
         )
         lat, energy = _segment_stats(half_vit_lat, half_vit_pow, _VIT_NUM_LAYERS)
         total_lat += lat
         total_energy += energy
+        if _track and _half_split:
+            total_chip_energy += _half_split.get("chip", half_vit_pow) * half_vit_lat * _VIT_NUM_LAYERS
+            total_dram_energy += _half_split.get("dram", 0.0) * half_vit_lat * _VIT_NUM_LAYERS
+            vit_peak = max(vit_peak, _half_split.get("peak", half_vit_pow))
+
+    if has_quarter:
+        # One ViT shared across 4 devices → simulate with degree=4 TP
+        _quarter_split: dict = {} if _track else None
+        quarter_vit_lat, quarter_vit_pow = _simulate_one_layer(
+            _VIT_MODEL,
+            vit_precision,
+            base_hw,
+            pcb,
+            dse_device_name,
+            dse_cache,
+            M=VIT_SEQ,
+            seq_len_q=VIT_SEQ,
+            seq_len_kv=VIT_SEQ,
+            is_prefill=True,
+            is_causal=False,
+            seq_len=VIT_SEQ,
+            degree=4,
+            parallelism="TP",
+            comm_bandwidth_gbps=_comm_bw_for_degree(4),
+            icnt_type=_LLM_ICNT_TYPE,
+            no_contention=_LLM_NO_CONTENTION,
+            _split_out=_quarter_split,
+        )
+        lat, energy = _segment_stats(quarter_vit_lat, quarter_vit_pow, _VIT_NUM_LAYERS)
+        total_lat += lat
+        total_energy += energy
+        if _track and _quarter_split:
+            total_chip_energy += _quarter_split.get("chip", quarter_vit_pow) * quarter_vit_lat * _VIT_NUM_LAYERS
+            total_dram_energy += _quarter_split.get("dram", 0.0) * quarter_vit_lat * _VIT_NUM_LAYERS
+            vit_peak = max(vit_peak, _quarter_split.get("peak", quarter_vit_pow))
+
+    if _track and total_lat > 0:
+        _split_out["chip"] = total_chip_energy / total_lat
+        _split_out["dram"] = total_dram_energy / total_lat
+        _split_out["peak"] = vit_peak
 
     return total_lat, total_energy
 
 
 def compute_inference_latency(
     inference_config: str,
+    size: str,
     base_hw: str,
     sm_count: int,
     l2_mb: float,
@@ -586,18 +721,14 @@ def compute_inference_latency(
     mem_bitwidth: int,
     llm_precision: str,
     dse_cache: dict,
-    *,
-    llm_model: str = "Qwen3_8B",
-    llm_degree: int = 4,
 ) -> dict:
     """
     Simulate the full inference pipeline for one hardware configuration.
 
     Parameters
     ----------
-    llm_model  : LLM model name (must be a key in test_model_dict).
-    llm_degree : tensor-parallel degree for LLM (and ViT distribution).
-                 1 = single device, 2 = dual-card, 4 = quad-card (default).
+    inference_config : "Robo" or "AD"
+    size             : "L", "M", or "S"
 
     Returns
     -------
@@ -606,6 +737,14 @@ def compute_inference_latency(
         avg_power_w   – energy-weighted average power (W)
         breakdown     – per-segment latency breakdown (ms)
     """
+    cfg = _INFERENCE_CONFIGS[inference_config][size]
+    num_vits: int = cfg["num_vits"]
+    VIT_SEQ: int = cfg["vit_seq"]
+    llm_model: str = cfg["llm_model"]
+    LLM_SEQ: int = cfg["llm_seq"]
+    llm_degree: int = cfg["degree"]
+    num_decode_steps: int = cfg["num_decode_steps"]
+
     dse_device_name = _make_dse_device_name(
         base_hw, sm_count, l2_mb, mem_freq, mem_bitwidth
     )
@@ -615,7 +754,6 @@ def compute_inference_latency(
     llm_num_layers: int = test_model_dict[llm_model]["num_layers"]
     llm_comm_bw = _comm_bw_for_degree(llm_degree)
 
-    # Split LLM precision for prefill vs decode
     if llm_precision == "fp16_int4":
         llm_prefill_prec = "fp16"
         llm_decode_prec = "int4"
@@ -623,15 +761,10 @@ def compute_inference_latency(
         llm_prefill_prec = llm_precision
         llm_decode_prec = llm_precision
 
-    # Smaller models use a reduced token budget (fewer visual tokens, shorter
-    # context) compared with the full 8B setup.
-    _small_model = llm_model in {"Qwen3_4B", "Qwen3_1_7B"}
-    VIT_SEQ = 576 if _small_model else 1024
+    SPEC_TOKENS = 64 if llm_precision != "fp4" else 128
 
-    # ── ViT layer (degree=1 baseline, reused for full-ViT steps) ───────────────
-    # ViTs are distributed across llm_degree devices. Integer ViTs per device
-    # use this degree=1 result; a 0.5 fractional part is handled by
-    # _compute_vit_stats (simulates 1 ViT at degree=2).
+    # ── ViT layer baseline (degree=1 per-device result) ──────────────────────
+    _vit_layer_split: dict = {}
     vit_layer_lat, vit_layer_pow = _simulate_one_layer(
         _VIT_MODEL,
         vit_precision,
@@ -645,11 +778,9 @@ def compute_inference_latency(
         is_prefill=True,
         is_causal=False,
         seq_len=VIT_SEQ,
-        # spec_tokens and degree use their defaults (64 and 1): this is a
-        # per-device, single-card baseline result reused by _compute_vit_stats.
+        _split_out=_vit_layer_split,
     )
 
-    # Shared kwargs forwarded to every _simulate_llm_layer call.
     _llm_common = {
         "model_name": llm_model,
         "base_hw": base_hw,
@@ -660,120 +791,70 @@ def compute_inference_latency(
         "comm_bw_gbps": llm_comm_bw,
     }
 
-    # ── Robo-S: 2 × ViT  +  LLM prefill ─────────────────────────────────────
-    # seq: ViT 576/1024, LLM 288/512 (small / full model)
-    if inference_config == "Robo-S":
-        LLM_SEQ = 288 if _small_model else 512
+    # ── ViT pipeline ──────────────────────────────────────────────────────────
+    _vit_pipeline_split: dict = {}
+    vit_lat, vit_energy = _compute_vit_stats(
+        num_vits,
+        vit_layer_lat,
+        vit_layer_pow,
+        vit_precision,
+        base_hw,
+        pcb,
+        dse_device_name,
+        dse_cache,
+        degree=llm_degree,
+        vit_seq=VIT_SEQ,
+        _chip_layer_pow=_vit_layer_split.get("chip"),
+        _dram_layer_pow=_vit_layer_split.get("dram"),
+        _split_out=_vit_pipeline_split,
+    )
 
-        vit_lat, vit_energy = _compute_vit_stats(
-            2,
-            vit_layer_lat,
-            vit_layer_pow,
-            vit_precision,
-            base_hw,
-            pcb,
-            dse_device_name,
-            dse_cache,
-            degree=llm_degree,
-            vit_seq=VIT_SEQ,
-        )
-
-        llm_layer_lat, llm_layer_pow, llm_prefill_para = _simulate_llm_layer(
+    # ── LLM prefill ───────────────────────────────────────────────────────────
+    _prefill_split: dict = {}
+    llm_prefill_layer_lat, llm_prefill_layer_pow, llm_prefill_para = (
+        _simulate_llm_layer(
             **_llm_common,
             precision=llm_prefill_prec,
             seq_len_q=LLM_SEQ,
             seq_len_kv=LLM_SEQ,
             is_prefill=True,
             is_causal=True,
+            spec_tokens=SPEC_TOKENS,
             seq_len=LLM_SEQ,
+            _split_out=_prefill_split,
         )
-        llm_prefill_lat, llm_prefill_energy = _segment_stats(
-            llm_layer_lat, llm_layer_pow, llm_num_layers
-        )
+    )
+    llm_prefill_lat, llm_prefill_energy = _segment_stats(
+        llm_prefill_layer_lat, llm_prefill_layer_pow, llm_num_layers
+    )
 
-        total_lat = vit_lat + llm_prefill_lat
-        total_energy = vit_energy + llm_prefill_energy
-        breakdown = {
-            "vit_lat_ms": vit_lat,
-            "llm_prefill_lat_ms": llm_prefill_lat,
-            "llm_prefill_para": llm_prefill_para,
-        }
+    total_lat = vit_lat + llm_prefill_lat
+    total_energy = vit_energy + llm_prefill_energy
+    # Chip/DRAM energy accumulation
+    total_chip_energy = (
+        _vit_pipeline_split.get("chip", vit_layer_pow) * vit_lat
+        + _prefill_split.get("chip", llm_prefill_layer_pow)
+        * llm_prefill_layer_lat
+        * llm_num_layers
+    )
+    total_dram_energy = (
+        _vit_pipeline_split.get("dram", 0.0) * vit_lat
+        + _prefill_split.get("dram", 0.0) * llm_prefill_layer_lat * llm_num_layers
+    )
+    # Peak power: max single-operator power across all segments (per card)
+    peak_power = max(
+        _vit_pipeline_split.get("peak", vit_layer_pow),
+        _prefill_split.get("peak", llm_prefill_layer_pow),
+    )
+    breakdown: dict = {
+        "vit_lat_ms": vit_lat,
+        "llm_prefill_lat_ms": llm_prefill_lat,
+        "llm_prefill_para": llm_prefill_para,
+    }
 
-    # ── Robo-L: 4 × ViT  +  LLM prefill ─────────────────────────────────────
-    # seq: ViT 576/1024, LLM 576/1024 (small / full model)
-    elif inference_config == "Robo-L":
-        LLM_SEQ = 576 if _small_model else 1024
-
-        vit_lat, vit_energy = _compute_vit_stats(
-            4,
-            vit_layer_lat,
-            vit_layer_pow,
-            vit_precision,
-            base_hw,
-            pcb,
-            dse_device_name,
-            dse_cache,
-            degree=llm_degree,
-            vit_seq=VIT_SEQ,
-        )
-
-        llm_layer_lat, llm_layer_pow, llm_prefill_para = _simulate_llm_layer(
-            **_llm_common,
-            precision=llm_prefill_prec,
-            seq_len_q=LLM_SEQ,
-            seq_len_kv=LLM_SEQ,
-            is_prefill=True,
-            is_causal=True,
-            seq_len=LLM_SEQ,
-        )
-        llm_prefill_lat, llm_prefill_energy = _segment_stats(
-            llm_layer_lat, llm_layer_pow, llm_num_layers
-        )
-
-        total_lat = vit_lat + llm_prefill_lat
-        total_energy = vit_energy + llm_prefill_energy
-        breakdown = {
-            "vit_lat_ms": vit_lat,
-            "llm_prefill_lat_ms": llm_prefill_lat,
-            "llm_prefill_para": llm_prefill_para,
-        }
-
-    # ── AD-S: 6 × ViT  +  LLM prefill (seq 768)  +  3 × decode ─────────────
-    # ViT seq: 576 (small model) / 1024 (8B); LLM seq unchanged at 768.
-    elif inference_config == "AD-S":
-        LLM_SEQ = 768
-        SPEC_TOKENS = 64 if llm_precision != "fp4" else 128
-        NUM_DECODE_STEPS = 3
-
-        vit_lat, vit_energy = _compute_vit_stats(
-            6,
-            vit_layer_lat,
-            vit_layer_pow,
-            vit_precision,
-            base_hw,
-            pcb,
-            dse_device_name,
-            dse_cache,
-            degree=llm_degree,
-            vit_seq=VIT_SEQ,
-        )
-
-        llm_prefill_layer_lat, llm_prefill_layer_pow, llm_prefill_para = (
-            _simulate_llm_layer(
-                **_llm_common,
-                precision=llm_prefill_prec,
-                seq_len_q=LLM_SEQ,
-                seq_len_kv=LLM_SEQ,
-                is_prefill=True,
-                is_causal=True,
-                spec_tokens=SPEC_TOKENS,
-                seq_len=LLM_SEQ,
-            )
-        )
-        llm_prefill_lat, llm_prefill_energy = _segment_stats(
-            llm_prefill_layer_lat, llm_prefill_layer_pow, llm_num_layers
-        )
-
+    # ── LLM speculative decode (AD only) ─────────────────────────────────────
+    if num_decode_steps > 0:
+        _decode_split: dict = {}
         llm_decode_layer_lat, llm_decode_layer_pow, _ = _simulate_llm_layer(
             **_llm_common,
             precision=llm_decode_prec,
@@ -783,92 +864,40 @@ def compute_inference_latency(
             is_causal=False,
             spec_tokens=SPEC_TOKENS,
             seq_len=LLM_SEQ,
+            _split_out=_decode_split,
         )
         llm_decode_lat, llm_decode_energy = _segment_stats(
             llm_decode_layer_lat,
             llm_decode_layer_pow,
             llm_num_layers,
-            num_steps=NUM_DECODE_STEPS,
+            num_steps=num_decode_steps,
         )
-
-        total_lat = vit_lat + llm_prefill_lat + llm_decode_lat
-        total_energy = vit_energy + llm_prefill_energy + llm_decode_energy
-        breakdown = {
-            "vit_lat_ms": vit_lat,
-            "llm_prefill_lat_ms": llm_prefill_lat,
-            "llm_prefill_para": llm_prefill_para,
-            "llm_decode_lat_ms": llm_decode_lat,
-        }
-
-    # ── AD-L: 12 × ViT  +  LLM prefill (seq 1024)  +  6 × decode ───────────
-    # ViT seq: 576 (small model) / 1024 (8B); LLM seq unchanged at 1024.
-    elif inference_config == "AD-L":
-        LLM_SEQ = 1024
-        SPEC_TOKENS = 64 if llm_precision != "fp4" else 128
-        NUM_DECODE_STEPS = 6
-
-        vit_lat, vit_energy = _compute_vit_stats(
-            12,
-            vit_layer_lat,
-            vit_layer_pow,
-            vit_precision,
-            base_hw,
-            pcb,
-            dse_device_name,
-            dse_cache,
-            degree=llm_degree,
-            vit_seq=VIT_SEQ,
+        total_lat += llm_decode_lat
+        total_energy += llm_decode_energy
+        total_chip_energy += (
+            _decode_split.get("chip", llm_decode_layer_pow)
+            * llm_decode_layer_lat
+            * llm_num_layers
+            * num_decode_steps
         )
-
-        llm_prefill_layer_lat, llm_prefill_layer_pow, llm_prefill_para = (
-            _simulate_llm_layer(
-                **_llm_common,
-                precision=llm_prefill_prec,
-                seq_len_q=LLM_SEQ,
-                seq_len_kv=LLM_SEQ,
-                is_prefill=True,
-                is_causal=True,
-                spec_tokens=SPEC_TOKENS,
-                seq_len=LLM_SEQ,
-            )
+        total_dram_energy += (
+            _decode_split.get("dram", 0.0)
+            * llm_decode_layer_lat
+            * llm_num_layers
+            * num_decode_steps
         )
-        llm_prefill_lat, llm_prefill_energy = _segment_stats(
-            llm_prefill_layer_lat, llm_prefill_layer_pow, llm_num_layers
-        )
-
-        llm_decode_layer_lat, llm_decode_layer_pow, _ = _simulate_llm_layer(
-            **_llm_common,
-            precision=llm_decode_prec,
-            seq_len_q=SPEC_TOKENS,
-            seq_len_kv=LLM_SEQ,
-            is_prefill=False,
-            is_causal=False,
-            spec_tokens=SPEC_TOKENS,
-            seq_len=LLM_SEQ,
-        )
-        llm_decode_lat, llm_decode_energy = _segment_stats(
-            llm_decode_layer_lat,
-            llm_decode_layer_pow,
-            llm_num_layers,
-            num_steps=NUM_DECODE_STEPS,
-        )
-
-        total_lat = vit_lat + llm_prefill_lat + llm_decode_lat
-        total_energy = vit_energy + llm_prefill_energy + llm_decode_energy
-        breakdown = {
-            "vit_lat_ms": vit_lat,
-            "llm_prefill_lat_ms": llm_prefill_lat,
-            "llm_prefill_para": llm_prefill_para,
-            "llm_decode_lat_ms": llm_decode_lat,
-        }
-
-    else:
-        raise ValueError(f"Unknown inference_config: {inference_config!r}")
+        peak_power = max(peak_power, _decode_split.get("peak", llm_decode_layer_pow))
+        breakdown["llm_decode_lat_ms"] = llm_decode_lat
 
     avg_power = total_energy / total_lat if total_lat > 0 else 0.0
+    chip_power = total_chip_energy / total_lat if total_lat > 0 else 0.0
+    dram_power = total_dram_energy / total_lat if total_lat > 0 else 0.0
     return {
         "total_lat_ms": total_lat,
         "avg_power_w": avg_power,
+        "chip_power_w": chip_power,
+        "dram_power_w": dram_power,
+        "peak_power_w": peak_power,
         "breakdown": breakdown,
     }
 
@@ -882,22 +911,24 @@ def run_dse(
     base_hw: str,
     soc_area_mm2: float,
     inference_config: str,
+    size: str,
     llm_precision: str,
     latency_limit_ms: float,
     mem_freq: int,
     mem_bitwidth: int,
-    *,
-    llm_model: str = "Qwen3_8B",
-    llm_degree: int = 4,
+    dse_cache: dict,
 ) -> list:
     """
-    Sweep over (SM count × L2 size) grid, apply area filter first, then
-    simulate latency/power for configs that pass.
+    Sweep over (SM count × L2 size) grid for one (inference_config, size) pair.
 
-    Returns a list of result dicts for all evaluated (area-feasible) configs.
+    Applies area filter first, then simulates latency/power for configs that
+    pass.  Returns a list of result dicts for all evaluated (area-feasible)
+    configs.
     """
-    # Sort both dimensions descending so pruning can terminate early.
-    # Monotonicity: more SM / larger L2 → strictly lower latency.
+    cfg = _INFERENCE_CONFIGS[inference_config][size]
+    llm_model: str = cfg["llm_model"]
+    llm_degree: int = cfg["degree"]
+
     sm_desc = sorted(
         ORIN_SM_CANDIDATES if base_hw == "Orin" else THOR_SM_CANDIDATES,
         reverse=True,
@@ -911,7 +942,7 @@ def run_dse(
     mem_bw = mem_freq * mem_bitwidth / 8 / 1000  # GB/s
 
     print("=" * 72)
-    print("  DSE: ViT + LLM Hardware Configuration Search")
+    print(f"  DSE Grid Search: {inference_config}-{size}")
     print("=" * 72)
     print(f"  Base HW          : {base_hw}")
     print(
@@ -921,7 +952,7 @@ def run_dse(
     print(
         f"  Memory           : {mem_freq} MT/s  ×  {mem_bitwidth}-bit  ({mem_bw:.1f} GB/s)"
     )
-    print(f"  Inference config : {inference_config}")
+    print(f"  Inference config : {inference_config}-{size}")
     print(f"  LLM model        : {llm_model}  (degree={llm_degree})")
     print(f"  LLM precision    : {llm_precision}")
     print(f"  Latency limit    : {latency_limit_ms} ms")
@@ -931,7 +962,6 @@ def run_dse(
     )
     print("-" * 72)
 
-    dse_cache = _load_dse_cache()
     evaluated: list = []
 
     # l2_cutoff_idx: inner loop runs over l2_desc[0 : l2_cutoff_idx].
@@ -942,24 +972,22 @@ def run_dse(
 
     for sm in sm_desc:
         if l2_cutoff_idx == 0:
-            # Rule 2: every L2 value already failed latency for a larger SM;
-            # no smaller SM can do better.
             print(f"  [pruned] SM={sm} and below: all L2 sizes exceed latency limit")
             break
 
-        new_l2_cutoff = l2_cutoff_idx  # only tightened on a latency failure
+        new_l2_cutoff = l2_cutoff_idx
 
         for l2_idx in range(l2_cutoff_idx):
             l2 = l2_desc[l2_idx]
             idx += 1
             tag = f"[{idx:3d}/{total}] SM={sm:2d}  L2={l2:5.1f} MB"
 
-            # ── Step 0: L2 BW vs mem BW (fast) ───────────────────────
+            # ── Step 0: L2 BW vs mem BW (fast) ───────────────────────────────
             if not _check_l2_bw_constraint(base_hw, sm, l2, mem_freq, mem_bitwidth):
                 print(f"{tag} | L2 BW < mem BW  [l2bw skip]")
                 continue
 
-            # ── Step 1: area constraint (fast) ─────────────────────────────
+            # ── Step 1: area constraint (fast) ───────────────────────────────
             area_ok, gpu_area = _check_area_constraint(base_hw, sm, l2, soc_area_mm2)
             if not area_ok:
                 max_area = soc_area_mm2 * GPU_AREA_FRACTION
@@ -969,7 +997,7 @@ def run_dse(
                 )
                 continue  # area failures do NOT update the latency cutoff
 
-            # ── Step 2: latency + power simulation ─────────────────────────
+            # ── Step 2: latency + power simulation ───────────────────────────
             print(
                 f"{tag} | GPU {gpu_area:6.1f} mm²  | simulating …",
                 end="",
@@ -978,6 +1006,7 @@ def run_dse(
             try:
                 result = compute_inference_latency(
                     inference_config,
+                    size,
                     base_hw,
                     sm,
                     l2,
@@ -985,8 +1014,6 @@ def run_dse(
                     mem_bitwidth,
                     llm_precision,
                     dse_cache,
-                    llm_model=llm_model,
-                    llm_degree=llm_degree,
                 )
             except Exception as exc:
                 print(f"  ERROR: {exc}")
@@ -994,6 +1021,9 @@ def run_dse(
 
             lat = result["total_lat_ms"]
             pwr = result["avg_power_w"]
+            chip_pwr = result.get("chip_power_w", pwr)
+            dram_pwr = result.get("dram_power_w", 0.0)
+            peak_pwr = result.get("peak_power_w", pwr)
             lat_ok = lat <= latency_limit_ms
             flag = "PASS" if lat_ok else "fail"
             print(f"  lat={lat:7.2f} ms  pwr={pwr:6.1f} W  [{flag}]")
@@ -1010,6 +1040,9 @@ def run_dse(
                     "gpu_area_mm2": round(gpu_area, 2),
                     "total_lat_ms": round(lat, 4),
                     "avg_power_w": round(pwr, 2),
+                    "chip_power_w": round(chip_pwr, 2),
+                    "dram_power_w": round(dram_pwr, 2),
+                    "peak_power_w": round(peak_pwr, 2),
                     "lat_ok": lat_ok,
                     **breakdown_flat,
                 }
@@ -1017,13 +1050,12 @@ def run_dse(
 
             if not lat_ok:
                 # Rule 1: smaller L2 for this SM will also fail → stop inner loop.
-                # Rule 2: record this L2 index so the next (smaller) SM skips it
-                #         and all smaller L2 values.
+                # Rule 2: record this L2 index so the next (smaller) SM skips it.
                 new_l2_cutoff = l2_idx
                 print(f"  → latency pruning: SM≤{sm}, L2≤{l2:.1f} MB all skipped")
                 break
 
-        l2_cutoff_idx = new_l2_cutoff  # apply Rule 2 for the next SM
+        l2_cutoff_idx = new_l2_cutoff
 
     return evaluated
 
@@ -1055,7 +1087,8 @@ def _print_summary(
         print("  No feasible configurations found.")
         return
 
-    if inference_config in ("AD-S", "AD-L"):
+    has_decode = any("llm_decode_lat_ms" in r for r in passing)
+    if has_decode:
         lat_cols = ["vit_lat_ms", "llm_prefill_lat_ms", "llm_decode_lat_ms"]
         lat_hdr = (
             f"  {'ViT(ms)':>10}  {'LLMpre(ms)':>11}  {'Para':>4}  {'LLMdec(ms)':>11}"
@@ -1078,10 +1111,64 @@ def _print_summary(
         )
         for col in lat_cols:
             row += f"  {r.get(col, 0.0):>10.2f}"
-            # show chosen parallelism right after LLM-prefill latency
             if col == "llm_prefill_lat_ms":
                 row += f"  {r.get('llm_prefill_para', '?'):>4}"
         print(row)
+
+
+def _print_final_summary(
+    results_by_size: Dict[str, list],
+    passing_keys: set,
+    inference_config: str,
+    latency_limit_ms: float,
+) -> None:
+    """
+    Print hardware configs that satisfy the latency constraint for ALL three
+    sizes (L+4-card, M+2-card, S+1-card).
+
+    Shows the total latency for each size in separate columns.
+    """
+    print()
+    print("=" * 72)
+    print(f"  Final Summary  —  {inference_config}: configs passing ALL sizes")
+    print(
+        f"  (L + 4-card,  M + 2-card,  S + 1-card,  limit = {latency_limit_ms:.0f} ms each)"
+    )
+    print("=" * 72)
+
+    if not passing_keys:
+        print("  No hardware configuration satisfies all three size constraints.")
+        return
+
+    # Build per-size lookup: (sm, l2) → result dict
+    lookup: Dict[str, dict] = {s: {} for s in ("L", "M", "S")}
+    for size, results in results_by_size.items():
+        for r in results:
+            lookup[size][(r["sm_count"], r["l2_mb"])] = r
+
+    hdr = (
+        f"  {'SM':>4}  {'L2(MB)':>7}  {'L2BW(B/clk)':>12}  {'GPU(mm²)':>9}"
+        f"  {'L-Total(ms)':>12}  {'M-Total(ms)':>12}  {'S-Total(ms)':>12}"
+    )
+    print(hdr)
+    print("  " + "-" * (len(hdr) - 2))
+
+    for key in sorted(
+        passing_keys, key=lambda k: lookup["L"].get(k, {}).get("total_lat_ms", 0)
+    ):
+        sm, l2 = key
+        r_l = lookup["L"].get(key, {})
+        r_m = lookup["M"].get(key, {})
+        r_s = lookup["S"].get(key, {})
+        lat_l = r_l.get("total_lat_ms", float("nan"))
+        lat_m = r_m.get("total_lat_ms", float("nan"))
+        lat_s = r_s.get("total_lat_ms", float("nan"))
+        gpu_area = r_l.get("gpu_area_mm2", 0.0)
+        l2_bw = r_l.get("l2_bw_per_cycle", 0)
+        print(
+            f"  {sm:>4}  {l2:>7.1f}  {l2_bw:>12d}  {gpu_area:>9.1f}"
+            f"  {lat_l:>12.2f}  {lat_m:>12.2f}  {lat_s:>12.2f}"
+        )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1108,8 +1195,9 @@ _DEFAULT_MEM: Dict[str, Tuple[int, int]] = {
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "DSE for ViT+LLM inference: search SM count and L2 cache size "
-            "under latency and area constraints."
+            "DSE for ViT+LLM inference: grid-search SM count and L2 cache size "
+            "for all three workload sizes (L/M/S) and report configurations that "
+            "satisfy the latency constraint for every size simultaneously."
         )
     )
     parser.add_argument(
@@ -1128,14 +1216,12 @@ def main() -> None:
     parser.add_argument(
         "--inference_config",
         required=True,
-        choices=["Robo-S", "Robo-L", "AD-S", "AD-L"],
+        choices=["Robo", "AD"],
         help=(
-            "Robo-S: 2×ViT + LLM prefill.  "
-            "Robo-L: 4×ViT + LLM prefill.  "
-            "AD-S:   6×ViT + LLM prefill (seq 768) + 3×decode.  "
-            "AD-L:  12×ViT + LLM prefill (seq 1024) + 6×decode.  "
-            "Seq-lens for ViT and Robo prefill vary by --llm_model; "
-            "see module docstring for details."
+            "Robo: prefill-only pipeline (2–4×ViT + LLM prefill).  "
+            "AD:   pipeline with speculative decode (6–12×ViT + prefill + 5×decode).  "
+            "Each config is evaluated at three sizes: "
+            "L (8B LLM, 4-card), M (4B LLM, 2-card), S (1.7B LLM, 1-card)."
         ),
     )
     parser.add_argument(
@@ -1151,7 +1237,7 @@ def main() -> None:
         "--latency_limit",
         type=float,
         default=110.0,
-        help="End-to-end latency constraint in ms (default: 100 ms).",
+        help="End-to-end latency constraint in ms (default: 110 ms).",
     )
     parser.add_argument(
         "--mem_freq",
@@ -1174,19 +1260,6 @@ def main() -> None:
             "Memory bus width in bits.  "
             "LPDDR5/5x: 128 | 256.  LPDDR6: 128 | 256.  "
             "Default: 256 for both Orin and Thor."
-        ),
-    )
-    parser.add_argument(
-        "--llm_model",
-        default="Qwen3_8B",
-        choices=list(_MODEL_DEFAULT_DEGREE.keys()),
-        help=(
-            "LLM model for Phase 1 DSE grid search.  "
-            "Degree is fixed per model: Qwen3_8B→4-card, Qwen3_4B→2-card, "
-            "Qwen3_1_7B→1-card.  "
-            "Phase 2 then evaluates the other two models at the minimum-area "
-            "passing config found in Phase 1.  "
-            "Default: Qwen3_8B."
         ),
     )
     args = parser.parse_args()
@@ -1220,110 +1293,83 @@ def main() -> None:
 
     # ── Guard against wide-bus config on a small SoC ───────────────────────────
     if args.area < 400 and mem_bitwidth in {256}:
-        print(
-            f"[ERROR] area={args.area} mm² (< 400) is not compatible with mem_bitwidth={mem_bitwidth}-bit: not enough shoreline to accommodate PHYs."
+        parser.error(
+            f"[ERROR] area={args.area} mm² (< 400) is not compatible with "
+            f"mem_bitwidth={mem_bitwidth}-bit: not enough shoreline to accommodate PHYs."
         )
-        sys.exit(1)
 
-    if args.area < 400:
-        ORIN_L2_MB_CANDIDATES.insert(0, 1.0)
-        THOR_L2_MB_CANDIDATES.insert(0, 8.0)
-
-    # ── Resolve degree from model name (fixed mapping) ─────────────────────────
-    llm_model: str = args.llm_model
-    llm_degree: int = _MODEL_DEFAULT_DEGREE[llm_model]
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # Phase 1: DSE grid search for the primary model
-    # ══════════════════════════════════════════════════════════════════════════
-    results = run_dse(
-        base_hw=args.base_hw,
-        soc_area_mm2=float(args.area),
-        inference_config=args.inference_config,
-        llm_precision=args.precision,
-        latency_limit_ms=args.latency_limit,
-        mem_freq=mem_freq,
-        mem_bitwidth=mem_bitwidth,
-        llm_model=llm_model,
-        llm_degree=llm_degree,
-    )
-
-    _print_summary(
-        results,
-        args.inference_config,
-        args.latency_limit,
-        label=f"Phase 1 DSE  ({llm_model}, degree={llm_degree})",
-    )
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # Phase 2: Single-point simulation for the other two models at the
-    # minimum-area passing config found in Phase 1.
-    # ══════════════════════════════════════════════════════════════════════════
-    passing = [r for r in results if r["lat_ok"]]
-    if not passing:
-        print("\n  [Phase 2 skipped] No passing config found in Phase 1.")
-        return
-
-    min_cfg = min(passing, key=lambda r: r["gpu_area_mm2"])
-    sm_min = min_cfg["sm_count"]
-    l2_min = min_cfg["l2_mb"]
-    area_min = min_cfg["gpu_area_mm2"]
-
-    print()
-    print("=" * 72)
-    print(
-        f"  Phase 2: Comparison at minimum-area passing config "
-        f"(SM={sm_min}, L2={l2_min:.1f} MB, GPU={area_min:.1f} mm²)"
-    )
-    print("=" * 72)
-
+    # ── Shared DSE cache (loaded once, reused across all three size searches) ──
     dse_cache = _load_dse_cache()
 
-    comparison_models = [
-        (m, d) for m, d in _MODEL_DEFAULT_DEGREE.items() if m != llm_model
-    ]
-    comparison_results = {}
-    for cmp_model, cmp_degree in comparison_models:
-        print(f"\n  Simulating {cmp_model} (degree={cmp_degree}) …", flush=True)
-        try:
-            cmp_result = compute_inference_latency(
-                args.inference_config,
-                args.base_hw,
-                sm_min,
-                l2_min,
-                mem_freq,
-                mem_bitwidth,
-                args.precision,
-                dse_cache,
-                llm_model=cmp_model,
-                llm_degree=cmp_degree,
-            )
-        except Exception as exc:
-            print(f"  ERROR: {exc}")
-            continue
+    # ══════════════════════════════════════════════════════════════════════════
+    # Grid search for L (4-card), M (2-card), S (1-card) sequentially.
+    # After each size, print its own summary.
+    # ══════════════════════════════════════════════════════════════════════════
+    results_by_size: Dict[str, list] = {}
 
-        breakdown_flat = {
-            k: (round(v, 4) if isinstance(v, float) else v)
-            for k, v in cmp_result["breakdown"].items()
-        }
-        cmp_row = {
-            "sm_count": sm_min,
-            "l2_mb": l2_min,
-            "l2_bw_per_cycle": _compute_l2_bw_per_cycle(args.base_hw, sm_min, l2_min),
-            "gpu_area_mm2": area_min,
-            "total_lat_ms": round(cmp_result["total_lat_ms"], 4),
-            "avg_power_w": round(cmp_result["avg_power_w"], 2),
-            "lat_ok": True,
-            **breakdown_flat,
-        }
+    for size in ("L", "M", "S"):
+        cfg = _INFERENCE_CONFIGS[args.inference_config][size]
+        print(
+            f"\n\n{'#' * 72}\n"
+            f"#  {args.inference_config}-{size}  |  "
+            f"{cfg['llm_model']}  degree={cfg['degree']}  |  "
+            f"{cfg['num_vits']}×ViT(seq={cfg['vit_seq']})  "
+            f"LLM-seq={cfg['llm_seq']}"
+            + (f"  decode×{cfg['num_decode_steps']}" if cfg["num_decode_steps"] else "")
+            + f"\n{'#' * 72}"
+        )
+
+        size_results = run_dse(
+            base_hw=args.base_hw,
+            soc_area_mm2=float(args.area),
+            inference_config=args.inference_config,
+            size=size,
+            llm_precision=args.precision,
+            latency_limit_ms=args.latency_limit,
+            mem_freq=mem_freq,
+            mem_bitwidth=mem_bitwidth,
+            dse_cache=dse_cache,
+        )
+        results_by_size[size] = size_results
+
         _print_summary(
-            [cmp_row],
+            size_results,
             args.inference_config,
             args.latency_limit,
-            label=f"Phase 2  ({cmp_model}, degree={cmp_degree})",
+            label=f"{args.inference_config}-{size}  ({cfg['llm_model']}, degree={cfg['degree']})",
         )
-        comparison_results[cmp_model] = cmp_result
-    return results, comparison_results
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Compute intersection: (SM, L2) pairs that pass in ALL three sizes.
+    # ══════════════════════════════════════════════════════════════════════════
+    passing_keys: set = None  # type: ignore[assignment]
+    for size, results in results_by_size.items():
+        size_passing = {(r["sm_count"], r["l2_mb"]) for r in results if r["lat_ok"]}
+        if passing_keys is None:
+            passing_keys = size_passing
+        else:
+            passing_keys &= size_passing
+
+    _print_final_summary(
+        results_by_size,
+        passing_keys or set(),
+        args.inference_config,
+        args.latency_limit,
+    )
+
+    return (
+        results_by_size,
+        passing_keys,
+        {
+            "base_hw": args.base_hw,
+            "inference_config": args.inference_config,
+            "precision": args.precision,
+            "area": args.area,
+            "mem_freq": mem_freq,
+            "mem_bitwidth": mem_bitwidth,
+            "latency_limit": args.latency_limit,
+        },
+    )
 
 
 if __name__ == "__main__":

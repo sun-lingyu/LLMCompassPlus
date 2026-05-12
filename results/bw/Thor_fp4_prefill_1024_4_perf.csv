@@ -1,4 +1,4 @@
-Latency (ms),Qwen3_1.7B TP,Qwen3_1.7B CP,Qwen3_4B TP,Qwen3_4B CP,Qwen3_8B TP,Qwen3_8B CP
+Bandwidth (GB/s),Qwen3_1.7B TP,Qwen3_1.7B CP,Qwen3_4B TP,Qwen3_4B CP,Qwen3_8B TP,Qwen3_8B CP
 16,11.04,6.86,18.65,14.78,29.20,23.27
 32,7.69,6.27,13.23,13.53,20.24,22.02
 64,6.01,5.98,10.52,12.91,15.77,21.40
