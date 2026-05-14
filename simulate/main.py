@@ -1090,7 +1090,7 @@ def main():
     parser.add_argument(
         "--icnt_type",
         type=str,
-        default="pcie",
+        default="ucie_std",
         choices=["pcie", "ucie_std", "ucie_adv"],
         help="ICNT type: pcie (PCIe), ucie_std (UCIE standard), ucie_adv (UCIE advanced)",
     )
