@@ -282,12 +282,15 @@ def _compute_non_overlapped_comm(
         if no_contention:
             bw_ov_gbps = eff_bandwidth_gbps
         else:
+            bw_divisor = (
+                3 if "reduce" in name else 2
+            )  # ReduceScatter needs Tx+Rx+Reduce, others only Tx+Rx
             bw_ov_gbps = min(
                 eff_bandwidth_gbps,
                 (dram_peak_gbps - overlap_mem_bw_gbps)
-                / 2,  # Remaining BW is used for Tx + Rx, so divide by 2
+                / bw_divisor,  # Remaining BW divided by number of concurrent BW consumers
             )
-            if (dram_peak_gbps - overlap_mem_bw_gbps) / 2 < eff_bandwidth_gbps:
+            if (dram_peak_gbps - overlap_mem_bw_gbps) / bw_divisor < eff_bandwidth_gbps:
                 print(
                     f"WARNING: Comm & Comp overlap: Mem BW contention dominates! Effective BW is {bw_ov_gbps / 8:.2f} GB/s"
                 )
