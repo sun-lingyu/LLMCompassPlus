@@ -9,7 +9,7 @@ from matplotlib.lines import Line2D
 
 COLOR_TP = "#4F89BA"
 COLOR_CP = "#D67F42"
-LINE_TP = "#A3C8EF"
+LINE_TP = "#4F89BA"
 LINE_CP = "#F2C28A"
 MARKER_EDGEWIDTH = 0.85
 
@@ -161,15 +161,15 @@ def main():
                     zorder=2,
                 )
 
-    def _style_ax(ax, show_xlabel=True):
+    def _style_ax(ax, show_xlabel=False):
         yticks = np.arange(y_min, y_max + y_step * 0.5, y_step)
         ax.set_ylim(y_min, y_max)
         ax.set_yticks(yticks)
         ax.set_xticks(SEQ_LENS)
-        ax.set_xticklabels([str(s) for s in SEQ_LENS], fontsize=8)
+        ax.set_xticklabels([str(s) for s in SEQ_LENS], fontsize=9)
         ax.tick_params(axis="y", labelsize=9)
         if show_xlabel:
-            ax.set_xlabel("Sequence length", fontsize=7, fontweight="bold", labelpad=1)
+            ax.set_xlabel("Sequence length", fontsize=9, fontweight="bold", labelpad=1)
         ax.set_ylabel("Speedup", fontsize=9, fontweight="bold")
         ax.set_axisbelow(True)
         ax.grid(
@@ -198,7 +198,7 @@ def main():
         leg = ax.legend(
             handles,
             labels,
-            fontsize=6,
+            fontsize=7,
             loc="lower center",
             frameon=True,
             fancybox=False,
@@ -207,7 +207,7 @@ def main():
             labelspacing=0.2,
             handlelength=1.5,
             handletextpad=0.3,
-            borderpad=0.4,
+            borderpad=0.2,
             ncol=len(parallelisms),
         )
         leg.get_frame().set_linewidth(0.8)

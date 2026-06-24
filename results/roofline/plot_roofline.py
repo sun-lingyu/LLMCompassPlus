@@ -14,7 +14,7 @@ def plot_element_based_roofline():
         {
             "name": "Orin INT8",
             "bw_gbps": 204.8,
-            "compute_tops": 137.5,
+            "compute_tops": 85,
             "bytes_per_elem": 1.0,
             "color": "#4F89BA",
             "linestyle": "-",
@@ -22,7 +22,7 @@ def plot_element_based_roofline():
         {
             "name": "Orin FP16",
             "bw_gbps": 204.8,
-            "compute_tops": 68.75,
+            "compute_tops": 42.5,
             "bytes_per_elem": 2.0,
             "color": "#A3C8EF",
             "linestyle": "-",
@@ -30,7 +30,7 @@ def plot_element_based_roofline():
         {
             "name": "Orin W4A16",
             "bw_gbps": 204.8,
-            "compute_tops": 68.75,
+            "compute_tops": 42.5,
             "bytes_per_elem": 0.5,
             "color": "#CDE2FA",
             "linestyle": "--",
@@ -54,7 +54,7 @@ def plot_element_based_roofline():
     ]
 
     plt.style.use("seaborn-v0_8-white")
-    fig, ax = plt.subplots(figsize=(3.5, 2))
+    fig, ax = plt.subplots(figsize=(3.5, 3.5))
 
     bw_gelems = []
     bw_telems = []
@@ -111,16 +111,16 @@ def plot_element_based_roofline():
                 y_position,
                 f"{cfg['compute_tops']} {text_suffix}",
                 color="black",
-                fontsize=7,
+                fontsize=10,
                 fontweight="bold",
             )
 
     ax.set_xlabel(
         "Arithmetic Intensity (OPs/Element)",
-        fontsize=9,
+        fontsize=10,
         fontweight="bold",
     )
-    ax.set_ylabel("Perf (TOPS/TFLOPS)", fontsize=9, fontweight="bold")
+    ax.set_ylabel("Perf (TOPS or TFLOPS)", fontsize=10, fontweight="bold")
     # ax.set_title(
     #     "Element-based Roofline Model: NVIDIA AGX Orin vs Thor",
     #     fontsize=10,
@@ -155,8 +155,8 @@ def plot_element_based_roofline():
         spine.set_linewidth(0.9)
 
     leg = ax.legend(
-        loc="upper left",
-        fontsize=7,
+        loc="center left",
+        fontsize=9,
         frameon=True,
         fancybox=False,
         edgecolor="#888888",
@@ -164,7 +164,7 @@ def plot_element_based_roofline():
     )
     leg.get_frame().set_linewidth(0.8)
 
-    ax.tick_params(axis="both", labelsize=8)
+    ax.tick_params(axis="both", labelsize=10)
 
     plt.tight_layout()
     plt.savefig(out_path, dpi=300, facecolor="white")

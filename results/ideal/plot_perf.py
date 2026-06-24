@@ -146,6 +146,8 @@ def main():
         fig, ax = plt.subplots(figsize=(2.5, 1.2))
     x_indices = np.arange(len(models))
 
+    print(f"\n{'Strategy':<12} | {'Model':<20} | Speedup")
+    print("-" * 44)
     for pos, (_, row) in enumerate(df.iterrows()):
         y_values = row[1:].astype(float).values
         label = strategy_labels[pos]
@@ -160,38 +162,24 @@ def main():
             linewidth=0.5,
             zorder=2,
         )
-        if re.match(r"^CP=", label):
-            ann_xytext = (1.5, 0)
-        elif re.match(r"^TP=", label) and args.phase == "prefill":
-            ann_xytext = (-1.5, 0)
-        else:
-            ann_xytext = (0, 0)
-
+        is_baseline = "No Parallelism" in label
         for j, bar in enumerate(bars):
+            if is_baseline:
+                continue
             latency = y_values[j]
             speedup = baseline_latency[j] / latency
-            ax.annotate(
-                f"{speedup:.1f}x",
-                xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
-                xytext=ann_xytext,
-                textcoords="offset points",
-                ha="center",
-                va="bottom",
-                fontsize=6,
-                color="black",
-            )
+            print(f"  {label:<12} | {models[j]:<20} | {speedup:.2f}x")
 
-    ax.set_ylabel(df.columns[0], fontsize=9, fontweight="bold")
+    ax.set_ylabel(df.columns[0], fontsize=10, fontweight="bold")
     ax.set_xticks(x_indices)
     # if args.phase == "decode":
     #     xticklabels = [re.sub(r"^Qwen3_", "", str(m)) for m in models]
     # else:
     #     xticklabels = list(models)
     xticklabels = list(models)
-    ax.set_xticklabels(xticklabels, fontsize=8)
+    ax.set_xticklabels(xticklabels, fontsize=8.5)
 
     max_y = df.iloc[:, 1:].astype(float).max().max()
-    ax.set_ylim(0, max_y * 1.2)
     ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
 
     # Prefill: optional FPS reference lines (latency ms = 1000 / FPS).
@@ -199,16 +187,18 @@ def main():
         "Orin": (30, 10),
         "Thor": (30,),
     }
-    x_position = 0.5 if args.device == "Orin" else 1.1
+    x_position = 0.2 if args.device == "Orin" else 1.1
     if args.phase == "prefill" and args.device in _prefill_fps_by_device:
-        y_cap = max_y * 1.2
+        fps_y_refs = [1000.0 / fps for fps in _prefill_fps_by_device[args.device]]
+        max_fps_ref = max(fps_y_refs)
+        current_top = ax.get_ylim()[1]
+        if max_fps_ref >= current_top * 0.95:
+            ax.set_ylim(0, max_fps_ref * 1.2)
         for fps in _prefill_fps_by_device[args.device]:
             y_ref = 1000.0 / fps
-            if y_ref > y_cap:
-                continue
             ax.axhline(
                 y=y_ref,
-                color="#B22222",
+                color="#333333",
                 linestyle="--",
                 linewidth=0.9,
                 zorder=1,
@@ -216,13 +206,13 @@ def main():
             )
             ax.text(
                 x_position,
-                y_ref + 0.02 * max_y,
+                y_ref + 0.005 * max_y,
                 f"{fps} FPS",
                 ha="right",
                 va="bottom",
-                fontsize=6,
+                fontsize=10,
                 zorder=1,
-                color="#B22222",
+                color="#333333",
                 fontstyle="italic",
             )
 
@@ -241,23 +231,35 @@ def main():
         spine.set_color("black")
         spine.set_linewidth(0.9)
 
+    plt.tight_layout()
+    plt.savefig(out_filename, dpi=300, facecolor="white")
+    plt.close(fig)
+    print(f"Chart successfully saved to: {out_filename}")
+
     if args.legend:
-        leg = ax.legend(
-            fontsize=7,
-            title_fontsize=8,
-            loc="upper left",
+        handles, labels = ax.get_legend_handles_labels()
+        n = len(handles)
+        fig_leg, ax_leg = plt.subplots(figsize=(n * 1.3, 0.45))
+        ax_leg.set_axis_off()
+        leg = ax_leg.legend(
+            handles,
+            labels,
+            loc="center",
+            ncol=n,
+            fontsize=10,
             frameon=True,
             fancybox=False,
             edgecolor="#888888",
             facecolor="white",
-            labelspacing=0.2,
+            labelspacing=0.3,
+            handlelength=1.5,
+            columnspacing=1.0,
         )
-        leg.set_zorder(1)
         leg.get_frame().set_linewidth(0.8)
-
-    plt.tight_layout()
-    plt.savefig(out_filename, dpi=300, facecolor="white")
-    print(f"Chart successfully saved to: {out_filename}")
+        leg_filename = "perf_legend.png"
+        fig_leg.savefig(leg_filename, dpi=300, facecolor="white", bbox_inches="tight")
+        plt.close(fig_leg)
+        print(f"Legend saved to: {leg_filename}")
 
 
 if __name__ == "__main__":

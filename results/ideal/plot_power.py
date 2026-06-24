@@ -22,11 +22,20 @@ def build_filename(device, precision, phase, seq_len, spec_tokens):
     return f"{device}_{precision}_{phase}_{seq_len}_{spec_tokens}_power.csv"
 
 
-def load_heatmap_data(device, strategy, phase, seq_len, spec_tokens):
+def load_heatmap_data(device, strategy, phase, seq_len, spec_tokens, precision=None):
     cfg = DEVICE_CONFIG[device]
-    precisions = cfg["precisions"][phase]
+    all_precisions = cfg["precisions"][phase]
 
-    # heatmap shape: (3 rows=degrees, 6 cols=models x precisions)
+    if precision is not None:
+        if precision not in all_precisions:
+            raise ValueError(
+                f"Unknown precision '{precision}' for {device} {phase}. "
+                f"Supported: {all_precisions}"
+            )
+        precisions = [precision]
+    else:
+        precisions = all_precisions
+
     data = np.full((len(DEGREES), len(MODELS) * len(precisions)), np.nan)
 
     for pi, prec in enumerate(precisions):
@@ -76,9 +85,8 @@ def main():
     parser.add_argument(
         "--precision",
         type=str,
-        required=False,
-        default=None,
-        help="(Unused for heatmap; both precisions are loaded automatically)",
+        required=True,
+        help="Precision to plot (e.g., fp8, fp4, fp16, int8, int4)",
     )
     parser.add_argument(
         "--strategy",
@@ -95,93 +103,74 @@ def main():
 
     strategy = args.strategy.upper()
     data, precisions = load_heatmap_data(
-        args.device, strategy, args.phase, args.seq_len, args.spec_tokens
+        args.device,
+        strategy,
+        args.phase,
+        args.seq_len,
+        args.spec_tokens,
+        precision=args.precision,
     )
 
-    # --- Column labels: precision x model (grouped by precision) ---
     col_labels = []
     for prec in precisions:
         for model in MODELS:
             col_labels.append(f"{model.replace('Qwen3_', '')}")
 
-    # --- Row labels: strategy=degree ---
     row_labels = ["No Para" if d == 1 else f"{strategy}={d}" for d in DEGREES]
 
-    # --- Plot ---
     plt.style.use("seaborn-v0_8-white")
-    fig, ax = plt.subplots(figsize=(2.8, 1.5))
+    fig, ax = plt.subplots(figsize=(1.8, 1.5))
 
     vmin, vmax = 20, 100
     cmap = "YlOrRd"
     im = ax.imshow(data, cmap=cmap, vmin=vmin, vmax=vmax, aspect="auto")
 
-    # Annotate each cell with per-device power, and total power for degree > 1
     for i, deg in enumerate(DEGREES):
         for j in range(len(MODELS) * len(precisions)):
             val = data[i, j]
             if np.isnan(val):
                 continue
+            total = val * deg
             normalized = (val - vmin) / (vmax - vmin) if vmax > vmin else 0.5
-            text_color = "white" if normalized > 0.55 else "black"
-            if deg == 1:
-                ax.text(
-                    j,
-                    i,
-                    f"{val:.0f}",
-                    ha="center",
-                    va="center",
-                    fontsize=7.5,
-                    color=text_color,
-                )
-            else:
-                total = val * deg
-                ax.text(
-                    j,
-                    i - 0.1,
-                    f"{val:.0f}",
-                    ha="center",
-                    va="center",
-                    fontsize=7.5,
-                    color=text_color,
-                )
-                ax.text(
-                    j,
-                    i + 0.25,
-                    f"({total:.0f})",
-                    ha="center",
-                    va="center",
-                    fontsize=6.5,
-                    color=text_color,
-                    fontstyle="italic",
-                )
+            text_color = "white" if normalized > 0.75 else "black"
+            ax.text(
+                j,
+                i,
+                f"{total:.0f}",
+                ha="center",
+                va="center",
+                fontsize=10,
+                color=text_color,
+            )
 
-    # Axis ticks
     ax.set_xticks(np.arange(len(col_labels)))
-    ax.set_xticklabels(col_labels, fontsize=7)
+    ax.set_xticklabels(col_labels, fontsize=10)
     ax.set_yticks(np.arange(len(row_labels)))
-    ax.set_yticklabels(row_labels, fontsize=7)
+    ax.set_yticklabels(row_labels, fontsize=10)
 
-    # Vertical separators between precision groups
     n_models = len(MODELS)
     for g in range(1, len(precisions)):
-        ax.axvline(g * n_models - 0.5, color="white", linewidth=2.5, zorder=3)
+        ax.axvline(g * n_models - 0.5, color="white", linewidth=5.0, zorder=3)
 
-    # Add top-level precision group labels via secondary x-axis
-    ax2 = ax.twiny()
-    ax2.set_xlim(ax.get_xlim())
-    group_centers = [
-        (g * n_models + (n_models - 1) / 2) for g in range(len(precisions))
-    ]
-    ax2.set_xticks(group_centers)
-    ax2.set_xticklabels(
-        precisions,
-        fontsize=7,
-        fontweight="bold",
-        fontstyle="italic",
-    )
-    ax2.tick_params(length=0, pad=1)
+    if len(precisions) > 1:
+        ax2 = ax.twiny()
+        ax2.set_xlim(ax.get_xlim())
+        group_centers = [
+            (g * n_models + (n_models - 1) / 2) for g in range(len(precisions))
+        ]
+        ax2.set_xticks(group_centers)
+        ax2.set_xticklabels(
+            precisions,
+            fontsize=10,
+            fontweight="bold",
+            fontstyle="italic",
+        )
+        ax2.tick_params(length=0, pad=1)
+        for spine in ax2.spines.values():
+            spine.set_visible(True)
+            spine.set_color("black")
+            spine.set_linewidth(0.9)
 
-    # Grid lines between cells
     ax.set_xticks(np.arange(-0.5, len(col_labels), 1), minor=True)
     ax.set_yticks(np.arange(-0.5, len(DEGREES), 1), minor=True)
     ax.grid(which="minor", color="white", linewidth=1.0)
@@ -193,31 +182,30 @@ def main():
         spine.set_color("black")
         spine.set_linewidth(0.9)
 
-    for spine in ax2.spines.values():
-        spine.set_visible(True)
-        spine.set_color("black")
-        spine.set_linewidth(0.9)
-
     plt.tight_layout()
 
-    # Output filename
     if args.spec_tokens == "-1":
-        out_filename = f"{args.device}_{args.phase}_{args.strategy}_{args.seq_len}_power_heatmap.png"
+        out_filename = (
+            f"{args.device}_{args.precision}_{args.phase}_{args.strategy}_"
+            f"{args.seq_len}_power_heatmap.png"
+        )
     else:
-        out_filename = f"{args.device}_{args.phase}_{args.strategy}_{args.seq_len}_{args.spec_tokens}_power_heatmap.png"
+        out_filename = (
+            f"{args.device}_{args.precision}_{args.phase}_{args.strategy}_"
+            f"{args.seq_len}_{args.spec_tokens}_power_heatmap.png"
+        )
 
     plt.savefig(out_filename, dpi=300, facecolor="white", bbox_inches="tight")
     print(f"Heatmap saved to: {out_filename}")
 
-    # --- Standalone colorbar ---
     fig_cb, ax_cb = plt.subplots(figsize=(0.2, 1.5))
     fig_cb.subplots_adjust(left=0.3, right=0.55, top=0.97, bottom=0.03)
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     cbar = fig_cb.colorbar(sm, cax=ax_cb)
-    cbar.set_label("Power (W)", fontsize=7, fontweight="bold")
-    cbar.ax.tick_params(labelsize=6)
+    cbar.set_label("Power (W)", fontsize=10, fontweight="bold")
+    cbar.ax.tick_params(labelsize=10)
     cb_filename = "power_colorbar.png"
     fig_cb.savefig(cb_filename, dpi=1200, facecolor="white", bbox_inches="tight")
     print(f"Colorbar saved to: {cb_filename}")
