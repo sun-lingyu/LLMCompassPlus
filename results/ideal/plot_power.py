@@ -121,7 +121,7 @@ def main():
     plt.style.use("seaborn-v0_8-white")
     fig, ax = plt.subplots(figsize=(1.8, 1.5))
 
-    vmin, vmax = 20, 100
+    vmin, vmax = 0, 400
     cmap = "YlOrRd"
     im = ax.imshow(data, cmap=cmap, vmin=vmin, vmax=vmax, aspect="auto")
 
@@ -203,7 +203,7 @@ def main():
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    cbar = fig_cb.colorbar(sm, cax=ax_cb)
+    cbar = fig_cb.colorbar(sm, cax=ax_cb, ticks=np.arange(vmin, vmax + 1, 50))
     cbar.set_label("Power (W)", fontsize=10, fontweight="bold")
     cbar.ax.tick_params(labelsize=10)
     cb_filename = "power_colorbar.png"

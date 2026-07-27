@@ -13,9 +13,9 @@ inference_config (CLI)  size   num_ViT  ViT seq  LLM model   LLM seq  decode ite
 Robo                    L      2        1024      Qwen3_8B    512      –
                         M      1        1024      Qwen3_4B    256      –
                         S      1        576       Qwen3_1_7B  144      –
-AD                      L      12       1024      Qwen3_8B    1024     5
-                        M      6        1024      Qwen3_4B    768      5
-                        S      6        576       Qwen3_1_7B  512      5
+AD                      L      12       1024      Qwen3_8B    1024     4
+                        M      6        1024      Qwen3_4B    768      4
+                        S      6        576       Qwen3_1_7B  512      4
 
 LLM model / degree mapping (fixed)
 -----------------------------------
@@ -95,7 +95,6 @@ LLM_PRECISION_CHOICES: Dict[str, list] = {
 
 # ── LLM / ViT interconnect ───────────────────────────────────────────────────
 _LLM_ICNT_TYPE = "ucie_std"
-_LLM_NO_CONTENTION = True
 # Single UCIe link: 128 GB/s → 128 * 8 Gbps.  _comm_bw_for_degree() scales this
 # by the number of active links (×1 for degree=2, ×2 for degree=4).
 _LINK_BW_GBPS: float = 128 * 8  # 128 * 8 Gbps per link
@@ -146,7 +145,7 @@ _INFERENCE_CONFIGS: Dict[str, Dict[str, dict]] = {
             "llm_model": "Qwen3_8B",
             "llm_seq": 1024,
             "degree": 4,
-            "num_decode_steps": 5,
+            "num_decode_steps": 4,
         },
         "M": {
             "num_vits": 6,
@@ -154,7 +153,7 @@ _INFERENCE_CONFIGS: Dict[str, Dict[str, dict]] = {
             "llm_model": "Qwen3_4B",
             "llm_seq": 768,
             "degree": 2,
-            "num_decode_steps": 5,
+            "num_decode_steps": 4,
         },
         "S": {
             "num_vits": 6,
@@ -162,7 +161,7 @@ _INFERENCE_CONFIGS: Dict[str, Dict[str, dict]] = {
             "llm_model": "Qwen3_1_7B",
             "llm_seq": 512,
             "degree": 1,
-            "num_decode_steps": 5,
+            "num_decode_steps": 4,
         },
     },
 }
@@ -387,14 +386,16 @@ def _simulate_one_layer(
     degree: int = 1,
     comm_bandwidth_gbps: float = 0.0,
     icnt_type: str = "pcie",
-    no_contention: bool = False,
+    overlap: bool = False,
     _split_out: dict = None,
 ) -> Tuple[float, float]:
     """
     Simulate one transformer layer for the given hardware config.
     Returns (total_lat_ms, avg_power_w) for a single layer, where:
       – total_lat_ms = lat_comp  (degree=1)
-                     = lat_comp + lat_comm  (degree>1, non-overlapped comm added)
+                     = lat_comp + lat_comm  (degree>1; lat_comm is fully
+                       serialized comm latency if overlap=False, or the
+                       exposed latency max(0, T_comm - T_comp) if overlap=True)
       – avg_power_w is energy-weighted average across compute and (if degree>1)
         the most-efficient interconnect candidate.
 
@@ -426,7 +427,7 @@ def _simulate_one_layer(
             degree=degree,
             comm_bandwidth_gbps=comm_bandwidth_gbps,
             icnt_type=icnt_type,
-            no_contention=no_contention,
+            overlap=overlap,
             spec_tokens=spec_tokens,
             seq_len=seq_len,
             layer_cache_dict=layer_cache_dict,
@@ -449,7 +450,7 @@ def _simulate_one_layer(
             _split_out["peak"] = _peak_comp
         return lat_comp, power_comp
 
-    # degree > 1: add non-overlapped comm latency and interconnect power
+    # degree > 1: add comm latency (serialized or exposed, per `overlap`) and interconnect power
     lat_comm: float = results["lat_comm"]
     total_lat = lat_comp + lat_comm
 
@@ -491,6 +492,7 @@ def _simulate_llm_layer(
     is_causal: bool,
     spec_tokens: int = 64,
     seq_len: int,
+    overlap: bool = False,
     _split_out: dict = None,
 ) -> Tuple[float, float, str]:
     """
@@ -517,7 +519,7 @@ def _simulate_llm_layer(
         "degree": degree,
         "comm_bandwidth_gbps": comm_bw_gbps,
         "icnt_type": _LLM_ICNT_TYPE,
-        "no_contention": _LLM_NO_CONTENTION,
+        "overlap": overlap,
     }
 
     # TP: M stays at seq_len_q (sequence not split across ranks)
@@ -593,6 +595,7 @@ def _compute_vit_stats(
     *,
     degree: int,
     vit_seq: int,
+    overlap: bool = False,
     _chip_layer_pow: float = None,
     _dram_layer_pow: float = None,
     _split_out: dict = None,
@@ -637,8 +640,12 @@ def _compute_vit_stats(
         total_lat += lat
         total_energy += energy
         if _track and _chip_layer_pow is not None:
-            total_chip_energy += _chip_layer_pow * vit_layer_lat * _VIT_NUM_LAYERS * full_steps
-            total_dram_energy += (_dram_layer_pow or 0.0) * vit_layer_lat * _VIT_NUM_LAYERS * full_steps
+            total_chip_energy += (
+                _chip_layer_pow * vit_layer_lat * _VIT_NUM_LAYERS * full_steps
+            )
+            total_dram_energy += (
+                (_dram_layer_pow or 0.0) * vit_layer_lat * _VIT_NUM_LAYERS * full_steps
+            )
             vit_peak = max(vit_peak, _chip_layer_pow + (_dram_layer_pow or 0.0))
 
     if has_half:
@@ -661,15 +668,19 @@ def _compute_vit_stats(
             parallelism="TP",
             comm_bandwidth_gbps=_LINK_BW_GBPS,
             icnt_type=_LLM_ICNT_TYPE,
-            no_contention=_LLM_NO_CONTENTION,
+            overlap=overlap,
             _split_out=_half_split,
         )
         lat, energy = _segment_stats(half_vit_lat, half_vit_pow, _VIT_NUM_LAYERS)
         total_lat += lat
         total_energy += energy
         if _track and _half_split:
-            total_chip_energy += _half_split.get("chip", half_vit_pow) * half_vit_lat * _VIT_NUM_LAYERS
-            total_dram_energy += _half_split.get("dram", 0.0) * half_vit_lat * _VIT_NUM_LAYERS
+            total_chip_energy += (
+                _half_split.get("chip", half_vit_pow) * half_vit_lat * _VIT_NUM_LAYERS
+            )
+            total_dram_energy += (
+                _half_split.get("dram", 0.0) * half_vit_lat * _VIT_NUM_LAYERS
+            )
             vit_peak = max(vit_peak, _half_split.get("peak", half_vit_pow))
 
     if has_quarter:
@@ -692,15 +703,21 @@ def _compute_vit_stats(
             parallelism="TP",
             comm_bandwidth_gbps=_comm_bw_for_degree(4),
             icnt_type=_LLM_ICNT_TYPE,
-            no_contention=_LLM_NO_CONTENTION,
+            overlap=overlap,
             _split_out=_quarter_split,
         )
         lat, energy = _segment_stats(quarter_vit_lat, quarter_vit_pow, _VIT_NUM_LAYERS)
         total_lat += lat
         total_energy += energy
         if _track and _quarter_split:
-            total_chip_energy += _quarter_split.get("chip", quarter_vit_pow) * quarter_vit_lat * _VIT_NUM_LAYERS
-            total_dram_energy += _quarter_split.get("dram", 0.0) * quarter_vit_lat * _VIT_NUM_LAYERS
+            total_chip_energy += (
+                _quarter_split.get("chip", quarter_vit_pow)
+                * quarter_vit_lat
+                * _VIT_NUM_LAYERS
+            )
+            total_dram_energy += (
+                _quarter_split.get("dram", 0.0) * quarter_vit_lat * _VIT_NUM_LAYERS
+            )
             vit_peak = max(vit_peak, _quarter_split.get("peak", quarter_vit_pow))
 
     if _track and total_lat > 0:
@@ -721,6 +738,7 @@ def compute_inference_latency(
     mem_bitwidth: int,
     llm_precision: str,
     dse_cache: dict,
+    overlap: bool = False,
 ) -> dict:
     """
     Simulate the full inference pipeline for one hardware configuration.
@@ -789,6 +807,7 @@ def compute_inference_latency(
         "dse_cache": dse_cache,
         "degree": llm_degree,
         "comm_bw_gbps": llm_comm_bw,
+        "overlap": overlap,
     }
 
     # ── ViT pipeline ──────────────────────────────────────────────────────────
@@ -804,6 +823,7 @@ def compute_inference_latency(
         dse_cache,
         degree=llm_degree,
         vit_seq=VIT_SEQ,
+        overlap=overlap,
         _chip_layer_pow=_vit_layer_split.get("chip"),
         _dram_layer_pow=_vit_layer_split.get("dram"),
         _split_out=_vit_pipeline_split,
@@ -917,6 +937,7 @@ def run_dse(
     mem_freq: int,
     mem_bitwidth: int,
     dse_cache: dict,
+    overlap: bool = False,
 ) -> list:
     """
     Sweep over (SM count × L2 size) grid for one (inference_config, size) pair.
@@ -955,6 +976,7 @@ def run_dse(
     print(f"  Inference config : {inference_config}-{size}")
     print(f"  LLM model        : {llm_model}  (degree={llm_degree})")
     print(f"  LLM precision    : {llm_precision}")
+    print(f"  Comm overlap     : {overlap}")
     print(f"  Latency limit    : {latency_limit_ms} ms")
     print(
         f"  Grid (max)       : {len(sm_desc)} SM × {len(l2_desc)} L2"
@@ -1014,6 +1036,7 @@ def run_dse(
                     mem_bitwidth,
                     llm_precision,
                     dse_cache,
+                    overlap=overlap,
                 )
             except Exception as exc:
                 print(f"  ERROR: {exc}")
@@ -1177,14 +1200,14 @@ def _print_final_summary(
 
 
 _MEM_FREQ_CHOICES = [6400, 8533, 9600, 10667, 12800]
-_MEM_BITWIDTH_CHOICES = [128, 256]
+_MEM_BITWIDTH_CHOICES = [128, 256, 512]
 
 # LPDDR5/LPDDR5x: [6400, 8533, 9600] ↔ [128, 256]
 # LPDDR6:         [10667, 12800]      ↔ [128, 256]
 _LPDDR5_FREQS = {6400, 8533, 9600}
 _LPDDR6_FREQS = {10667, 12800}
-_LPDDR5_BITWIDTHS = {128, 256}
-_LPDDR6_BITWIDTHS = {128, 256}
+_LPDDR5_BITWIDTHS = {128, 256, 512}
+_LPDDR6_BITWIDTHS = {128, 256, 512}
 
 _DEFAULT_MEM: Dict[str, Tuple[int, int]] = {
     "Orin": (6400, 256),
@@ -1204,7 +1227,7 @@ def main() -> None:
         "--area",
         type=int,
         required=True,
-        choices=[100, 200, 400],
+        choices=[200, 250, 400],
         help="SoC area in mm² (100, 200 or 400).  GPU is budgeted at ≤35%% of this.",
     )
     parser.add_argument(
@@ -1236,8 +1259,14 @@ def main() -> None:
     parser.add_argument(
         "--latency_limit",
         type=float,
-        default=110.0,
-        help="End-to-end latency constraint in ms (default: 110 ms).",
+        default=100.0,
+        help="End-to-end latency constraint in ms (default: 100 ms).",
+    )
+    parser.add_argument(
+        "--overlap",
+        action="store_true",
+        help="Model ideal compute/comm overlap: exposed comm latency = "
+        "max(0, T_comm - T_comp). Default is no overlap (fully serialized).",
     )
     parser.add_argument(
         "--mem_freq",
@@ -1329,6 +1358,7 @@ def main() -> None:
             mem_freq=mem_freq,
             mem_bitwidth=mem_bitwidth,
             dse_cache=dse_cache,
+            overlap=args.overlap,
         )
         results_by_size[size] = size_results
 
@@ -1368,6 +1398,7 @@ def main() -> None:
             "mem_freq": mem_freq,
             "mem_bitwidth": mem_bitwidth,
             "latency_limit": args.latency_limit,
+            "overlap": args.overlap,
         },
     )
 

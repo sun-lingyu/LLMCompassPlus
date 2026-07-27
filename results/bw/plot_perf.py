@@ -6,289 +6,97 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
-from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter, NullLocator
+from matplotlib.patches import Patch
+from matplotlib.transforms import blended_transform_factory
 
-COLOR_TP = "#4F89BA"
-COLOR_CP = "#D67F42"
-LINE_TP = "#A3C8EF"
-LINE_CP = "#F2C28A"
-MARKER_EDGEWIDTH = 0.85
-IDEAL_LINE_TP = "#4F89BA"
-IDEAL_LINE_CP = "#D67F42"
+COLOR_BASE = "#4F89BA"  # no-overlap bars (comm fully serialized)
+COLOR_OVERLAP = "#F2C28A"  # overlap bars (ideal comm/compute overlap)
+IDEAL_LINE_COLOR = "black"
+IDEAL_LINE_STYLE = "--"
+IDEAL_LINE_WIDTH = 1.0
+BAR_EDGE_COLOR = "black"
+BAR_EDGE_WIDTH = 0.4
 
+# Bandwidth reduction between adjacent (doubling) BW points below which we
+# consider the curve to have entered "diminishing returns".
+KNEE_THRESHOLD = 0.05
 
-def _parse_column_name(name):
-    s = str(name).strip()
-    m = re.match(r"^(.+?)\s+(TP|CP)$", s)
-    if m:
-        return m.group(1).strip(), m.group(2)
-    return s, None
+# Compact paper-figure layout: narrow bars packed tightly within each group.
+FIGSIZE = (1.2, 1.5)
+BAR_GROUP_WIDTH = 0.62
+BAR_GAP = 0.02
 
-
-def _group_series_by_model(series_columns):
-    groups = []
-    key_index = {}
-    ungrouped = []
-
-    for c in series_columns:
-        model, kind = _parse_column_name(c)
-        if kind not in ("TP", "CP"):
-            ungrouped.append(c)
-            continue
-        if model not in key_index:
-            key_index[model] = len(groups)
-            groups.append((model, {"TP": None, "CP": None}))
-        groups[key_index[model]][1][kind] = c
-
-    return groups, ungrouped
+FONT_AXIS_LABEL = 9
+FONT_TICK = 9
+FONT_MODEL_NAME = 8
+FONT_IDEAL = 8
+FONT_KNEE = 8
 
 
 def _split_data_and_ideal(df, bw_col):
+    """Split the raw CSV into (numeric BW rows, 'Ideal' row, 'Ideal single' row)."""
     first = df[bw_col].astype(str).str.strip()
     is_ideal = first.str.lower() == "ideal"
+    is_ideal_single = first.str.lower() == "ideal single"
+
     ideal_df = df.loc[is_ideal]
-    plot_df = df.loc[~is_ideal].copy()
+    ideal_single_df = df.loc[is_ideal_single]
+
+    plot_df = df.loc[~is_ideal & ~is_ideal_single].copy()
     plot_df[bw_col] = pd.to_numeric(plot_df[bw_col], errors="coerce")
     plot_df = plot_df.dropna(subset=[bw_col])
+    plot_df = plot_df.sort_values(bw_col).reset_index(drop=True)
 
     ideal_row = ideal_df.iloc[0] if len(ideal_df) else None
-    return plot_df, ideal_row
+    ideal_single_row = ideal_single_df.iloc[0] if len(ideal_single_df) else None
+    return plot_df, ideal_row, ideal_single_row
 
 
-def _plot_ideal_hlines(ax, ideal_row, series_cols, include_cp):
-    if ideal_row is None:
-        return
-    for col in series_cols:
-        model, kind = _parse_column_name(col)
-        if kind == "CP" and not include_cp:
-            continue
-        if kind == "TP":
-            color = IDEAL_LINE_TP
-        elif kind == "CP":
-            color = IDEAL_LINE_CP
-        else:
-            continue
-        try:
-            y = float(ideal_row[col])
-        except (TypeError, ValueError, KeyError):
-            continue
-        if not np.isfinite(y):
-            continue
-        ax.axhline(
-            y=y,
-            color=color,
-            linestyle="--",
-            linewidth=1.25,
-            zorder=1,
-            clip_on=True,
-        )
+def _find_base_overlap_columns(series_columns):
+    """Identify the (base_col, overlap_col, model_name) triple.
+
+    Expects one column named "<model>" and a sibling "<model> overlap".
+    """
+    overlap_col = None
+    model_name = None
+    for c in series_columns:
+        s = str(c).strip()
+        if re.search(r"\boverlap$", s, flags=re.IGNORECASE):
+            overlap_col = c
+            model_name = re.sub(r"\s+overlap$", "", s, flags=re.IGNORECASE).strip()
+            break
+
+    base_col = None
+    if model_name is not None:
+        for c in series_columns:
+            if c != overlap_col and str(c).strip() == model_name:
+                base_col = c
+                break
+    if base_col is None:
+        for c in series_columns:
+            if c != overlap_col:
+                base_col = c
+                break
+    if model_name is None and base_col is not None:
+        model_name = str(base_col).strip()
+
+    return base_col, overlap_col, model_name
 
 
-def _configure_bw_axes(
-    ax,
-    x,
-    df_plot,
-    ylim_cols,
-    ideal_row,
-    series_cols,
-    include_cp,
-    phase,
-    df_nc_plot=None,
-    nc_ideal_row=None,
-    nc_ylim_cols=None,
-):
-    ax.set_xscale("log", base=2)
-    x_ticks = np.unique(np.sort(x.astype(float)))
-    ax.xaxis.set_major_locator(FixedLocator(x_ticks))
-    ax.xaxis.set_major_formatter(
-        FuncFormatter(
-            lambda v, _p: (f"{int(round(v))}" if abs(v - round(v)) < 1e-9 else f"{v:g}")
-        )
-    )
-    ax.xaxis.set_minor_locator(NullLocator())
-    ax.xaxis.set_minor_formatter(NullFormatter())
+def _find_knee(bw, lat, threshold=KNEE_THRESHOLD):
+    """Find the first BW point beyond which further doubling of bandwidth
+    only reduces latency by less than `threshold` (diminishing returns).
 
-    ax.set_xlabel("ICNT BW (GB/s)", fontsize=9, fontweight="bold")
-    ax.set_ylabel("Latency (ms)", fontsize=9, fontweight="bold")
-
-    xmin, xmax = float(x_ticks.min()), float(x_ticks.max())
-    ax.set_xlim(xmin / 2**0.25, xmax * 2**0.25)
-
-    ymax = df_plot[ylim_cols].astype(float).to_numpy().max() if ylim_cols else 1.0
-    if df_nc_plot is not None and nc_ylim_cols:
-        ymax = max(
-            ymax,
-            float(df_nc_plot[nc_ylim_cols].astype(float).to_numpy().max()),
-        )
-    if ideal_row is not None:
-        for col in ylim_cols:
-            try:
-                v = float(ideal_row[col])
-                if np.isfinite(v):
-                    ymax = max(ymax, v)
-            except (TypeError, ValueError, KeyError):
-                pass
-    if nc_ideal_row is not None and nc_ylim_cols:
-        for col in nc_ylim_cols:
-            try:
-                v = float(nc_ideal_row[col])
-                if np.isfinite(v):
-                    ymax = max(ymax, v)
-            except (TypeError, ValueError, KeyError):
-                pass
-    if phase == "prefill":
-        ax.set_ylim(0, ymax * 1.12)
-    else:
-        ax.set_ylim(0, ymax * 1.35)
-
-    _plot_ideal_hlines(ax, ideal_row, series_cols, include_cp)
-
-
-def _plot_bw_data_series(
-    ax, x, df_plot, model_groups, ungrouped_cols, include_cp, df_nc_plot=None
-):
-    for _model, cols in model_groups:
-        series_styles = (("TP", COLOR_TP, LINE_TP),)
-        if include_cp:
-            series_styles = (
-                ("TP", COLOR_TP, LINE_TP),
-                ("CP", COLOR_CP, LINE_CP),
-            )
-        for _kind, pt_color, ln_color in series_styles:
-            col = cols[_kind]
-            if col is None:
-                continue
-            y = df_plot[col].astype(float).values
-            ax.plot(
-                x,
-                y,
-                color=ln_color,
-                linestyle="-",
-                linewidth=1.8,
-                marker="o",
-                markersize=3,
-                markerfacecolor=pt_color,
-                markeredgecolor=pt_color,
-                markeredgewidth=MARKER_EDGEWIDTH,
-                zorder=2,
-            )
-        if df_nc_plot is not None:
-            col = cols.get("TP")
-            if col is not None and col in df_nc_plot.columns:
-                y_nc = df_nc_plot[col].astype(float).values
-                ax.plot(
-                    x,
-                    y_nc,
-                    color=LINE_TP,
-                    linestyle="--",
-                    linewidth=1.2,
-                    marker="x",
-                    markersize=3,
-                    markerfacecolor=COLOR_TP,
-                    markeredgecolor=COLOR_TP,
-                    markeredgewidth=MARKER_EDGEWIDTH,
-                    zorder=2,
-                )
-
-    for col in ungrouped_cols:
-        y = df_plot[col].astype(float).values
-        ax.plot(
-            x,
-            y,
-            color="#C8C8C8",
-            linestyle="-",
-            linewidth=1.8,
-            marker="o",
-            markersize=3,
-            markerfacecolor="#4A4A4A",
-            markeredgecolor="#4A4A4A",
-            markeredgewidth=MARKER_EDGEWIDTH,
-            zorder=2,
-        )
-
-
-def _is_thor_device(device):
-    return str(device).strip().lower() == "thor"
-
-
-def _series_cols_for_ylim(model_groups, ungrouped_cols, include_cp):
-    cols = []
-    for _m, g in model_groups:
-        if g.get("TP"):
-            cols.append(g["TP"])
-        if include_cp and g.get("CP"):
-            cols.append(g["CP"])
-    cols.extend(ungrouped_cols)
-    return cols
-
-
-def _tp_cp_legend_handles():
-    tp_h = Line2D(
-        [0],
-        [0],
-        color=LINE_TP,
-        linewidth=2,
-        linestyle="-",
-        marker="o",
-        markersize=3,
-        markerfacecolor=COLOR_TP,
-        markeredgecolor=COLOR_TP,
-        markeredgewidth=MARKER_EDGEWIDTH,
-    )
-    cp_h = Line2D(
-        [0],
-        [0],
-        color=LINE_CP,
-        linewidth=2,
-        linestyle="-",
-        marker="o",
-        markersize=3,
-        markerfacecolor=COLOR_CP,
-        markeredgecolor=COLOR_CP,
-        markeredgewidth=MARKER_EDGEWIDTH,
-    )
-    return tp_h, cp_h
-
-
-def _tp_nocontention_legend_handle():
-    return Line2D(
-        [0],
-        [0],
-        color=LINE_TP,
-        linewidth=1.2,
-        linestyle="--",
-        marker="x",
-        markersize=3,
-        markerfacecolor=COLOR_TP,
-        markeredgecolor=COLOR_TP,
-        markeredgewidth=MARKER_EDGEWIDTH,
-    )
-
-
-def _add_bw_legend(ax, include_cp, show_nocontention=False):
-    tp_h, cp_h = _tp_cp_legend_handles()
-    if include_cp:
-        handles = [tp_h, cp_h]
-        labels = ["TP", "CP"]
-    else:
-        handles = [tp_h]
-        labels = ["TP"]
-    if show_nocontention:
-        handles.append(_tp_nocontention_legend_handle())
-        labels.append("TP (no-cont.)")
-    leg = ax.legend(
-        handles,
-        labels,
-        fontsize=7,
-        loc="upper right",
-        frameon=True,
-        fancybox=False,
-        edgecolor="#888888",
-        facecolor="white",
-        labelspacing=0.35,
-    )
-    leg.set_zorder(1)
-    leg.get_frame().set_linewidth(0.8)
+    Returns (index, found) where `found` is False if the reduction never
+    drops below the threshold within the sampled range (falls back to the
+    last point).
+    """
+    n = len(lat)
+    for i in range(n - 1):
+        reduction = (lat[i] - lat[i + 1]) / lat[i]
+        if reduction < threshold:
+            return i, True
+    return n - 1, False
 
 
 def _resolve_bw_csv_paths(bw_dir, args):
@@ -309,44 +117,204 @@ def _resolve_bw_csv_paths(bw_dir, args):
     )
 
 
-def _annotate_models(ax, model_groups, df, x_last, include_cp=True):
-    ymax = ax.get_ylim()[1]
-    dy = 0.01 * ymax
-    x_text = x_last
+def _build_series(base_col, overlap_col):
+    series = [("No overlap", base_col, COLOR_BASE)]
+    if overlap_col is not None:
+        series.append(("Overlap", overlap_col, COLOR_OVERLAP))
+    return series
 
-    kinds = ("TP", "CP") if include_cp else ("TP",)
 
-    for model, cols in model_groups:
-        y_ends = []
-        for kind in kinds:
-            col = cols[kind]
-            if col is None:
-                continue
-            y_ends.append(float(df[col].astype(float).values[-1]))
-        if not y_ends:
-            continue
-        y_high = max(y_ends)
-        y_top = ax.get_ylim()[1]
-        y_text = min(y_high + dy, y_top * 0.995)
-        ax.text(
-            x_text,
-            y_text,
-            model,
-            ha="right",
-            va="bottom",
-            fontsize=6,
-            color="black",
-            alpha=0.7,
-            clip_on=True,
-            zorder=4,
-            fontweight="bold",
-            fontstyle="italic",
+def _plot_bars(ax, x, bw, plot_df, series, ideal_row, ideal_single_row, bar_width):
+    """Draw the speedup bars for every series and collect Ideal/knee info."""
+    n_series = len(series)
+    ideal_speedups = []
+    knee_infos = []
+    max_speedup = 0.0
+
+    for idx, (label, col, color) in enumerate(series):
+        lat = plot_df[col].astype(float).to_numpy()
+        ideal_single = float(ideal_single_row[col])
+        speedup = ideal_single / lat
+        max_speedup = max(max_speedup, float(speedup.max()))
+
+        offset = (idx - (n_series - 1) / 2) * (bar_width + BAR_GAP)
+        ax.bar(
+            x + offset,
+            speedup,
+            width=bar_width,
+            color=color,
+            edgecolor=BAR_EDGE_COLOR,
+            linewidth=BAR_EDGE_WIDTH,
+            zorder=2,
+            label=label,
         )
+
+        if ideal_row is not None:
+            ideal_lat = float(ideal_row[col])
+            ideal_sp = ideal_single / ideal_lat
+            ideal_speedups.append((label, ideal_sp, color))
+            max_speedup = max(max_speedup, ideal_sp)
+
+        knee_idx, found = _find_knee(bw, lat)
+        knee_infos.append(
+            {
+                "label": label,
+                "color": color,
+                "bw": bw[knee_idx],
+                "speedup": float(speedup[knee_idx]),
+                "x": x[knee_idx] + offset,
+                "found": found,
+            }
+        )
+
+    return ideal_speedups, knee_infos, max_speedup
+
+
+def _draw_ideal_lines(ax, ideal_speedups, anchor_left=True):
+    """Draw one dashed horizontal line per distinct ideal-speedup value.
+
+    Series whose ideal speedup values coincide (within 0.1%) share a single
+    line/label so we don't stack redundant annotations. The line/label are
+    always drawn in `IDEAL_LINE_COLOR` (regardless of series). `anchor_left`
+    chooses which side of the axes the label sits on; callers pick whichever
+    side is less likely to be crossed by a knee-annotation arrow.
+    """
+    values = []
+    for _label, value, _color in ideal_speedups:
+        if not any(abs(value - v) / max(abs(v), 1e-9) < 1e-3 for v in values):
+            values.append(value)
+
+    trans = blended_transform_factory(ax.transAxes, ax.transData)
+    x_frac = 0.02 if anchor_left else 0.98
+    ha = "left" if anchor_left else "right"
+    for value in values:
+        ax.axhline(
+            y=value,
+            color=IDEAL_LINE_COLOR,
+            linestyle=IDEAL_LINE_STYLE,
+            linewidth=IDEAL_LINE_WIDTH,
+            zorder=1,
+        )
+        ax.text(
+            x_frac,
+            value,
+            f"{value:.1f}\u00d7",
+            transform=trans,
+            ha=ha,
+            va="bottom",
+            fontsize=FONT_IDEAL,
+            fontweight="bold",
+            color=IDEAL_LINE_COLOR,
+            zorder=4,
+            bbox={
+                "boxstyle": "round,pad=0.06",
+                "facecolor": "white",
+                "edgecolor": "none",
+                "alpha": 0.85,
+            },
+        )
+
+
+def _annotate_knees(ax, knee_infos, ymax):
+    """Annotate each series' diminishing-returns point.
+
+    Each series gets its own fixed horizontal "rail" near the top of the
+    axes (rather than an offset relative to its own bar height), so labels
+    never collide with the bars or the Ideal line regardless of the
+    underlying data. When two rails would still land visually close in x
+    (adjacent/same BW index), the labels are additionally nudged apart
+    horizontally.
+    """
+    n = len(knee_infos)
+    row_fracs = [0.90] if n == 1 else list(np.linspace(0.80, 0.97, n))
+
+    text_x = [info["x"] for info in knee_infos]
+    if n == 2 and abs(text_x[1] - text_x[0]) < 0.9:
+        mid = sum(text_x) / 2
+        spread = 0.5 if text_x[1] >= text_x[0] else -0.5
+        text_x = [mid - spread, mid + spread]
+
+    for info, tx, row_frac in zip(knee_infos, text_x, row_fracs):
+        star = "" if info["found"] else "*"
+        # The x position already sits on the corresponding BW tick, so the
+        # label only needs the speedup value to stay compact.
+        text = f"{info['speedup']:.2f}\u00d7{star}"
+        ax.annotate(
+            text,
+            xy=(info["x"], info["speedup"]),
+            xytext=(tx, row_frac * ymax),
+            ha="center",
+            va="center",
+            fontsize=FONT_KNEE,
+            fontweight="bold",
+            color=info["color"],
+            zorder=5,
+            arrowprops={
+                "arrowstyle": "-",
+                "color": info["color"],
+                "lw": 0.6,
+                "shrinkA": 0,
+                "shrinkB": 5,
+            },
+            bbox={
+                "boxstyle": "round,pad=0.08",
+                "facecolor": "white",
+                "edgecolor": "none",
+                "alpha": 0.85,
+            },
+        )
+        if not info["found"]:
+            print(
+                f"  [warn] '{info['label']}': latency reduction never dropped "
+                f"below {KNEE_THRESHOLD * 100:.0f}% within the sampled BW "
+                f"range; annotated the last point instead (marked with *)."
+            )
+
+
+def _save_bw_legend(out_path):
+    handles = [
+        Patch(facecolor=COLOR_BASE, edgecolor=BAR_EDGE_COLOR, linewidth=BAR_EDGE_WIDTH),
+        Patch(
+            facecolor=COLOR_OVERLAP, edgecolor=BAR_EDGE_COLOR, linewidth=BAR_EDGE_WIDTH
+        ),
+        Line2D(
+            [0],
+            [0],
+            color=IDEAL_LINE_COLOR,
+            linestyle=IDEAL_LINE_STYLE,
+            linewidth=IDEAL_LINE_WIDTH,
+        ),
+    ]
+    labels = ["Serialized", "Optimistic overlap", "Zero-cost communication"]
+
+    fig_leg, ax_leg = plt.subplots(figsize=(len(handles) * 1.1, 0.45))
+    ax_leg.set_axis_off()
+    leg = ax_leg.legend(
+        handles,
+        labels,
+        loc="center",
+        ncol=len(handles),
+        fontsize=9,
+        frameon=True,
+        fancybox=False,
+        edgecolor="#888888",
+        facecolor="white",
+        labelspacing=0.3,
+        handlelength=1.5,
+        handletextpad=0.4,
+        columnspacing=1.0,
+    )
+    leg.get_frame().set_linewidth(0.8)
+    fig_leg.savefig(out_path, dpi=300, facecolor="white", bbox_inches="tight")
+    plt.close(fig_leg)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Plot latency vs interconnect bandwidth (results/bw CSV)"
+        description=(
+            "Plot speedup-vs-Ideal-Single bar chart across interconnect "
+            "bandwidths (results/bw CSV)"
+        )
     )
     parser.add_argument(
         "--device", type=str, required=True, help="Device name (e.g., Orin)"
@@ -379,7 +347,11 @@ def main():
         default=None,
         help="Directory containing CSV (default: this script's directory)",
     )
-    parser.add_argument("--legend", action="store_true", help="Show TP/CP legend")
+    parser.add_argument(
+        "--legend",
+        action="store_true",
+        help="Save standalone horizontal legend figure",
+    )
     args = parser.parse_args()
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -388,108 +360,89 @@ def main():
     input_filename, out_filename = _resolve_bw_csv_paths(bw_dir, args)
 
     df = pd.read_csv(input_filename)
-    df_nc_plot = None
-    nc_ideal_row = None
-    if _is_thor_device(args.device):
-        nc_path = os.path.splitext(input_filename)[0] + "_nocontention.csv"
-        if os.path.isfile(nc_path):
-            df_nc = pd.read_csv(nc_path)
-            nc_bw = df_nc.columns[0]
-            df_nc_plot, nc_ideal_row = _split_data_and_ideal(df_nc, nc_bw)
-            if df_nc_plot.empty:
-                df_nc_plot = None
-                nc_ideal_row = None
     if df.shape[1] < 2:
         raise ValueError(
             "CSV must have bandwidth column plus at least one series column"
         )
 
     bw_col = df.columns[0]
-    df_plot, ideal_row = _split_data_and_ideal(df, bw_col)
-    if df_plot.empty:
-        raise ValueError("CSV has no numeric bandwidth rows to plot")
-    x = df_plot[bw_col].astype(float).values
-    if np.any(x <= 0):
-        raise ValueError("Bandwidth values must be positive for log-scale x-axis")
     series_cols = list(df.columns[1:])
-    model_groups, ungrouped_cols = _group_series_by_model(series_cols)
-    include_cp = not _is_thor_device(args.device) and args.phase == "prefill"
+    base_col, overlap_col, _model_name = _find_base_overlap_columns(series_cols)
+    if base_col is None:
+        raise ValueError("Could not find a base (non-overlap) series column")
 
-    nc_ylim_cols = None
-    if df_nc_plot is not None:
-        nc_ylim_cols = [
-            g["TP"]
-            for _m, g in model_groups
-            if g.get("TP") is not None and g["TP"] in df_nc_plot.columns
-        ]
-        if not nc_ylim_cols:
-            df_nc_plot = None
-            nc_ideal_row = None
-            nc_ylim_cols = None
+    plot_df, ideal_row, ideal_single_row = _split_data_and_ideal(df, bw_col)
+    if plot_df.empty:
+        raise ValueError("CSV has no numeric bandwidth rows to plot")
+    if ideal_single_row is None:
+        raise ValueError("CSV is missing the 'Ideal single' baseline row")
+
+    bw = plot_df[bw_col].astype(float).to_numpy()
+    x = np.arange(len(bw))
+
+    series = _build_series(base_col, overlap_col)
+    n_series = len(series)
+    bar_width = (BAR_GROUP_WIDTH - BAR_GAP * (n_series - 1)) / n_series
 
     plt.style.use("seaborn-v0_8-white")
-    if args.phase == "prefill":
-        fig, ax = plt.subplots(figsize=(1.7, 2.2))
+    fig, ax = plt.subplots(figsize=FIGSIZE)
+
+    ideal_speedups, knee_infos, max_speedup = _plot_bars(
+        ax, x, bw, plot_df, series, ideal_row, ideal_single_row, bar_width
+    )
+
+    ymax = max_speedup * 1.55
+    ax.set_ylim(0, ymax)
+    ax.set_xlim(-0.65, len(x) - 1 + 0.65)
+
+    xticklabels = [f"{int(v)}" if float(v).is_integer() else f"{v:g}" for v in bw]
+    ax.set_xticks(x)
+    # Narrow figures can't fit all (up to 3-digit) BW labels side-by-side at
+    # fontsize>=9 without them colliding; rotate them vertically instead of
+    # shrinking the font or dropping labels.
+    narrow = FIGSIZE[0] < 2.0
+    if narrow:
+        ax.set_xticklabels(xticklabels, rotation=90, ha="center", va="top")
     else:
-        fig, ax = plt.subplots(figsize=(1.7, 1.9))
-
-    _plot_bw_data_series(
-        ax, x, df_plot, model_groups, ungrouped_cols, include_cp, df_nc_plot=df_nc_plot
+        ax.set_xticklabels(xticklabels)
+    ax.set_xlabel(
+        "BW (GB/s)", fontsize=FONT_AXIS_LABEL, fontweight="bold", labelpad=1.5
     )
+    ax.set_ylabel("Speedup", fontsize=FONT_AXIS_LABEL, fontweight="bold", labelpad=1.5)
+    ax.tick_params(axis="both", labelsize=FONT_TICK, length=2, pad=1.5)
 
-    ylim_cols = _series_cols_for_ylim(model_groups, ungrouped_cols, include_cp)
-    _configure_bw_axes(
-        ax,
-        x,
-        df_plot,
-        ylim_cols,
-        ideal_row,
-        series_cols,
-        include_cp,
-        args.phase,
-        df_nc_plot=df_nc_plot,
-        nc_ideal_row=nc_ideal_row,
-        nc_ylim_cols=nc_ylim_cols,
-    )
-
-    x_last = float(x[-1])
-    _annotate_models(ax, model_groups, df_plot, x_last, include_cp=include_cp)
+    # Anchor the Ideal-line label on whichever side the knee arrows are
+    # less likely to cross (arrows run ~vertically from each knee's bar).
+    avg_knee_x = np.mean([info["x"] for info in knee_infos]) if knee_infos else 0.0
+    anchor_left = avg_knee_x >= (len(x) - 1) / 2
+    _draw_ideal_lines(ax, ideal_speedups, anchor_left=anchor_left)
+    _annotate_knees(ax, knee_infos, ymax)
 
     ax.set_axisbelow(True)
     ax.grid(
         axis="y",
         linestyle="--",
         color="#B8B8B8",
-        linewidth=0.7,
-        alpha=0.95,
-        zorder=0,
-    )
-    ax.grid(
-        axis="x",
-        which="major",
-        linestyle="--",
-        color="#D8D8D8",
         linewidth=0.5,
-        alpha=0.85,
+        alpha=0.95,
         zorder=0,
     )
 
     for spine in ax.spines.values():
         spine.set_visible(True)
         spine.set_color("black")
-        spine.set_linewidth(0.9)
+        spine.set_linewidth(0.7)
+
+    bottom = 0.34 if FIGSIZE[0] < 2.0 else 0.24
+    fig.subplots_adjust(left=0.32, right=0.97, top=0.97, bottom=bottom)
+    plt.savefig(out_filename, dpi=300, facecolor="white")
+    plt.close(fig)
+    print(f"Chart successfully saved to: {out_filename}")
 
     if args.legend:
-        _add_bw_legend(
-            ax,
-            include_cp,
-            show_nocontention=df_nc_plot is not None,
-        )
-
-    # plt.tight_layout()
-    fig.subplots_adjust(left=0.34, right=0.93, top=0.93, bottom=0.27)
-    plt.savefig(out_filename, dpi=300, facecolor="white")
-    print(f"Chart successfully saved to: {out_filename}")
+        leg_filename = os.path.join(script_dir, "bw_legend.png")
+        _save_bw_legend(leg_filename)
+        print(f"Legend saved to: {leg_filename}")
 
 
 if __name__ == "__main__":

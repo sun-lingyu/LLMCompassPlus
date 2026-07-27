@@ -31,7 +31,7 @@ def plot_element_based_roofline():
     ]
 
     plt.style.use("seaborn-v0_8-white")
-    fig, ax = plt.subplots(figsize=(2.7, 3.5))
+    fig, ax = plt.subplots(figsize=(2.5, 1.5))
 
     bw_gelems = []
     bw_telems = []
@@ -53,7 +53,7 @@ def plot_element_based_roofline():
     ):
         y = np.minimum(cfg["compute_tops"], x * bw_telem)
 
-        label = f"{cfg['name']}\n(BW: {bw_gelem:.1f} GElem/s)"
+        label = f"{cfg['name']}"
         ax.plot(
             x,
             y,
@@ -74,17 +74,18 @@ def plot_element_based_roofline():
         )
 
         if cfg["name"].startswith("Orin"):
-            x_position = ridge_point + 0.1 * x_max
+            x_position = ridge_point + 0.2 * x_max
+            y_position = cfg["compute_tops"] + 25
         else:
-            x_position = ridge_point - 0.4 * x_max
-        y_position = cfg["compute_tops"] + 18
+            x_position = ridge_point - 0.45 * x_max
+            y_position = cfg["compute_tops"] - 25
         text_suffix = "TOPS" if cfg["name"].endswith("INT8") else "TFLOPS"
         ax.text(
             x_position,
             y_position,
             f"{cfg['compute_tops']} {text_suffix}",
             color="black",
-            fontsize=10,
+            fontsize=9,
             fontweight="bold",
         )
 
@@ -95,7 +96,7 @@ def plot_element_based_roofline():
         x=0.42,
         ha="center",
     )
-    ax.set_ylabel("Perf (TOPS or TFLOPS)", fontsize=10, fontweight="bold")
+    ax.set_ylabel("Performance", fontsize=10, fontweight="bold")
 
     ax.set_xlim(0.0, x_max)
     ax.set_ylim(0.0, y_max)
@@ -116,7 +117,7 @@ def plot_element_based_roofline():
         alpha=0.85,
     )
 
-    ax.xaxis.set_major_locator(MaxNLocator(nbins=7))
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=4))
     ax.yaxis.set_major_locator(MaxNLocator(nbins=7))
 
     for spine in ax.spines.values():
@@ -125,7 +126,8 @@ def plot_element_based_roofline():
         spine.set_linewidth(0.9)
 
     leg = ax.legend(
-        loc="center",
+        loc="center left",
+        ncol=1,
         fontsize=9,
         frameon=True,
         fancybox=False,
@@ -136,8 +138,13 @@ def plot_element_based_roofline():
 
     ax.tick_params(axis="both", labelsize=10)
 
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=300, facecolor="white")
+    plt.savefig(
+        out_path,
+        dpi=300,
+        facecolor="white",
+        bbox_inches="tight",
+        bbox_extra_artists=(leg,),
+    )
     print(f"Chart successfully saved to: {out_path}")
 
 

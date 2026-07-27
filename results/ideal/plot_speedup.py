@@ -8,14 +8,29 @@ import pandas as pd
 from matplotlib.lines import Line2D
 
 COLOR_TP = "#4F89BA"
-COLOR_CP = "#D67F42"
+COLOR_CP = "#F2C28A"
 LINE_TP = "#4F89BA"
 LINE_CP = "#F2C28A"
 MARKER_EDGEWIDTH = 0.85
 
 SEQ_LENS = [512, 768, 1024, 1280, 1536]
-MARKERS = ["o", "s", "^", "D", "v"]
+MARKERS = ["o", "s", "x", "D", "v"]
 LINE_STYLES = ["-", "--", ":"]
+
+
+def _marker_style(marker, pt_color):
+    """Return marker face/edge colors; square markers are hollow."""
+    if marker == "s":
+        return {
+            "markerfacecolor": "white",
+            "markeredgecolor": pt_color,
+            "markeredgewidth": MARKER_EDGEWIDTH,
+        }
+    return {
+        "markerfacecolor": pt_color,
+        "markeredgecolor": pt_color,
+        "markeredgewidth": MARKER_EDGEWIDTH,
+    }
 
 
 def _find_csv(script_dir, device, precision, phase, seq_len):
@@ -125,17 +140,17 @@ def main():
             pt_color = color_map[p]
             ln_color = line_color_map[p]
             for i, model in enumerate(models):
+                marker = MARKERS[i % len(MARKERS)]
+                mstyle = _marker_style(marker, pt_color)
                 h = Line2D(
                     [0],
                     [0],
                     color=ln_color,
                     linewidth=1.5,
                     linestyle=LINE_STYLES[i % len(LINE_STYLES)],
-                    marker=MARKERS[i % len(MARKERS)],
-                    markersize=3,
-                    markerfacecolor=pt_color,
-                    markeredgecolor=pt_color,
-                    markeredgewidth=MARKER_EDGEWIDTH,
+                    marker=marker,
+                    markersize=4,
+                    **mstyle,
                 )
                 handles.append(h)
                 labels.append(f"{_short_model_name(model)} {p}")
@@ -147,17 +162,17 @@ def main():
             ln_color = line_color_map[p]
             for i, model in enumerate(models):
                 y = data[p][model]
+                marker = MARKERS[i % len(MARKERS)]
+                mstyle = _marker_style(marker, pt_color)
                 ax.plot(
                     SEQ_LENS,
                     y,
                     color=ln_color,
                     linestyle=LINE_STYLES[i % len(LINE_STYLES)],
                     linewidth=1.2,
-                    marker=MARKERS[i % len(MARKERS)],
-                    markersize=3,
-                    markerfacecolor=pt_color,
-                    markeredgecolor=pt_color,
-                    markeredgewidth=MARKER_EDGEWIDTH,
+                    marker=marker,
+                    markersize=4,
+                    **mstyle,
                     zorder=2,
                 )
 
@@ -198,7 +213,7 @@ def main():
         leg = ax.legend(
             handles,
             labels,
-            fontsize=7,
+            fontsize=8,
             loc="lower center",
             frameon=True,
             fancybox=False,

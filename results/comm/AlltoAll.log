@@ -1,0 +1,119 @@
+(base) orin3@orin3:/MLNX_NCCL_TEST/nccl-tests$ mpirun -x NCCL_SOCKET_IFNAME=eth1 -x NCCL_IB_QPS_PER_CONNECTION -x NCCL_IB_SPLIT_DATA_ON_QPS -x LD_LIBRARY_PATH -x NCCL_DEBUG=INFO  --mca orte_base_help_aggregate 0  --mca btl_tcp_if_include eth1 --hostfile ../test/hostfile -np 2 ./build/alltoall_perf NCCL_IB_QPS_PER_CONNECTION_gather_perf -b 8 -e 16M -f 2 -g 1
+No protocol specified
+[orin3:314409] Warning: could not find environment variable "NCCL_IB_QPS_PER_CONNECTION"
+[orin3:314409] Warning: could not find environment variable "NCCL_IB_SPLIT_DATA_ON_QPS"
+No protocol specified
+--------------------------------------------------------------------------
+No OpenFabrics connection schemes reported that they were able to be
+used on a specific port.  As such, the openib BTL (OpenFabrics
+support) will be disabled for this port.
+
+  Local host:           orin3
+  Local device:         mlx5_0
+  Local port:           1
+  CPCs attempted:       udcm
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+No OpenFabrics connection schemes reported that they were able to be
+used on a specific port.  As such, the openib BTL (OpenFabrics
+support) will be disabled for this port.
+
+  Local host:           orin4
+  Local device:         mlx5_0
+  Local port:           1
+  CPCs attempted:       udcm
+--------------------------------------------------------------------------
+# Collective test starting: alltoall_perf
+# nThread 1 nGpus 1 minBytes 8 maxBytes 16777216 step: 2(factor) warmup iters: 1 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 314414 on      orin3 device  0 [0000:00:00] Orin
+#  Rank  1 Group  0 Pid  20667 on      orin4 device  0 [0000:00:00] Orin
+orin3:314414:314414 [0] NCCL INFO NCCL_SOCKET_IFNAME set by environment to eth1
+orin3:314414:314414 [0] NCCL INFO Bootstrap : Using eth1:15.15.15.21<0>
+orin3:314414:314414 [0] NCCL INFO NET/Plugin : Plugin load (libnccl-net.so) returned 13 : libnccl-net.so: cannot open shared object file: No such file or directory
+orin3:314414:314414 [0] NCCL INFO NET/Plugin : No plugin found, using internal implementation
+orin3:314414:314414 [0] NCCL INFO cudaDriverVersion 11040
+NCCL version 2.18.3+cuda11.4
+orin4:20667:20667 [0] NCCL INFO cudaDriverVersion 11040
+orin4:20667:20667 [0] NCCL INFO NCCL_SOCKET_IFNAME set by environment to eth1
+orin4:20667:20667 [0] NCCL INFO Bootstrap : Using eth1:15.15.15.22<0>
+orin4:20667:20667 [0] NCCL INFO NET/Plugin : Plugin load (libnccl-net.so) returned 2 : libnccl-net.so: cannot open shared object file: No such file or directory
+orin4:20667:20667 [0] NCCL INFO NET/Plugin : No plugin found, using internal implementation
+orin3:314414:314437 [0] NCCL INFO NCCL_SOCKET_IFNAME set by environment to eth1
+orin3:314414:314437 [0] NCCL INFO NET/IB : Using [0]mlx5_0:1/RoCE [RO]; OOB eth1:15.15.15.21<0>
+orin3:314414:314437 [0] NCCL INFO Using network IB
+orin4:20667:20671 [0] NCCL INFO NCCL_SOCKET_IFNAME set by environment to eth1
+orin4:20667:20671 [0] NCCL INFO NET/IB : Using [0]mlx5_0:1/RoCE [RO]; OOB eth1:15.15.15.22<0>
+orin4:20667:20671 [0] NCCL INFO Using network IB
+orin3:314414:314437 [0] NCCL INFO comm 0xaaaaf0ee33c0 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 0 commId 0xe4b5199f02ac1714 - Init START
+orin4:20667:20671 [0] NCCL INFO comm 0xaaaab776ea90 rank 1 nranks 2 cudaDev 0 nvmlDev 0 busId 0 commId 0xe4b5199f02ac1714 - Init START
+
+orin3:314414:314437 [0] graph/xml.cc:625 NCCL WARN No NVML device handle. Skipping nvlink detection.
+
+orin4:20667:20671 [0] graph/xml.cc:625 NCCL WARN No NVML device handle. Skipping nvlink detection.
+orin3:314414:314437 [0] NCCL INFO Channel 00/02 :    0   1
+orin3:314414:314437 [0] NCCL INFO Channel 01/02 :    0   1
+orin3:314414:314437 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] -1/-1/-1->0->1
+orin3:314414:314437 [0] NCCL INFO P2P Chunksize set to 131072
+orin4:20667:20671 [0] NCCL INFO Trees [0] -1/-1/-1->1->0 [1] 0/-1/-1->1->-1
+orin4:20667:20671 [0] NCCL INFO P2P Chunksize set to 131072
+orin3:314414:314437 [0] NCCL INFO Channel 00/0 : 1[0] -> 0[0] [receive] via NET/IB/0/GDRDMA
+orin4:20667:20671 [0] NCCL INFO Channel 00/0 : 0[0] -> 1[0] [receive] via NET/IB/0/GDRDMA
+orin3:314414:314437 [0] NCCL INFO Channel 01/0 : 1[0] -> 0[0] [receive] via NET/IB/0/GDRDMA
+orin3:314414:314437 [0] NCCL INFO NCCL_NET_GDR_READ set by environment to 1.
+orin4:20667:20671 [0] NCCL INFO Channel 01/0 : 0[0] -> 1[0] [receive] via NET/IB/0/GDRDMA
+orin3:314414:314437 [0] NCCL INFO Channel 00/0 : 0[0] -> 1[0] [send] via NET/IB/0/GDRDMA
+orin3:314414:314437 [0] NCCL INFO Channel 01/0 : 0[0] -> 1[0] [send] via NET/IB/0/GDRDMA
+orin4:20667:20671 [0] NCCL INFO Channel 00/0 : 1[0] -> 0[0] [send] via NET/IB/0/GDRDMA
+orin4:20667:20671 [0] NCCL INFO Channel 01/0 : 1[0] -> 0[0] [send] via NET/IB/0/GDRDMA
+orin3:314414:314437 [0] NCCL INFO Connected all rings
+orin3:314414:314437 [0] NCCL INFO Connected all trees
+orin3:314414:314437 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+orin3:314414:314437 [0] NCCL INFO 2 coll channels, 0 nvls channels, 2 p2p channels, 2 p2p channels per peer
+orin4:20667:20671 [0] NCCL INFO Connected all rings
+orin4:20667:20671 [0] NCCL INFO Connected all trees
+orin4:20667:20671 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+orin4:20667:20671 [0] NCCL INFO 2 coll channels, 0 nvls channels, 2 p2p channels, 2 p2p channels per peer
+orin3:314414:314437 [0] NCCL INFO comm 0xaaaaf0ee33c0 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 0 commId 0xe4b5199f02ac1714 - Init COMPLETE
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw #wrong     time   algbw   busbw #wrong
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)            (us)  (GB/s)  (GB/s)       
+orin4:20667:20671 [0] NCCL INFO comm 0xaaaab776ea90 rank 1 nranks 2 cudaDev 0 nvmlDev 0 busId 0 commId 0xe4b5199f02ac1714 - Init COMPLETE
+orin3:314414:314441 [0] NCCL INFO Channel 00/1 : 1[0] -> 0[0] [receive] via NET/IB/0/GDRDMA/Shared
+orin3:314414:314441 [0] NCCL INFO Channel 01/1 : 1[0] -> 0[0] [receive] via NET/IB/0/GDRDMA/Shared
+orin4:20667:20675 [0] NCCL INFO Channel 00/1 : 0[0] -> 1[0] [receive] via NET/IB/0/GDRDMA/Shared
+orin4:20667:20675 [0] NCCL INFO Channel 01/1 : 0[0] -> 1[0] [receive] via NET/IB/0/GDRDMA/Shared
+orin3:314414:314441 [0] NCCL INFO Channel 00/1 : 0[0] -> 1[0] [send] via NET/IB/0/GDRDMA/Shared
+orin3:314414:314441 [0] NCCL INFO Channel 01/1 : 0[0] -> 1[0] [send] via NET/IB/0/GDRDMA/Shared
+orin4:20667:20675 [0] NCCL INFO Channel 00/1 : 1[0] -> 0[0] [send] via NET/IB/0/GDRDMA/Shared
+orin4:20667:20675 [0] NCCL INFO Channel 01/1 : 1[0] -> 0[0] [send] via NET/IB/0/GDRDMA/Shared
+           0             0     float    none      -1    27.91    0.00    0.00      0    28.70    0.00    0.00    N/A
+           0             0     float    none      -1    27.92    0.00    0.00      0    28.61    0.00    0.00    N/A
+          32             4     float    none      -1    37.12    0.00    0.00      0    36.49    0.00    0.00    N/A
+          64             8     float    none      -1    45.44    0.00    0.00      0    43.58    0.00    0.00    N/A
+         128            16     float    none      -1    42.88    0.00    0.00      0    41.27    0.00    0.00    N/A
+         256            32     float    none      -1    41.53    0.01    0.00      0    41.87    0.01    0.00    N/A
+         512            64     float    none      -1    42.76    0.01    0.01      0    46.01    0.01    0.01    N/A
+        1024           128     float    none      -1    40.36    0.03    0.01      0    44.35    0.02    0.01    N/A
+        2048           256     float    none      -1    44.40    0.05    0.02      0    40.04    0.05    0.03    N/A
+        4096           512     float    none      -1    41.78    0.10    0.05      0    41.22    0.10    0.05    N/A
+        8192          1024     float    none      -1    41.13    0.20    0.10      0    42.27    0.19    0.10    N/A
+       16384          2048     float    none      -1    45.01    0.36    0.18      0    48.11    0.34    0.17    N/A
+       32768          4096     float    none      -1    49.31    0.66    0.33      0    49.50    0.66    0.33    N/A
+       65536          8192     float    none      -1    53.18    1.23    0.62      0    51.13    1.28    0.64    N/A
+      131072         16384     float    none      -1    64.34    2.04    1.02      0    62.52    2.10    1.05    N/A
+      262144         32768     float    none      -1    83.92    3.12    1.56      0    85.28    3.07    1.54    N/A
+      524288         65536     float    none      -1    114.4    4.58    2.29      0    114.2    4.59    2.29    N/A
+     1048576        131072     float    none      -1    172.4    6.08    3.04      0    170.2    6.16    3.08    N/A
+     2097152        262144     float    none      -1    304.5    6.89    3.44      0    299.5    7.00    3.50    N/A
+     4194304        524288     float    none      -1    563.1    7.45    3.72      0    556.4    7.54    3.77    N/A
+     8388608       1048576     float    none      -1   1064.4    7.88    3.94      0   1062.3    7.90    3.95    N/A
+    16777216       2097152     float    none      -1   2075.0    8.09    4.04      0   2063.2    8.13    4.07    N/A
+orin3:314414:314414 [0] NCCL INFO comm 0xaaaaf0ee33c0 rank 0 nranks 2 cudaDev 0 busId 0 - Destroy COMPLETE
+orin4:20667:20667 [0] NCCL INFO comm 0xaaaab776ea90 rank 1 nranks 2 cudaDev 0 busId 0 - Destroy COMPLETE
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 1.113 
+#
+# Collective test concluded: alltoall_perf

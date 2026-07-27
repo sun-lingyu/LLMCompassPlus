@@ -61,6 +61,69 @@ def _parse_strategy_row(label):
     return ("other", None)
 
 
+# Prefill @ seq_len=1024: borrow InternVision from native-precision CSVs.
+_INTERNVISION_PREFILL = {
+    ("Orin", "int8"): ("fp16", "InternVision (f16)"),
+    ("Thor", "fp4"): ("fp8", "InternVision (f8)"),
+}
+
+
+def _find_csv(script_dir, device, precision, phase, seq_len):
+    """Locate perf CSV, tolerating stray spaces in filenames."""
+    stem = f"{device}_{precision}_{phase}_{seq_len}_perf"
+    for fname in os.listdir(script_dir):
+        if not fname.endswith(".csv"):
+            continue
+        if fname.replace(" ", "") == f"{stem}.csv":
+            return os.path.join(script_dir, fname)
+    return os.path.join(script_dir, f"{stem}.csv")
+
+
+def _internvision_source_column(df):
+    for col in df.columns[1:]:
+        if str(col).strip().startswith("InternVision"):
+            return col
+    return None
+
+
+def merge_internvision_prefill(df, device, precision, phase, seq_len, script_dir):
+    """Inject InternVision column for mixed-precision prefill bar charts."""
+    if phase != "prefill":
+        return df
+    key = (device, precision)
+    if key not in _INTERNVISION_PREFILL:
+        return df
+    if str(seq_len) != "1024":
+        return df
+
+    src_precision, col_label = _INTERNVISION_PREFILL[key]
+    if col_label in df.columns:
+        return df
+
+    src_path = _find_csv(script_dir, device, src_precision, phase, seq_len)
+    if not os.path.exists(src_path):
+        raise FileNotFoundError(
+            f"Cannot find InternVision source CSV: {src_path}"
+        )
+
+    src_df = pd.read_csv(src_path)
+    src_col = _internvision_source_column(src_df)
+    if src_col is None:
+        raise ValueError(f"No InternVision column in source CSV: {src_path}")
+
+    strat_col = df.columns[0]
+    src_by_strat = src_df.set_index(strat_col)[src_col]
+    iv_values = src_by_strat.reindex(df[strat_col].astype(str).str.strip()).values
+    if pd.isna(iv_values).any():
+        raise ValueError(
+            f"Strategy rows mismatch between {src_path} and target prefill CSV."
+        )
+
+    merged = df.copy()
+    merged.insert(1, col_label, iv_values)
+    return merged
+
+
 def compute_bar_offsets(strategy_labels, width, gap_normal, gap_zero=0.0):
     """
     One x-offset per row. Adjacent TP=d and CP=d use gap_zero; all other
@@ -120,10 +183,17 @@ def main():
     input_filename = f"{file_name_prefix}.csv"
     out_filename = f"{file_name_prefix}.png"
 
-    if not os.path.exists(input_filename):
-        raise FileNotFoundError(f"Cannot find CSV file: {input_filename}")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    csv_path = _find_csv(
+        script_dir, args.device, args.precision, args.phase, args.seq_len
+    )
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"Cannot find CSV file: {csv_path}")
 
-    df = pd.read_csv(input_filename)
+    df = pd.read_csv(csv_path)
+    df = merge_internvision_prefill(
+        df, args.device, args.precision, args.phase, args.seq_len, script_dir
+    )
 
     models = df.columns[1:]
     strategies = df.iloc[:, 0].values

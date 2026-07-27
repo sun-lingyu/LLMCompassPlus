@@ -1,7 +1,12 @@
 {
   "spec_version": "5.0",
   "description": "PCIE 5.0 PHY and switch Power Modeling",
-  "latency": 1000,
+  "latency": 1.3,
+  "ccl_latency": {
+    "AllGather": 25.0,
+    "ReduceScatter": 25.0,
+    "AlltoAll": 35.0
+  },
   "bandwidth_efficiency": 0.9,
   "rate_gt": 32,
   "efficiency_pj_per_bit": 7,

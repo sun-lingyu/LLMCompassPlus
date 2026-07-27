@@ -238,78 +238,86 @@ def _comm_tx_alltoall_transpose(per_rank_bytes: float, degree: int) -> float:
         return degree * per_rank_bytes / 4
 
 
-def _compute_non_overlapped_comm(
+def _collective_type_of(name: str) -> str:
+    if "allgather" in name:
+        return "AllGather"
+    if "reducescatter" in name:
+        return "ReduceScatter"
+    if "alltoall" in name:
+        return "AlltoAll"
+    assert False, f"unknown collective name {name}"
+
+
+def _comm_rounds(name: str, degree: int) -> int:
+    """Number of sequential communication rounds N on the critical path.
+
+    AllGather/ReduceScatter: unidirectional ring, N = degree - 1.
+    AlltoAll: degree == 2 -> unidirectional ring, N = degree - 1;
+              degree == 4 -> bidirectional ring, N = degree // 2.
+    """
+    collective_type = _collective_type_of(name)
+    if collective_type == "AlltoAll" and degree == 4:
+        return degree // 2
+    return degree - 1
+
+
+def _compute_comm_latency(
     comm_breakdown: dict[str, float],
     bandwidth_gbps: float,
-    latency_ns: float,
+    latency_us: float,
+    ccl_latency_us: dict[str, float],
+    degree: int,
     lat_breakdown_ms: dict[str, float],
-    dram_access_breakdown_bytes: dict[str, float],
-    launch_lat_breakdown_ms: dict[str, float],
     overlap_config: dict[str, str],
-    io_module,
-    no_contention: bool,
+    overlap: bool,
     comm_bandwidth_efficiency: float = 0.9,
-) -> tuple[float, float, dict[str, float]]:
-    """Non-overlapped comm latency (s) and per-collective breakdown (ms).
+) -> tuple[float, float, dict[str, float], dict[str, float]]:
+    """Per-collective comm latency (ms) using T_comm = L0 + N*L + M/B.
 
-    Models: (1) comm does not start until after the overlap op's launch latency;
-    (2) during effective compute (total op time minus launch), DRAM contention:
-    comm uses min(link Gbps, DRAM leftover after compute's average DRAM BW);
-    (3) after the overlap op finishes, comm uses full link bandwidth_gbps.
+    L0: primitive-specific one-time CCL initiation overhead (ccl_latency_us).
+    N*L: N sequential inter-SoC hops, each of latency `latency_us`.
+    M/B: bottleneck-link payload (comm_breakdown[name]) over effective bandwidth.
+
+    If `overlap` is True, models the ideal-overlap case where comm and the
+    adjacent Matmul (overlap_config[name]) progress concurrently without
+    affecting each other; the exposed latency is max(0, T_comm - T_comp).
+    Otherwise, comm is fully serialized on top of compute (exposed = T_comm).
+
+    Returns (total_comm_time_ms, total_exposed_ms, comm_time_breakdown_ms, exposed_breakdown_ms).
     """
     assert bandwidth_gbps > 0
     eff_bandwidth_gbps = bandwidth_gbps * comm_bandwidth_efficiency
-    dram_peak_gbps = io_module.bandwidth * io_module.bandwidth_efficiency * 8 / 1e9
-    t_lat_s = latency_ns * 1e-9
-    total_comm_tx_time_ms = 0.0
-    total_non_overlapped_ms = 0.0
-    breakdown_ms = {}
+    total_comm_time_ms = 0.0
+    total_exposed_ms = 0.0
+    comm_time_breakdown_ms = {}
+    exposed_breakdown_ms = {}
 
     for name, tx_bytes in comm_breakdown.items():
-        overlap_op = overlap_config[name]
-        T_comp_s = lat_breakdown_ms[overlap_op] / 1000.0
-        Launch_s = launch_lat_breakdown_ms[overlap_op] / 1000.0
-        assert Launch_s >= 0 and T_comp_s > Launch_s
-        T_comp_eff_s = T_comp_s - Launch_s
-        dram_access_size_byte = float(dram_access_breakdown_bytes[overlap_op])
-        assert dram_access_size_byte > 0
+        collective_type = _collective_type_of(name)
+        L0_s = ccl_latency_us[collective_type] * 1e-6
+        N = _comm_rounds(name, degree)
+        L_s = latency_us * 1e-6
+        M_over_B_s = tx_bytes * 8 / (eff_bandwidth_gbps * 1e9)
+        T_comm_s = L0_s + N * L_s + M_over_B_s
+        T_comm_ms = T_comm_s * 1000
 
-        overlap_mem_bw_gbps = dram_access_size_byte / T_comp_eff_s * 8 / 1e9
-        assert dram_peak_gbps > overlap_mem_bw_gbps, (
-            f"{overlap_op}| T_comp_s: {T_comp_s}, Launch_s: {Launch_s} dram_peak_gbps: {dram_peak_gbps}, overlap_mem_bw_gbps: {overlap_mem_bw_gbps}"
-        )
-
-        if no_contention:
-            bw_ov_gbps = eff_bandwidth_gbps
+        if overlap:
+            overlap_op = overlap_config[name]
+            T_comp_ms = lat_breakdown_ms[overlap_op]
+            exposed_ms = max(0.0, T_comm_ms - T_comp_ms)
         else:
-            bw_divisor = (
-                3 if "reduce" in name else 2
-            )  # ReduceScatter needs Tx+Rx+Reduce, others only Tx+Rx
-            bw_ov_gbps = min(
-                eff_bandwidth_gbps,
-                (dram_peak_gbps - overlap_mem_bw_gbps)
-                / bw_divisor,  # Remaining BW divided by number of concurrent BW consumers
-            )
-            if (dram_peak_gbps - overlap_mem_bw_gbps) / bw_divisor < eff_bandwidth_gbps:
-                print(
-                    f"WARNING: Comm & Comp overlap: Mem BW contention dominates! Effective BW is {bw_ov_gbps / 8:.2f} GB/s"
-                )
+            exposed_ms = T_comm_ms
 
-        tx_giga_bytes = tx_bytes / 1e9
-        cap_giga_bytes = bw_ov_gbps * T_comp_eff_s / 8
-        if tx_giga_bytes <= cap_giga_bytes:
-            T_comm_eff_s = tx_giga_bytes * 8 / bw_ov_gbps
-        else:
-            rem_giga_bytes = tx_giga_bytes - cap_giga_bytes
-            T_comm_eff_s = T_comp_eff_s + rem_giga_bytes * 8 / eff_bandwidth_gbps
-        T_comm_s = t_lat_s + T_comm_eff_s
-        non_overlapped_ms = max(0, T_comm_s - T_comp_eff_s) * 1000
-        if non_overlapped_ms > 0:
-            breakdown_ms[name] = non_overlapped_ms
-
-        total_comm_tx_time_ms += T_comm_s * 1000
-        total_non_overlapped_ms += non_overlapped_ms
-    return total_comm_tx_time_ms, total_non_overlapped_ms, breakdown_ms
+        comm_time_breakdown_ms[name] = T_comm_ms
+        exposed_breakdown_ms[name] = exposed_ms
+        total_comm_time_ms += T_comm_ms
+        total_exposed_ms += exposed_ms
+    return (
+        total_comm_time_ms,
+        total_exposed_ms,
+        comm_time_breakdown_ms,
+        exposed_breakdown_ms,
+    )
 
 
 def print_layer_summary_comp(
@@ -363,20 +371,20 @@ def print_layer_summary_comm(
     comm_breakdown,
     comm_bandwidth_gbps,
     device,
-    dram_access_breakdown_bytes,
-    launch_lat_breakdown_ms,
-    pcb,
+    degree,
     icnt_type,
-    no_contention,
+    overlap,
     ucie_spec_path=f"{file_dir}/../icnt_model/configs/UCIE.json",
     pcie_spec_path=f"{file_dir}/../icnt_model/configs/PCIE.json",
 ):
     if icnt_type.startswith("ucie"):
         ucie_spec = load_json_data(ucie_spec_path)
-        comm_latency_ns = ucie_spec["latency"]
+        comm_latency_us = ucie_spec["latency"]
+        ccl_latency_us = ucie_spec["ccl_latency"]
     elif icnt_type == "pcie":  # pcie
         pcie_spec = load_json_data(pcie_spec_path)
-        comm_latency_ns = pcie_spec["latency"]
+        comm_latency_us = pcie_spec["latency"]
+        ccl_latency_us = pcie_spec["ccl_latency"]
     else:
         assert False
 
@@ -397,39 +405,33 @@ def print_layer_summary_comm(
         "alltoall_before_fa": "qkv_proj",
         "alltoall_after_fa": "o_proj",
     }
-    total_comm_tx_time_ms, non_overlapped_ms, comm_non_overlapped_ms = (
-        _compute_non_overlapped_comm(
+    total_comm_tx_time_ms, exposed_ms, comm_time_ms, comm_exposed_ms = (
+        _compute_comm_latency(
             comm_breakdown,
             comm_bandwidth_gbps,
-            comm_latency_ns,
+            comm_latency_us,
+            ccl_latency_us,
+            degree,
             lat_breakdown,
-            dram_access_breakdown_bytes,
-            launch_lat_breakdown_ms,
             overlap_config,
-            pcb.io_module,
-            no_contention,
+            overlap,
         )
     )
 
     print("  " + "=" * 57)
-    print(f"  {icnt_type.upper()} Communication latency summary:")
+    mode_str = "overlap" if overlap else "no-overlap"
+    print(f"  {icnt_type.upper()} Communication latency summary [{mode_str}]:")
     print(
-        f"  {'Operator':<35} {'Latency(ms)':>12} {'Non-ov(ms)':>10} {'Non-ov Share':>15}"
+        f"  {'Operator':<35} {'T_comm(ms)':>12} {'Exposed(ms)':>11} {'Exposed Share':>15}"
     )
-    for name, tx_bytes in comm_breakdown.items():
-        lat_ideal_ms = (
-            comm_latency_ns / 1e6 + tx_bytes * 8 / 1024**3 / comm_bandwidth_gbps * 1000
-        )
-        lat_non_overlapped_ms = comm_non_overlapped_ms.get(name, 0)
-        pct_non_overlapped = (
-            lat_non_overlapped_ms / non_overlapped_ms * 100
-            if non_overlapped_ms > 0
-            else 0
-        )
+    for name in comm_breakdown:
+        lat_ideal_ms = comm_time_ms[name]
+        lat_exposed_ms = comm_exposed_ms[name]
+        pct_exposed = lat_exposed_ms / exposed_ms * 100 if exposed_ms > 0 else 0
         print(
-            f"  {name:<35} {lat_ideal_ms:>12.4f} {lat_non_overlapped_ms:>10.4f} {pct_non_overlapped:>14.1f}%"
+            f"  {name:<35} {lat_ideal_ms:>12.4f} {lat_exposed_ms:>11.4f} {pct_exposed:>14.1f}%"
         )
-    print(f"  {'Total Non-overlapped Latency':<35} {non_overlapped_ms:>9.4f} ms")
+    print(f"  {'Total Exposed Comm Latency':<35} {exposed_ms:>9.4f} ms")
 
     print("  " + "=" * 57)
     power_results = {}
@@ -479,7 +481,7 @@ def print_layer_summary_comm(
     else:
         assert False
 
-    return non_overlapped_ms, power_results
+    return exposed_ms, power_results
 
 
 def run_matmul(M, K, N, act_dt, wt_dt, mid_dt, out_dt, device, pcb, l2_prev=None):
@@ -518,7 +520,7 @@ def run_layer(
     degree=1,
     comm_bandwidth_gbps=0.0,
     icnt_type="pcie",
-    no_contention=False,
+    overlap=False,
     spec_tokens=64,
     seq_len=512,
     layer_cache_dict=None,
@@ -989,11 +991,9 @@ def run_layer(
             comm_breakdown,
             comm_bandwidth_gbps,
             device,
-            dram_access_breakdown_bytes,
-            launch_lat_breakdown_ms,
-            pcb,
+            degree,
             icnt_type,
-            no_contention,
+            overlap,
         )
         results["lat_comm"] = lat_comm
         results["power_results_comm"] = power_results_comm
@@ -1088,7 +1088,7 @@ def main():
         "--comm_bandwidth",
         type=float,
         default=0.0,
-        help="Comm bandwidth (GB/s), >0 to add non-overlapped comm latency",
+        help="Comm bandwidth (GB/s), >0 to add comm latency",
     )
     parser.add_argument(
         "--icnt_type",
@@ -1098,9 +1098,10 @@ def main():
         help="ICNT type: pcie (PCIe), ucie_std (UCIE standard), ucie_adv (UCIE advanced)",
     )
     parser.add_argument(
-        "--no_contention",
+        "--overlap",
         action="store_true",
-        help="Do not factor in comm&comp mem bw contention",
+        help="Model ideal compute/comm overlap: exposed comm latency = "
+        "max(0, T_comm - T_comp). Default is no overlap (fully serialized).",
     )
     args = parser.parse_args()
 
@@ -1158,7 +1159,7 @@ def main():
         print(f"  parallelism: {args.parallelism}")
         print(f"  comm_bw:     {args.comm_bandwidth} GB/s")
         print(f"  icnt_type:   {args.icnt_type}")
-        print(f"  no_contention: {args.no_contention}")
+        print(f"  overlap:     {args.overlap}")
     print(f"  phase:       {args.phase}")
     print(f"  causal:      {args.is_causal}")
     print(f"  seq_len:     {args.seq_len}")
@@ -1193,7 +1194,7 @@ def main():
         degree=degree,
         comm_bandwidth_gbps=effective_comm_bandwidth * 8,  # GB/s to Gbps
         icnt_type=args.icnt_type,
-        no_contention=args.no_contention,
+        overlap=args.overlap,
         spec_tokens=args.spec_tokens,
         seq_len=args.seq_len,
         layer_cache_dict=layer_cache_dict,

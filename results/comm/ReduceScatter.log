@@ -1,0 +1,112 @@
+(base) orin3@orin3:/MLNX_NCCL_TEST/nccl-tests$ mpirun -x NCCL_SOCKET_IFNAME=eth1 -x NCCL_IB_QPS_PER_CONNECTION -x NCCL_IB_SPLIT_DATA_ON_QPS -x LD_LIBRARY_PATH -x NCCL_DEBUG=INFO  --mca orte_base_help_aggregate 0  --mca btl_tcp_if_include eth1 --hostfile ../test/hostfile -np 2 ./build/reduce_scatter_perf NCCL_IB_QPS_PER_CONNECTION_gather_perf -b 8 -e 16M -f 2
+ -g 1
+No protocol specified
+[orin3:314587] Warning: could not find environment variable "NCCL_IB_QPS_PER_CONNECTION"
+[orin3:314587] Warning: could not find environment variable "NCCL_IB_SPLIT_DATA_ON_QPS"
+No protocol specified
+--------------------------------------------------------------------------
+No OpenFabrics connection schemes reported that they were able to be
+used on a specific port.  As such, the openib BTL (OpenFabrics
+support) will be disabled for this port.
+
+  Local host:           orin3
+  Local device:         mlx5_0
+  Local port:           1
+  CPCs attempted:       udcm
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+No OpenFabrics connection schemes reported that they were able to be
+used on a specific port.  As such, the openib BTL (OpenFabrics
+support) will be disabled for this port.
+
+  Local host:           orin4
+  Local device:         mlx5_0
+  Local port:           1
+  CPCs attempted:       udcm
+--------------------------------------------------------------------------
+# Collective test starting: reduce_scatter_perf
+# nThread 1 nGpus 1 minBytes 8 maxBytes 16777216 step: 2(factor) warmup iters: 1 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 314592 on      orin3 device  0 [0000:00:00] Orin
+#  Rank  1 Group  0 Pid  20782 on      orin4 device  0 [0000:00:00] Orin
+orin3:314592:314592 [0] NCCL INFO NCCL_SOCKET_IFNAME set by environment to eth1
+orin3:314592:314592 [0] NCCL INFO Bootstrap : Using eth1:15.15.15.21<0>
+orin3:314592:314592 [0] NCCL INFO NET/Plugin : Plugin load (libnccl-net.so) returned 13 : libnccl-net.so: cannot open shared object file: No such file or directory
+orin3:314592:314592 [0] NCCL INFO NET/Plugin : No plugin found, using internal implementation
+orin3:314592:314592 [0] NCCL INFO cudaDriverVersion 11040
+NCCL version 2.18.3+cuda11.4
+orin4:20782:20782 [0] NCCL INFO cudaDriverVersion 11040
+orin4:20782:20782 [0] NCCL INFO NCCL_SOCKET_IFNAME set by environment to eth1
+orin4:20782:20782 [0] NCCL INFO Bootstrap : Using eth1:15.15.15.22<0>
+orin4:20782:20782 [0] NCCL INFO NET/Plugin : Plugin load (libnccl-net.so) returned 2 : libnccl-net.so: cannot open shared object file: No such file or directory
+orin4:20782:20782 [0] NCCL INFO NET/Plugin : No plugin found, using internal implementation
+orin3:314592:314624 [0] NCCL INFO NCCL_SOCKET_IFNAME set by environment to eth1
+orin3:314592:314624 [0] NCCL INFO NET/IB : Using [0]mlx5_0:1/RoCE [RO]; OOB eth1:15.15.15.21<0>
+orin3:314592:314624 [0] NCCL INFO Using network IB
+orin4:20782:20786 [0] NCCL INFO NCCL_SOCKET_IFNAME set by environment to eth1
+orin4:20782:20786 [0] NCCL INFO NET/IB : Using [0]mlx5_0:1/RoCE [RO]; OOB eth1:15.15.15.22<0>
+orin4:20782:20786 [0] NCCL INFO Using network IB
+orin3:314592:314624 [0] NCCL INFO comm 0xaaab05abbf40 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 0 commId 0xd683d8bc3380c3e0 - Init START
+orin4:20782:20786 [0] NCCL INFO comm 0xaaaaeb527180 rank 1 nranks 2 cudaDev 0 nvmlDev 0 busId 0 commId 0xd683d8bc3380c3e0 - Init START
+
+orin3:314592:314624 [0] graph/xml.cc:625 NCCL WARN No NVML device handle. Skipping nvlink detection.
+
+orin4:20782:20786 [0] graph/xml.cc:625 NCCL WARN No NVML device handle. Skipping nvlink detection.
+orin3:314592:314624 [0] NCCL INFO Channel 00/02 :    0   1
+orin3:314592:314624 [0] NCCL INFO Channel 01/02 :    0   1
+orin3:314592:314624 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] -1/-1/-1->0->1
+orin3:314592:314624 [0] NCCL INFO P2P Chunksize set to 131072
+orin4:20782:20786 [0] NCCL INFO Trees [0] -1/-1/-1->1->0 [1] 0/-1/-1->1->-1
+orin4:20782:20786 [0] NCCL INFO P2P Chunksize set to 131072
+orin4:20782:20786 [0] NCCL INFO Channel 00/0 : 0[0] -> 1[0] [receive] via NET/IB/0/GDRDMA
+orin4:20782:20786 [0] NCCL INFO Channel 01/0 : 0[0] -> 1[0] [receive] via NET/IB/0/GDRDMA
+orin4:20782:20786 [0] NCCL INFO Channel 00/0 : 1[0] -> 0[0] [send] via NET/IB/0/GDRDMA
+orin4:20782:20786 [0] NCCL INFO Channel 01/0 : 1[0] -> 0[0] [send] via NET/IB/0/GDRDMA
+orin3:314592:314624 [0] NCCL INFO Channel 00/0 : 1[0] -> 0[0] [receive] via NET/IB/0/GDRDMA
+orin3:314592:314624 [0] NCCL INFO Channel 01/0 : 1[0] -> 0[0] [receive] via NET/IB/0/GDRDMA
+orin3:314592:314624 [0] NCCL INFO NCCL_NET_GDR_READ set by environment to 1.
+orin3:314592:314624 [0] NCCL INFO Channel 00/0 : 0[0] -> 1[0] [send] via NET/IB/0/GDRDMA
+orin3:314592:314624 [0] NCCL INFO Channel 01/0 : 0[0] -> 1[0] [send] via NET/IB/0/GDRDMA
+orin4:20782:20786 [0] NCCL INFO Connected all rings
+orin4:20782:20786 [0] NCCL INFO Connected all trees
+orin4:20782:20786 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+orin4:20782:20786 [0] NCCL INFO 2 coll channels, 0 nvls channels, 2 p2p channels, 2 p2p channels per peer
+orin3:314592:314624 [0] NCCL INFO Connected all rings
+orin3:314592:314624 [0] NCCL INFO Connected all trees
+orin3:314592:314624 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+orin3:314592:314624 [0] NCCL INFO 2 coll channels, 0 nvls channels, 2 p2p channels, 2 p2p channels per peer
+orin4:20782:20786 [0] NCCL INFO comm 0xaaaaeb527180 rank 1 nranks 2 cudaDev 0 nvmlDev 0 busId 0 commId 0xd683d8bc3380c3e0 - Init COMPLETE
+orin3:314592:314624 [0] NCCL INFO comm 0xaaab05abbf40 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 0 commId 0xd683d8bc3380c3e0 - Init COMPLETE
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw #wrong     time   algbw   busbw #wrong
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)            (us)  (GB/s)  (GB/s)       
+           0             0     float     sum      -1    15.33    0.00    0.00      0    10.78    0.00    0.00      0
+           0             0     float     sum      -1    15.47    0.00    0.00      0    15.71    0.00    0.00      0
+          32             4     float     sum      -1    29.49    0.00    0.00      0    29.81    0.00    0.00      0
+          64             8     float     sum      -1    31.33    0.00    0.00      0    29.35    0.00    0.00      0
+         128            16     float     sum      -1    30.67    0.00    0.00      0    29.52    0.00    0.00      0
+         256            32     float     sum      -1    29.98    0.01    0.00      0    34.56    0.01    0.00      0
+         512            64     float     sum      -1    29.63    0.02    0.01      0    29.93    0.02    0.01      0
+        1024           128     float     sum      -1    30.13    0.03    0.02      0    30.54    0.03    0.02      0
+        2048           256     float     sum      -1    30.37    0.07    0.03      0    33.30    0.06    0.03      0
+        4096           512     float     sum      -1    31.42    0.13    0.07      0    30.67    0.13    0.07      0
+        8192          1024     float     sum      -1    35.27    0.23    0.12      0    34.50    0.24    0.12      0
+       16384          2048     float     sum      -1    39.60    0.41    0.21      0    39.63    0.41    0.21      0
+       32768          4096     float     sum      -1    44.40    0.74    0.37      0    42.81    0.77    0.38      0
+       65536          8192     float     sum      -1    52.59    1.25    0.62      0    52.37    1.25    0.63      0
+      131072         16384     float     sum      -1    62.16    2.11    1.05      0    60.17    2.18    1.09      0
+      262144         32768     float     sum      -1    76.22    3.44    1.72      0    75.85    3.46    1.73      0
+      524288         65536     float     sum      -1    111.3    4.71    2.35      0    111.3    4.71    2.36      0
+     1048576        131072     float     sum      -1    182.5    5.74    2.87      0    175.5    5.97    2.99      0
+     2097152        262144     float     sum      -1    309.3    6.78    3.39      0    309.3    6.78    3.39      0
+     4194304        524288     float     sum      -1    594.0    7.06    3.53      0    595.2    7.05    3.52      0
+     8388608       1048576     float     sum      -1   1153.8    7.27    3.64      0   1155.9    7.26    3.63      0
+    16777216       2097152     float     sum      -1   2240.3    7.49    3.74      0   2234.7    7.51    3.75      0
+orin4:20782:20782 [0] NCCL INFO comm 0xaaaaeb527180 rank 1 nranks 2 cudaDev 0 busId 0 - Destroy COMPLETE
+orin3:314592:314592 [0] NCCL INFO comm 0xaaab05abbf40 rank 0 nranks 2 cudaDev 0 busId 0 - Destroy COMPLETE
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 1.08339 
+#
+# Collective test concluded: reduce_scatter_perf

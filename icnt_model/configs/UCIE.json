@@ -1,7 +1,12 @@
 {
   "spec_version": "1.0/1.1",
   "description": "UCIe Physical Layer with Voltage-Dependent Power Modeling",
-  "latency": 600,
+  "latency": 0.6,
+  "ccl_latency": {
+    "AllGather": 25.0,
+    "ReduceScatter": 25.0,
+    "AlltoAll": 35.0
+  },
   "bandwidth_efficiency": 0.9,
   "available_module_count": [
     1,
