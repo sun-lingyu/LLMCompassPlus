@@ -24,17 +24,24 @@ from software_model.flashattn import FlashAttn
 from software_model.flashattn_combine import FlashAttnCombine
 from software_model.layernorm import FusedLayerNorm
 from software_model.matmul import Matmul
-from software_model.utils import Tensor, data_type_dict
+from software_model.rope import FusedQKNormRoPE
+from software_model.silu import SiLU
+from software_model.utils import L2AccessType, L2Cache, Tensor, data_type_dict
 from test.flashattn.utils import get_model_shape as get_fa_shape
 from test.flashattn.utils import get_output_dtype as get_fa_output_dtype
 from test.layernorm.utils import get_output_dtype as get_ln_output_dtype
 from test.matmul.utils import get_model_shape as get_matmul_shapes
 from test.matmul.utils import get_output_dtype as get_matmul_output_dtype
+from test.rope.utils import get_output_dtype as get_rope_output_dtype
+from test.silu.utils import get_output_dtype as get_silu_output_dtype
 from test.utils import test_model_dict
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 
 LAYER_COMPUTE_CACHE_PATH = os.path.join(file_dir, "layer_compute_cache.json")
+
+# Version 5: intra-block L2 residency restored; cold block entrance.
+LAYER_COMPUTE_CACHE_VERSION = 5
 
 LAYER_CACHE_META_KEYS = (
     "device",
@@ -50,10 +57,12 @@ LAYER_CACHE_META_KEYS = (
 
 LAYER_COMPUTE_OP_NAMES = (
     "qkv_proj",
+    "rope",
     "flash_attn",
     "o_proj",
     "post_attn_ln",
     "gate_up_proj",
+    "silu",
     "down_proj",
     "post_ffn_ln",
     "qkv_proj_2",
@@ -77,19 +86,24 @@ def layer_cache_key_tuple_from_record(r: dict) -> tuple:
 def load_layer_compute_cache(
     path: str,
 ) -> Dict[Tuple[Any, ...], Dict[str, dict]]:
-    """Load JSON list of layer records; return (records, key -> {op_name: {lat, dram_access, power}})."""
-    assert os.path.exists(path)
+    """Load current-version records as key -> per-operator metrics."""
+    if not os.path.exists(path):
+        return {}
     lock = FileLock(path + ".lock")
     with lock:
         with open(path, "r") as f:
             try:
                 data = json.load(f)
             except json.JSONDecodeError:
-                return [], {}
+                return {}
     assert isinstance(data, list)
     cache_dict: Dict[Tuple[Any, ...], Dict[str, dict]] = {}
     for r in data:
         assert isinstance(r, dict)
+        if r.get("cache_version") != LAYER_COMPUTE_CACHE_VERSION:
+            continue
+        if not all(op in r for op in LAYER_COMPUTE_OP_NAMES):
+            continue
         kt = layer_cache_key_tuple_from_record(r)
         ops = {}
         for op in LAYER_COMPUTE_OP_NAMES:
@@ -108,21 +122,31 @@ def load_layer_compute_cache(
 def update_layer_cache_record(flat_row: dict, path: str) -> None:
     """Merge flat_row (meta + per-op metrics) into records by cache key and write JSON."""
     new_r = {mk: flat_row[mk] for mk in LAYER_CACHE_META_KEYS}
+    new_r["cache_version"] = LAYER_COMPUTE_CACHE_VERSION
     for op in LAYER_COMPUTE_OP_NAMES:
         if op in flat_row:
             new_r[op] = flat_row[op]
     lock = FileLock(path + ".lock")
     with lock:
-        with open(path, "r") as f:
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError:
-                pass
+        data = []
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                try:
+                    data = json.load(f)
+                except json.JSONDecodeError:
+                    data = []
         new_key = layer_cache_key_tuple_from_record(new_r)
-        for existing in data:
+        for i, existing in enumerate(data):
             if layer_cache_key_tuple_from_record(existing) == new_key:
-                return  # already exists, skip writing
-        data.append(new_r)
+                if (
+                    existing.get("cache_version") == LAYER_COMPUTE_CACHE_VERSION
+                    and all(op in existing for op in LAYER_COMPUTE_OP_NAMES)
+                ):
+                    return
+                data[i] = new_r
+                break
+        else:
+            data.append(new_r)
         with open(path, "w") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
 
@@ -136,6 +160,10 @@ def _launch_lat_ms_for_compute_op(op_name: str, pcb, is_prefill: bool) -> float:
         "qkv_proj_2",
     ):
         return pcb.compute_module.launch_latency.matmul * 1000
+    if op_name == "rope":
+        return pcb.compute_module.launch_latency.rope * 1000
+    if op_name == "silu":
+        return pcb.compute_module.launch_latency.silu * 1000
     if op_name == "flash_attn":
         return (
             pcb.compute_module.launch_latency.flashattn_prefill
@@ -167,6 +195,11 @@ def _fill_comm_breakdown_for_layer(
 ) -> dict[str, float]:
     """Fill comm_breakdown from shapes only (same logic as interleaved in run_layer)."""
     comm_breakdown: dict[str, float] = {}
+    if parallelism == "TP" and degree > 1:
+        comm_breakdown["allgather_before_qkv"] = _comm_tx_allgather_reducescatter(
+            M * H * ln_out_dt.word_size, degree
+        )
+
     if parallelism == "CP" and degree > 1:
         comm_breakdown["alltoall_before_fa"] = _comm_tx_alltoall_transpose(
             M * N_shapes["qkv_proj"] * qkv_dt.word_size, degree
@@ -200,10 +233,7 @@ def _fill_comm_breakdown_for_layer(
             _comm_tx_allgather_reducescatter(M * H * dn_out.word_size, degree)
         )
 
-    if parallelism == "TP" and degree > 1:
-        comm_breakdown["allgather_after_postffn_ln"] = _comm_tx_allgather_reducescatter(
-            M * H * ln_out_dt.word_size, degree
-        )
+
 
     return comm_breakdown
 
@@ -330,11 +360,13 @@ def print_layer_summary_comp(
 
     # Latency summary
     summary_ops = [
-        ("qkv_proj", lat_breakdown["qkv_proj_2"]),  # warm path
+        ("qkv_proj", lat_breakdown["qkv_proj"]),  # Cold block entrance.
+        ("rope", lat_breakdown["rope"]),
         ("flash_attn", lat_breakdown["flash_attn"]),
         ("o_proj", lat_breakdown["o_proj"]),
         ("post_attn_ln", lat_breakdown["post_attn_ln"]),
         ("gate_up_proj", lat_breakdown["gate_up_proj"]),
+        ("silu", lat_breakdown["silu"]),
         ("down_proj", lat_breakdown["down_proj"]),
         ("post_ffn_ln", lat_breakdown["post_ffn_ln"]),
     ]
@@ -356,7 +388,7 @@ def print_layer_summary_comp(
     print("  Operator Power/Energy summary:")
     print(f"  {'Operator':<20} {'Power(W)':>10} {'Energy(mJ)':>12} {'Share':>8}")
     print("  " + "-" * 55)
-    for name in power_breakdown:
+    for name in op_names:
         power_w = power_breakdown[name]
         energy_mJ = power_w * lat_breakdown[name]
         pct = (energy_mJ / total_energy_mJ * 100) if total_energy_mJ > 0 else 0
@@ -401,7 +433,7 @@ def print_layer_summary_comm(
         "reducescatter_before_postattn_ln": "o_proj",
         "allgather_after_postattn_ln": "gate_up_proj",
         "reducescatter_before_postffn_ln": "down_proj",
-        "allgather_after_postffn_ln": "qkv_proj_2",
+        "allgather_before_qkv": "qkv_proj",
         "alltoall_before_fa": "qkv_proj",
         "alltoall_after_fa": "o_proj",
     }
@@ -526,10 +558,11 @@ def run_layer(
     layer_cache_dict=None,
     cache_path=None,
 ):
-    """Simulate in one pass: QKV -> FA -> O -> LN -> GateUp -> Down -> LN -> QKV.
-    Returns (lat_first, lat_rest):
-      lat_first = first QKV through post_ffn LN (layer 1)
-      lat_rest = FA through second QKV (layer 2+)
+    """Simulate QKV -> RoPE -> FA -> O -> LN -> GateUp -> SiLU/Mul -> Down -> LN.
+
+    The extra QKV probe estimates warm-cache QKV latency at a steady-state block
+    entrance, for diagnostics only. The charged block starts cold, retains L2
+    between its operators, and includes only the first QKV. Returns latency/power metrics.
     """
     K_shapes, N_shapes = get_matmul_shapes(model_name)
     d, nq, nkv = get_fa_shape(model_name)
@@ -564,6 +597,8 @@ def run_layer(
     base_act = (
         data_type_dict["fp16"] if precision == "int4" else data_type_dict[precision]
     )
+    thor_fp8 = device == "Thor" and precision == "fp8"
+    fp16 = data_type_dict["fp16"]
     fp32 = data_type_dict["fp32"]
     int32 = data_type_dict["int32"]
     wt_dt = (
@@ -573,17 +608,18 @@ def run_layer(
     )
     mid_dt = int32 if precision == "int8" else fp32
 
-    # Activation flow: qkv_out -> FlashAttn -> attn_out -> o_out -> ln -> up_act -> up_out -> dn_act -> dn_out -> ln
+    # QKV -> QKNorm/RoPE -> Attention -> O -> Norm -> Gate/Up -> SiLU/Mul -> Down -> Norm
     qkv_act, qkv_out = (
         base_act,
         get_matmul_output_dtype(base_act, "qkv_proj", is_test=False),
     )
-    qkv_dt = qkv_out  # FlashAttn receives QKV proj output
+    rope_out = get_rope_output_dtype(base_act, is_test=False) if thor_fp8 else qkv_out
+    qkv_dt = rope_out
     attn_out_dt = get_fa_output_dtype(base_act, is_test=False)
-    o_act, o_out = (
-        attn_out_dt,
-        get_matmul_output_dtype(attn_out_dt, "o_proj", is_test=False),
-    )
+    # Attention output quantization is implicit and contributes no extra kernel.
+    # FP8 denotes E4M3 with static, rank-consistent scales in this flow.
+    o_act = base_act if thor_fp8 else attn_out_dt
+    o_out = get_matmul_output_dtype(o_act, "o_proj", is_test=False)
     ln_out_dt = get_ln_output_dtype(
         base_act, is_test=False
     )  # LN output = up_proj input
@@ -592,7 +628,8 @@ def run_layer(
         ln_out_dt,
         get_matmul_output_dtype(ln_out_dt, "up_proj", is_test=False),
     )
-    dn_act, dn_out = up_out, get_matmul_output_dtype(up_out, "down_proj", is_test=False)
+    dn_act = get_silu_output_dtype(base_act, is_test=False) if thor_fp8 else up_out
+    dn_out = get_matmul_output_dtype(dn_act, "down_proj", is_test=False)
 
     comm_breakdown = _fill_comm_breakdown_for_layer(
         parallelism,
@@ -613,6 +650,7 @@ def run_layer(
         ln_out_dt,
     )
 
+    print("  L2 residency: enabled within block; cold block entrance")
     l2_prev = None
     lat_breakdown = {}
     power_breakdown = {}
@@ -622,6 +660,8 @@ def run_layer(
     launch_lat_breakdown_ms = {}
     mode = "prefill" if is_prefill else "decode"
     fa_precision = "fp16" if precision in ("int4", "int8", "fp16") else "fp8"
+    if thor_fp8:
+        fa_precision = "fp16"
     phase = mode
     cache_key = (
         device,
@@ -649,7 +689,7 @@ def run_layer(
     use_cached_layer = False
     if layer_cache_dict is not None:
         ops_cached = layer_cache_dict.get(cache_key)
-        if ops_cached:
+        if ops_cached and all(op in ops_cached for op in LAYER_COMPUTE_OP_NAMES):
             use_cached_layer = True
             for op in LAYER_COMPUTE_OP_NAMES:
                 e = ops_cached[op]
@@ -705,10 +745,43 @@ def run_layer(
                 "power_w": power_breakdown[op_name],
             }
 
+    def implicit_quantized_cache(previous, output_dtype):
+        """Preserve output residency across a conversion whose cost is excluded."""
+        converted = L2Cache(pcb.compute_module.l2_size)
+        converted.output_tile_size = output_dtype.word_size * L2Cache.TILE_LENGTH**2
+        for tile in previous.resident_tiles:
+            if tile.access_type == L2AccessType.OUTPUT:
+                converted.resident_tiles[tile] = None
+                converted.occupied_size += converted.output_tile_size
+        return converted
+
+    def record_memory_op(name, operator, previous):
+        launch = _launch_lat_ms_for_compute_op(name, pcb, is_prefill) / 1000
+        latency = operator.compile_and_simulate(pcb, L2Cache_previous=previous) + launch
+        # Approximation: RoPE and SiLU use the calibrated LayerNorm power model.
+        record_op(
+            name,
+            latency,
+            lambda: calculate_layernorm_power(
+                device, mode, operator.mem_access_size, latency, pcb=pcb
+            ),
+            mem_access_bytes=operator.mem_access_size,
+            launch_latency_s=launch,
+        )
+        return operator.l2_status
+
+    def record_skipped_op(name):
+        lat_breakdown[name] = power_breakdown[name] = 0.0
+        power_breakdown_chip[name] = power_breakdown_dram[name] = 0.0
+        dram_access_breakdown_bytes[name] = launch_lat_breakdown_ms[name] = 0.0
+        layer_cache_row[name] = {
+            "lat_ms": 0.0, "dram_access_byte": 0.0, "power_w": 0.0
+        }
+
     if not use_cached_layer:
         # 1. QKV proj (L2 cold)
         print(
-            f"  [1/8] QKV_proj  [M={M}, K={K_shapes['qkv_proj']}, N={N_shapes['qkv_proj']}] (L2 cold)"
+            f"  QKV_proj  [M={M}, K={K_shapes['qkv_proj']}, N={N_shapes['qkv_proj']}] (L2 cold)"
         )
         lat, mm = run_matmul(
             M,
@@ -732,9 +805,19 @@ def run_layer(
             mem_access_bytes=mm.mem_access_size,
             launch_latency_s=pcb.compute_module.launch_latency.matmul,
         )
+        # CP AllToAll transposes sequence shards into head shards before RoPE.
+        # Distributed collectives do not preserve this rank's old tile coordinates.
+        if parallelism == "CP" and degree > 1:
+            l2_prev = None
+        print("  QKNorm_RoPE")
+        rope = FusedQKNormRoPE(qkv_out, rope_out)
+        rope_rows = seq_len_q if parallelism == "CP" and degree > 1 else M
+        rope(Tensor([rope_rows, (nq + 2 * nkv) * d], qkv_out), d, nq, nkv)
+        l2_prev = record_memory_op("rope", rope, l2_prev)
+
         # 2. FlashAttn
         print(
-            f"  [2/8] FlashAttn  [seq_q={seq_len_q}, seq_kv={seq_len_kv}, heads={nq}/{nkv}, causal={is_causal}]"
+            f"  FlashAttn  [seq_q={seq_len_q}, seq_kv={seq_len_kv}, heads={nq}/{nkv}, causal={is_causal}]"
         )
         num_splits_list = [1] if is_prefill else [1, 2, 4]
         lat_fa_combine = inf
@@ -794,9 +877,15 @@ def run_layer(
             launch_latency_s=best_fa_launch_s,
         )
 
+        if parallelism == "CP" and degree > 1:
+            # CP AllToAll remains FP16 before the implicit FP8 conversion.
+            l2_prev = None
+        elif thor_fp8:
+            l2_prev = implicit_quantized_cache(l2_prev, o_act)
+
         # 3. O proj
         print(
-            f"  [3/8] O_proj  [M={M}, K={K_shapes['o_proj']}, N={N_shapes['o_proj']}]"
+            f"  O_proj  [M={M}, K={K_shapes['o_proj']}, N={N_shapes['o_proj']}]"
         )
         lat, mm = run_matmul(
             M,
@@ -822,8 +911,10 @@ def run_layer(
         )
 
         # 4. Post-attn LayerNorm
-        print(f"  [4/8] PostAttn_LayerNorm  [M={M}, N={H}]")
-        ln = FusedLayerNorm(o_out, up_act)
+        print(f"  PostAttn_LayerNorm  [M={M}, N={H}]")
+        if parallelism == "TP" and degree > 1:
+            l2_prev = None  # ReduceScatter before the residual/norm kernel.
+        ln = FusedLayerNorm(o_out, up_act, residual_dtype=o_out)
         ln(Tensor([M_ln, H], o_out), Tensor([M_ln, H], o_out))
         lat = (
             ln.compile_and_simulate(pcb, L2Cache_previous=l2_prev)
@@ -840,9 +931,12 @@ def run_layer(
             launch_latency_s=pcb.compute_module.launch_latency.layernorm,
         )
 
+        if parallelism == "TP" and degree > 1:
+            l2_prev = None  # AllGather of the normalized activation.
+
         # 5. Gate+Up proj
         print(
-            f"  [5/8] GateUp_proj  [M={M}, K={K_shapes['up_proj']}, N={N_shapes['up_proj']}]"
+            f"  GateUp_proj  [M={M}, K={K_shapes['up_proj']}, N={N_shapes['up_proj']}]"
         )
         lat, mm = run_matmul(
             M,
@@ -867,9 +961,23 @@ def run_layer(
             launch_latency_s=pcb.compute_module.launch_latency.matmul,
         )
 
+        if model_cfg["hidden_act"] == "silu":
+            print("  SiLU_Mul_Quant")
+            silu = SiLU(up_out, dn_act, fused_mul=True)
+            silu_output = silu(Tensor([M, N_shapes["up_proj"]], up_out))
+            assert silu_output.shape == [M, K_shapes["down_proj"]]
+            l2_prev = record_memory_op("silu", silu, l2_prev)
+        else:
+            # GELU models have a single Up output, not a packed Gate/Up tensor.
+            record_skipped_op("silu")
+            if thor_fp8:
+                # The existing GELU path is not a SiLU/Mul kernel. Its implicit
+                # output conversion still obeys the FP8 Down GEMM contract.
+                l2_prev = implicit_quantized_cache(l2_prev, dn_act)
+
         # 6. Down proj
         print(
-            f"  [6/8] Down_proj  [M={M}, K={K_shapes['down_proj']}, N={N_shapes['down_proj']}]"
+            f"  Down_proj  [M={M}, K={K_shapes['down_proj']}, N={N_shapes['down_proj']}]"
         )
         lat, mm = run_matmul(
             M,
@@ -895,8 +1003,10 @@ def run_layer(
         )
 
         # 7. Post-FFN LayerNorm
-        print(f"  [7/8] PostFFN_LayerNorm  [M={M}, N={H}]")
-        ln = FusedLayerNorm(dn_out, ln_out_dt)
+        print(f"  PostFFN_LayerNorm  [M={M}, N={H}]")
+        if parallelism == "TP" and degree > 1:
+            l2_prev = None  # ReduceScatter before the residual/norm kernel.
+        ln = FusedLayerNorm(dn_out, ln_out_dt, residual_dtype=dn_out)
         ln(Tensor([M_ln, H], dn_out), Tensor([M_ln, H], dn_out))
         lat = (
             ln.compile_and_simulate(pcb, L2Cache_previous=l2_prev)
@@ -913,9 +1023,12 @@ def run_layer(
             launch_latency_s=pcb.compute_module.launch_latency.layernorm,
         )
 
+        if parallelism == "TP" and degree > 1:
+            l2_prev = None  # Next block entrance AllGather.
+
         # 8. QKV proj (L2 warm, receives from post_ffn_ln)
         print(
-            f"  [8/8] QKV_proj  [M={M}, K={K_shapes['qkv_proj']}, N={N_shapes['qkv_proj']}] (L2 warm)"
+            f"  QKV_proj  [M={M}, K={K_shapes['qkv_proj']}, N={N_shapes['qkv_proj']}] (L2 warm)"
         )
         lat, mm = run_matmul(
             M,
@@ -951,13 +1064,15 @@ def run_layer(
     print()
     print("  Layer summary:")
     op_names = [
+        "qkv_proj",  # Cold entrance; qkv_proj_2 is diagnostic only.
+        "rope",
         "flash_attn",
         "o_proj",
         "post_attn_ln",
         "gate_up_proj",
+        "silu",
         "down_proj",
         "post_ffn_ln",
-        "qkv_proj_2",
     ]
     results = {}
     lat, power_avg = print_layer_summary_comp(
@@ -1172,7 +1287,7 @@ def main():
     print(f"  seq_len_q:   {seq_len_q}")
     print(f"  seq_len_kv:  {seq_len_kv}")
     print("-" * 57)
-    print("  Simulating (QKV->FA->O->LN->GateUp->Down->LN->QKV)...")
+    print("  Simulating (QKV->RoPE->FA->O->LN->GateUp->SiLU/Mul->Down->LN)...")
     if degree > 1:
         effective_comm_bandwidth = (
             args.comm_bandwidth * 2 if degree == 4 else args.comm_bandwidth

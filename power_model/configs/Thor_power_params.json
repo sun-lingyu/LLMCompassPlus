@@ -10,6 +10,9 @@
       "layernorm": {
         "fp16": 12.5
       },
+      "rope": {
+        "fp16": 12.5
+      },
       "flashattn": {
         "fp16": 26.0,
         "fp8": 26.0
@@ -26,6 +29,9 @@
       "layernorm": {
         "fp16": 0
       },
+      "rope": {
+        "fp16": 0
+      },
       "flashattn": {
         "fp16": 1.64e-12,
         "fp8": 1.64e-12
@@ -37,6 +43,9 @@
         "fp4": 1.52e-10
       },
       "layernorm": {
+        "fp16": 5.15e-11
+      },
+      "rope": {
         "fp16": 5.15e-11
       },
       "flashattn": {

@@ -11,6 +11,8 @@ def get_model_shape(model):
 
 
 def get_output_dtype(model_dtype: DataType, is_test: bool):
+    if model_dtype.name == "fp8":  # Thor FP8 execution contract
+        return data_type_dict["fp16"]
     assert model_dtype.name in ("fp16", "int8", "int4", "fp8", "fp4")
     if is_test:
         if model_dtype.name in ("fp16", "int8", "int4"):

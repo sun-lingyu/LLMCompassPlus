@@ -24,10 +24,17 @@
     },
     "launch_latency": {
       "matmul": 5e-06,
-      "layernorm": 7e-06,
+      "layernorm": 3e-06,
+      "rope": 7e-06,
       "flashattn_prefill": 2e-06,
       "flashattn_decode": 1.5e-05,
-      "flashattn_combine": 2e-06
+      "flashattn_combine": 2e-06,
+      "silu": 2e-06
+    },
+    "compute_latency_factor": {
+      "layernorm": 1e-11,
+      "rope": 1.7e-11,
+      "silu": 7e-12
     }
   },
   "io_module": {

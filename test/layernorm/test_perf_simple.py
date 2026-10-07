@@ -25,10 +25,10 @@ if __name__ == "__main__":
     input_dtype = data_type_dict[args.precision]
     output_dtype = get_output_dtype(input_dtype, True)
 
-    model = FusedLayerNorm(input_dtype, output_dtype)
+    model = FusedLayerNorm(input_dtype, output_dtype, residual_dtype=input_dtype)
     _ = model(
         Tensor([M, N], input_dtype),
-        Tensor([M, N], output_dtype),
+        Tensor([M, N], input_dtype),
     )
 
     latency = (

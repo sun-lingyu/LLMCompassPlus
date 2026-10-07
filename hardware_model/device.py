@@ -51,6 +51,7 @@ def _create_device_from_config(config_data: dict) -> Device:
         l2_bandwidth_per_cycle=comp_params["l2_bandwidth_per_cycle"],
         l2_latency_cycles=comp_params["l2_latency_cycles"],
         launch_latency=launch_latency,
+        compute_latency_factor=comp_params.get("compute_latency_factor"),
     )
 
     # 2. Build IO Module

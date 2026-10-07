@@ -42,10 +42,8 @@ def get_output_dtype(activation_dtype: DataType, op_name: str, is_test: bool):
             return data_type_dict["fp16"]
 
     if activation_dtype.name == "fp8":
-        if op_name in ("qkv_proj", "up_proj"):
-            return data_type_dict["fp8"]
-        else:
-            return data_type_dict["fp16"]
+        # Thor: FP8 activations/weights, FP32 accumulation, FP16 output.
+        return data_type_dict["fp16"]
 
     if activation_dtype.name == "fp4":
         if op_name == "qkv_proj":

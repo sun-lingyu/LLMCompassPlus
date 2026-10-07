@@ -1,11 +1,8 @@
-from math import ceil
-
-from hardware_model.device import Device
-from software_model.operators import Operator
+from software_model.elementwise_like import ElementwiseLike, L2CacheElementwiseLike
 from software_model.utils import DataType, L2AccessType, L2Cache, Tensor
 
 
-class L2CacheLayerNorm(L2Cache):
+class L2CacheLayerNorm(L2CacheElementwiseLike):
     def __init__(
         self,
         l2_size: int,
@@ -13,15 +10,26 @@ class L2CacheLayerNorm(L2Cache):
         N: int,
         input_dtype: DataType,
         output_dtype: DataType,
+        residual_dtype: DataType,
         L2Cache_previous: L2Cache = None,
     ):
-        super().__init__(l2_size)
-        # change output to activation
-        assert M > 0 and N > 0
-        self.m_tiles = ceil(M / L2Cache.TILE_LENGTH)
-        self.n_tiles = ceil(N / L2Cache.TILE_LENGTH)
-        self.input_tile_size = input_dtype.word_size * self.TILE_LENGTH**2
-        self.output_tile_size = output_dtype.word_size * self.TILE_LENGTH**2
+        super().__init__(l2_size, M, N, input_dtype, output_dtype)
+        assert residual_dtype is not None
+        self.residual_tile_size = residual_dtype.word_size * self.TILE_LENGTH**2
+        self.regions.update(
+            {
+                L2AccessType.RESIDUAL_INPUT: (
+                    self.m_tiles,
+                    self.n_tiles,
+                    self.input_tile_size,
+                ),
+                L2AccessType.RESIDUAL_OUTPUT: (
+                    self.m_tiles,
+                    self.n_tiles,
+                    self.residual_tile_size,
+                ),
+            }
+        )
 
         if L2Cache_previous:
             assert L2Cache_previous.output_tile_size == self.input_tile_size
@@ -33,49 +41,26 @@ class L2CacheLayerNorm(L2Cache):
                     self.occupied_size += L2Cache_previous.output_tile_size
                 assert tile.access_type != L2AccessType.OUTPUT_SCALE
 
-    def access(
-        self,
-        access_type: L2AccessType,
-        coord_tuple: tuple[int, int],
-        scope_tuple: tuple[int, int],
+
+class FusedLayerNorm(ElementwiseLike):  # Residual + LayerNorm/RMSNorm
+    operator_name = "layernorm"
+    cache_type = L2CacheLayerNorm
+    access_types = (
+        L2AccessType.ACTIVATION,
+        L2AccessType.RESIDUAL_INPUT,
+        L2AccessType.RESIDUAL_OUTPUT,
+        L2AccessType.OUTPUT,
+    )
+
+    def __init__(
+        self, input_dtype: DataType, output_dtype: DataType, residual_dtype: DataType
     ):
-        height = self.m_tiles
-        width = self.n_tiles
-        tile_size = (
-            self.input_tile_size
-            if access_type in (L2AccessType.ACTIVATION, L2AccessType.RESIDUAL_INPUT)
-            else self.output_tile_size
-            if access_type in (L2AccessType.OUTPUT, L2AccessType.RESIDUAL_OUTPUT)
-            else None
-        )
+        super().__init__(input_dtype, output_dtype)
+        assert residual_dtype is not None
+        assert residual_dtype == input_dtype
+        self.residual_dtype = residual_dtype
 
-        return self._access(
-            coord_tuple, scope_tuple, access_type, height, width, tile_size
-        )
-
-    def evict_oldest_tile(self):
-        assert self.resident_tiles
-
-        oldest_tile = self.resident_tiles.popitem(last=False)[0]
-        tile_size = (
-            self.input_tile_size
-            if oldest_tile.access_type
-            in (L2AccessType.ACTIVATION, L2AccessType.RESIDUAL_INPUT)
-            else self.output_tile_size
-            if oldest_tile.access_type
-            in (L2AccessType.OUTPUT, L2AccessType.RESIDUAL_OUTPUT)
-            else None
-        )
-        self.occupied_size -= tile_size
-
-
-class FusedLayerNorm(Operator):  # Residual + LayerNorm/RMSNorm
-    def __init__(self, input_dtype: DataType, output_dtype: DataType):
-        super().__init__()
-        self.input_dtype = input_dtype
-        self.output_dtype = output_dtype
-
-    def __call__(self, input1: Tensor, input2: Tensor) -> Tensor:
+    def __call__(self, input1: Tensor, input2: Tensor) -> tuple[Tensor, Tensor]:
         assert self.input_dtype == input1.dtype
         assert input1.dtype == input2.dtype
         assert input1.shape == input2.shape
@@ -84,49 +69,18 @@ class FusedLayerNorm(Operator):  # Residual + LayerNorm/RMSNorm
             self.M *= dim
         self.N = input1.shape[-1]
         self.io_size = (
-            self.M * self.N * self.input_dtype.word_size * 4
-        )  # 2 input + 2 output
-        return input1, input2
-
-    def roofline_model(self, pcb_module: Device):
-        self.roofline_latency = self.io_size / min(
-            pcb_module.io_module.bandwidth,
-            pcb_module.compute_module.l2_bandwidth_per_cycle
-            * pcb_module.compute_module.clock_freq,
-        )  # must be io_bound
-        return self.roofline_latency
-
-    def compile_and_simulate(
-        self, pcb_module: Device, L2Cache_previous: L2Cache = None
-    ):  # memory bound operator
-        self.l2_status = L2CacheLayerNorm(
-            pcb_module.compute_module.l2_size,
-            self.M,
-            self.N,
-            self.input_dtype,
-            self.output_dtype,
-            L2Cache_previous,
-        )
-        mem_access_size = self.l2_status.access(
-            L2AccessType.ACTIVATION, (0, 0), (self.M, self.N)
-        )
-        mem_access_size += self.l2_status.access(
-            L2AccessType.RESIDUAL_INPUT, (0, 0), (self.M, self.N)
-        )
-        mem_access_size += self.l2_status.access(
-            L2AccessType.RESIDUAL_OUTPUT, (0, 0), (self.M, self.N)
-        )
-        mem_access_size += self.l2_status.access(
-            L2AccessType.OUTPUT, (0, 0), (self.M, self.N)
-        )
-        mem_access_cycle = ceil(
-            mem_access_size
-            / (
-                pcb_module.io_module.bandwidth
-                * pcb_module.io_module.bandwidth_efficiency
-                / pcb_module.compute_module.clock_freq
+            self.M
+            * self.N
+            * (
+                2 * self.input_dtype.word_size
+                + self.output_dtype.word_size
+                + self.residual_dtype.word_size
             )
         )
-        self.mem_access_size = mem_access_size
-        self.latency = mem_access_cycle / pcb_module.compute_module.clock_freq
-        return self.latency
+        return (
+            Tensor(list(input1.shape), self.output_dtype),
+            Tensor(list(input2.shape), self.residual_dtype),
+        )
+
+    def _cache_kwargs(self):
+        return {"residual_dtype": self.residual_dtype}

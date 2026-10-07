@@ -56,7 +56,7 @@ def load_or_generate_data(args):
     for record in existing_data:
         M, N = record["M"], record["N"]
 
-        model = FusedLayerNorm(input_dtype, output_dtype)
+        model = FusedLayerNorm(input_dtype, output_dtype, residual_dtype=input_dtype)
         _ = model(
             Tensor([M, N], input_dtype),
             Tensor([M, N], input_dtype),

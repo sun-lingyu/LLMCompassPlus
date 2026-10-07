@@ -1,3 +1,5 @@
+from math import isfinite
+
 from software_model.utils import DataType
 
 
@@ -41,10 +43,19 @@ class Core:
 
 class LaunchLatency:
     def __init__(
-        self, matmul, layernorm, flashattn_prefill, flashattn_decode, flashattn_combine
+        self,
+        matmul,
+        layernorm,
+        rope,
+        silu,
+        flashattn_prefill,
+        flashattn_decode,
+        flashattn_combine,
     ):
         self.matmul = matmul
         self.layernorm = layernorm
+        self.rope = rope
+        self.silu = silu
         self.flashattn_prefill = flashattn_prefill
         self.flashattn_decode = flashattn_decode
         self.flashattn_combine = flashattn_combine
@@ -60,6 +71,7 @@ class ComputeModule:
         l2_bandwidth_per_cycle,
         l2_latency_cycles,
         launch_latency: LaunchLatency,
+        compute_latency_factor: dict = None,
     ):
         self.core = core
         self.core_count = core_count
@@ -68,6 +80,13 @@ class ComputeModule:
         self.l2_bandwidth_per_cycle = l2_bandwidth_per_cycle  # Byte/clock
         self.l2_latency_cycles = l2_latency_cycles
         self.launch_latency = launch_latency
+        # Seconds per logical output element, calibrated for the base device.
+        self.compute_latency_factor = dict.fromkeys(("layernorm", "rope", "silu"), 0.0)
+        if compute_latency_factor is not None:
+            self.compute_latency_factor.update(compute_latency_factor)
+        for name, factor in self.compute_latency_factor.items():
+            if not isfinite(factor) or factor < 0:
+                raise ValueError(f"Invalid compute latency factor for {name}: {factor}")
 
     def get_total_vector_throughput_per_cycle(
         self, data_type: DataType, operation: str

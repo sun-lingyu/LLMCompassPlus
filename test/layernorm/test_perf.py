@@ -96,7 +96,7 @@ def test_and_save_latency(
     latency_list = []
     for idx, (M, N) in enumerate(test_problems):
         print(f"problem: M {M} N {N}")
-        model = FusedLayerNorm(input_dtype, output_dtype)
+        model = FusedLayerNorm(input_dtype, output_dtype, residual_dtype=input_dtype)
         _ = model(
             Tensor([M, N], input_dtype),
             Tensor([M, N], input_dtype),

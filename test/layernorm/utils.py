@@ -8,6 +8,8 @@ def get_model_shape(model):
 
 
 def get_output_dtype(model_dtype: DataType, is_test: bool):
+    if model_dtype.name == "fp8":  # Thor FP8 execution contract
+        return data_type_dict["fp8"]
     if is_test:
         return data_type_dict["fp16"]
     else:
