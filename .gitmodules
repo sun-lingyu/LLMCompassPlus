@@ -1,0 +1,3 @@
+[submodule "cost_model/chiplet-actuary"]
+	path = cost_model/chiplet-actuary
+	url = https://github.com/sun-lingyu/chiplet-actuary.git
