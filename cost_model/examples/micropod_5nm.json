@@ -1,0 +1,21 @@
+{
+  "name": "micropod_8sm_demo",
+  "node": "5",
+  "whole_wafers": true,
+  "soc": {
+    "hw": "Thor",
+    "target_sm_count": 8,
+    "target_l2_size_mb": 16,
+    "cpu_core_count": 4,
+    "memory_bus_bits": 128,
+    "extra_hardware_area_mm2": 0.0
+  },
+  "interconnect": {
+    "target_bandwidth_gbps_per_port": 1024
+  },
+  "tiers": [
+    {"name": "S", "soc_count": 1, "demand": 100000},
+    {"name": "M", "soc_count": 2, "demand": 100000},
+    {"name": "L", "soc_count": 4, "demand": 100000}
+  ]
+}

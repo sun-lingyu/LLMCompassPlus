@@ -1,23 +1,17 @@
 import argparse
 import json
-import os
+import math
+from pathlib import Path
 
 
 def load_area_data(hardware_name):
-    file_name = f"configs/{hardware_name}_die_mm.json"
-
-    if not os.path.exists(file_name):
-        print(f"Error: {file_name} not found")
-        return None
-
-    try:
-        with open(file_name, "r") as f:
-            data = json.load(f)
-            print(f"Read file success: {file_name}")
-            return data
-    except json.JSONDecodeError:
-        print(f"Error: {file_name} format error")
-        return None
+    if hardware_name not in {"Orin", "Thor"}:
+        raise ValueError("hardware_name must be Orin or Thor")
+    file_name = (
+        Path(__file__).resolve().parent / "configs" / f"{hardware_name}_die_mm.json"
+    )
+    with file_name.open(encoding="utf-8") as stream:
+        return json.load(stream)
 
 
 def calculate_gpu_area(
@@ -29,8 +23,25 @@ def calculate_gpu_area(
 ):
     """
     Returns:
-        dict: include total die area and breakdown
+        dict: GPU compute-complex area only; physical SMs, unrounded mm^2
     """
+    for name, value in {
+        "target_sm_count": target_sm_count,
+        "target_l2_size_mb": target_l2_size_mb,
+        "target_l1_size_kb": target_l1_size_kb,
+        "target_reg_size_kb": target_reg_size_kb,
+    }.items():
+        if value is None and name in {"target_l1_size_kb", "target_reg_size_kb"}:
+            continue
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or value <= 0
+        ):
+            raise ValueError(f"{name} must be positive and finite")
+    if target_sm_count != int(target_sm_count):
+        raise ValueError("target_sm_count must be an integer")
     gpu_data = load_area_data(hw)
     # 1. Prepare Base Data
 
@@ -93,11 +104,11 @@ def calculate_gpu_area(
             "sm_reg_kb": t_reg_kb,
         },
         "area_breakdown_mm2": {
-            "total": round(total_die_area, 2),
-            "command_front": round(area_cmd_front, 2),
-            "l2_total": round(new_l2_total_area, 2),
-            "sm_total": round(new_sm_total_area, 2),
-            "extra_gpc_tpc": round(new_extra_area, 2),
+            "total": total_die_area,
+            "command_front": area_cmd_front,
+            "l2_total": new_l2_total_area,
+            "sm_total": new_sm_total_area,
+            "extra_gpc_tpc": new_extra_area,
         },
     }
 
@@ -108,7 +119,7 @@ def print_report(res):
     print(
         f"\n--- Custom GPU Config: {res['config']['sm_count']} SMs, {res['config']['l2_size_mb']}MB L2, {res['config']['sm_l1_kb']}KB L1 ---"
     )
-    print(f"Total Die Area  : {res['area_breakdown_mm2']['total']} mm²")
+    print(f"GPU Complex Area: {res['area_breakdown_mm2']['total']} mm²")
     print(f" > Command Front: {res['area_breakdown_mm2']['command_front']} mm² (Fixed)")
     print(
         f" > L2 Cache     : {res['area_breakdown_mm2']['l2_total']} mm² (Scaled Data + Fixed Ctrl)"
@@ -128,10 +139,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.hw == "Thor":
-        res_thor = calculate_gpu_area(args.hw, target_sm_count=22, target_l2_size_mb=24)
+        res_thor = calculate_gpu_area(args.hw, target_sm_count=22, target_l2_size_mb=32)
         print_report(res_thor)
         res_thor_half = calculate_gpu_area(
-            args.hw, target_sm_count=10, target_l2_size_mb=12
+            args.hw, target_sm_count=10, target_l2_size_mb=16
         )
         print_report(res_thor_half)
     elif args.hw == "Orin":

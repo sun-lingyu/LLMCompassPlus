@@ -1,0 +1,985 @@
+{
+  "schema_version": 1,
+  "reference": {
+    "hardware": "Orin",
+    "name": "Orin physical die",
+    "die_width_mm": 20.17,
+    "die_height_mm": 22.2,
+    "physical_sm_count": 16,
+    "active_sm_count": 16,
+    "l2_size_mb": 4,
+    "cpu_core_count": 12,
+    "memory_bus_bits": 256
+  },
+  "cpu": {
+    "default_core_quantum": 1,
+    "note": "Scaled CPU policies round to nearest core, ties upward, minimum one core. An explicit quantum changes the rounding granularity. Core/private-cache and shared L3 areas scale by rounded core count / reference core count; no independent cache-capacity rounding. This is a design assumption, not a physical cluster claim."
+  },
+  "memory": {
+    "channel_bits": 16,
+    "technology": "LPDDR5",
+    "shoreline_axes": [
+      "x",
+      "x",
+      "y",
+      "y"
+    ],
+    "note": "PHY width and length scale with memory bus width at reference technology. Memory controller remains in residual."
+  },
+  "defaults": {
+    "include_dla": false,
+    "display_exclusion_supported": false,
+    "include_vision_accelerator": false
+  },
+  "measurement": {
+    "source": "die_shot/Orin_soc_regions_annotated.png",
+    "sha256": "254917c985930acbd1a3f4a5c8bf738a2dc7b6981d66f271052de47b00ab169a",
+    "image_size_px": [
+      1128,
+      1022
+    ],
+    "die_bounds_px": [
+      5,
+      5,
+      1122,
+      1017
+    ],
+    "image_die_width_mm": 22.2,
+    "image_die_height_mm": 20.17,
+    "method": "Full user-outlined IP envelopes; rectangles approximately follow red stroke centers. CPU envelope split into cores/support and L3. GPU/PVA red-box overlap assigned to GPU. CSI PHY excluded from ISP envelope to prevent duplication. Peripheral coordinates registered from prior image crop to preserve their measured physical areas and lengths. No independent physical validation. PVA supersedes the broad PVA/system box: dedicated envelope registered from the unobscured original image; surrounding system functions are residual. Latest revision separately counts system_components as fixed per-die area; previous residual classification is superseded.",
+    "components": {
+      "memory_phy": {
+        "rectangles_px": [
+          [
+            117.25123373710184,
+            20.074478649453823,
+            452.0004486316734,
+            69.31777557100298
+          ],
+          [
+            663.9748766262899,
+            20.074478649453823,
+            1000.7285778375954,
+            69.31777557100298
+          ],
+          [
+            9.008972633467923,
+            189.91360476663357,
+            55.112157918349034,
+            509.4925521350546
+          ],
+          [
+            1069.3822341857335,
+            185.39126117179742,
+            1117.991027366532,
+            507.4826216484608
+          ]
+        ],
+        "note": "Four labelled 64-bit LPDDR5 PHYs: two horizontal top strips and two vertical side strips. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+      },
+      "camera_phy": {
+        "rectangles_px": [
+          [
+            1087.4226110363393,
+            757.2164846077458,
+            1105.4629878869448,
+            977.8063555114201
+          ]
+        ],
+        "note": "Labelled CSI strip; unidentified controller remains in residual. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+      },
+      "pcie_phy": {
+        "rectangles_px": [
+          [
+            152.83086585912966,
+            971.27408142999,
+            377.83445491251683,
+            1009.4627606752731
+          ],
+          [
+            441.4768954688201,
+            971.27408142999,
+            645.9344997756841,
+            1009.4627606752731
+          ],
+          [
+            663.9748766262899,
+            971.27408142999,
+            841.3719156572454,
+            1009.4627606752731
+          ]
+        ],
+        "note": "Approximate three labelled PCIe x8 PHY strips. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+      },
+      "ethernet_phy": {
+        "rectangles_px": [
+          [
+            88.68730372364288,
+            969.7666335650447,
+            151.82862270076268,
+            1008.4577954319761
+          ]
+        ],
+        "note": "Labelled 10Gbps LAN PHY. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+      },
+      "usb_phy": {
+        "rectangles_px": [
+          [
+            842.8752803947958,
+            969.7666335650447,
+            991.7083894122925,
+            1008.4577954319761
+          ]
+        ],
+        "note": "Labelled USB PHY strip. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+      },
+      "display_phy": {
+        "rectangles_px": [
+          [
+            993.2117541498429,
+            968.7616683217477,
+            1051.3418573351278,
+            1008.4577954319761
+          ]
+        ],
+        "note": "Labelled display I/O; retained. Display controller is not separately identified. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+      },
+      "system_slc": {
+        "rectangles_px": [
+          [
+            73,
+            92,
+            276,
+            250
+          ]
+        ],
+        "note": "Full SLC outer region including tags/control."
+      },
+      "cpu_cores_and_private_cache": {
+        "rectangles_px": [
+          [
+            73,
+            257,
+            467,
+            365
+          ],
+          [
+            73,
+            432,
+            467,
+            531
+          ]
+        ],
+        "note": "CPU envelope above/below L3 band; includes cluster support within these bands."
+      },
+      "cpu_shared_l3": {
+        "rectangles_px": [
+          [
+            73,
+            365,
+            467,
+            432
+          ]
+        ],
+        "note": "Full CPU middle cache band. Together with cores tiles complete CPU outer box."
+      },
+      "dla": {
+        "rectangles_px": [
+          [
+            63,
+            538,
+            460,
+            658
+          ]
+        ],
+        "note": "Full DLA outer region; removed only after reference calibration."
+      },
+      "gpu_region": {
+        "rectangles_px": [
+          [
+            276,
+            92,
+            1041,
+            239
+          ],
+          [
+            512,
+            239,
+            1041,
+            713
+          ]
+        ],
+        "note": "Full stepped GPU/media envelope. Legacy GPU compute-complex area is contained here, NOT added on top."
+      },
+      "isp_vic": {
+        "rectangles_px": [
+          [
+            612,
+            736,
+            1103,
+            757.2164846077458
+          ],
+          [
+            612,
+            757.2164846077458,
+            1087.4226110363393,
+            937
+          ]
+        ],
+        "note": "Full ISP/VIC outer region, excluding separately measured overlapping CSI PHY."
+      },
+      "pva": {
+        "rectangles_px": [
+          [
+            188.91161956034097,
+            688.3763654419066,
+            503.1148497083894,
+            886.3545183714002
+          ]
+        ],
+        "source_measurement": {
+          "source": "die_shot/Orin_die_annotated.png",
+          "sha256": "3d14cc3543132d90a1a86b2ac023218d10d0134afc58b14d7f4b069d5d73c474",
+          "die_bounds_px": [
+            14,
+            13,
+            2243,
+            2027
+          ],
+          "rectangles_px": [
+            [
+              381,
+              1373,
+              1008,
+              1767
+            ]
+          ]
+        },
+        "note": "Dedicated annotated PVA envelope, including VPU0/VPU1, VPU Memory 768KB and local logic. Excludes adjacent Security Engine, Safety Island, system SRAM, external R5 regions and separately labelled DMA. Those surrounding system regions form fixed system_components. Manual boundary estimate, not layout-ground-truth precision."
+      },
+      "system_components": {
+        "rectangles_px": [
+          [
+            32,
+            886.3545183714002,
+            602,
+            937
+          ],
+          [
+            32,
+            713,
+            188.91161956034097,
+            886.3545183714002
+          ],
+          [
+            503.1148497083894,
+            713,
+            602,
+            886.3545183714002
+          ],
+          [
+            32,
+            679,
+            512,
+            688.3763654419066
+          ],
+          [
+            32,
+            688.3763654419066,
+            188.91161956034097,
+            713
+          ],
+          [
+            503.1148497083894,
+            688.3763654419066,
+            512,
+            713
+          ]
+        ],
+        "note": "Fixed system-support envelope: previous full PVA/system region minus dedicated PVA. Includes Security Engine, Safety Island, system SRAM, external R5, separately labelled DMA and surrounding support. GPU overlap was already excluded from the original envelope. Dedicated VPU memory remains in PVA; no duplicate area."
+      }
+    }
+  },
+  "scope": [
+    "DLA and dedicated PVA included in reference calibration but excluded from custom SoCs by default. PVA-local memory belongs to PVA; surrounding system support is separately retained as fixed system_components.",
+    "GPU full envelope contains the original parameterized compute complex. Envelope minus reference compute area is retained as fixed gpu_region_other_fixed, including media/support. No separate multimedia area is added.",
+    "CPU cores/support and L3 together cover the full CPU outer envelope and scale with rounded CPU core count.",
+    "System SLC is fixed and separate from GPU L2 and CPU L3.",
+    "Display/media controls cannot be isolated; retained in GPU region other/system residual. Full display exclusion remains unsupported.",
+    "Only uncovered regions enter proportional residual; identified system_components stays fixed when GPU, CPU and memory width scale. Memory controller is not separately identified.",
+    "New inter-SoC ports require explicit area; PHY shoreline check remains enabled for package integration."
+  ],
+  "measurement_history": [
+    {
+      "source": "die_shot/Orin_die_annotated.png",
+      "sha256": "3d14cc3543132d90a1a86b2ac023218d10d0134afc58b14d7f4b069d5d73c474",
+      "image_size_px": [
+        2257,
+        2043
+      ],
+      "die_bounds_px": [
+        14,
+        13,
+        2243,
+        2027
+      ],
+      "image_die_width_mm": 22.2,
+      "image_die_height_mm": 20.17,
+      "method": "Approximate manual non-GPU rectangles on the existing annotated Orin image, converted from 1250x1131 viewing coordinates to source pixels. Die image is landscape; inherited 20.17x22.2 mm dimensions are rotated for directional length conversion. Original GPU calibration is retained. No independent measurement validation.",
+      "components": {
+        "cpu_cores_and_private_cache": {
+          "rectangles_px": [
+            [
+              150,
+              515,
+              939,
+              724
+            ],
+            [
+              153,
+              867,
+              915,
+              1073
+            ]
+          ],
+          "note": "12 labelled Cortex-A78AE cores; approximate core/private-cache envelopes."
+        },
+        "cpu_shared_l3": {
+          "rectangles_px": [
+            [
+              150,
+              732,
+              939,
+              862
+            ]
+          ],
+          "note": "CPU cluster L3 region; scales with CPU core count."
+        },
+        "system_slc": {
+          "rectangles_px": [
+            [
+              150,
+              193,
+              545,
+              508
+            ]
+          ],
+          "note": "Separately labelled 4 MB SLC including its control/tag area; fixed, not GPU L2 or CPU L3."
+        },
+        "dla": {
+          "rectangles_px": [
+            [
+              135,
+              1082,
+              917,
+              1317
+            ]
+          ],
+          "note": "DLA accelerators; included in reference calibration, removed in default custom SoC."
+        },
+        "pva": {
+          "rectangles_px": [
+            [
+              381,
+              1373,
+              1008,
+              1767
+            ]
+          ],
+          "note": "PVA visual preprocessing; functional category corresponding to Thor DSP, not identical hardware."
+        },
+        "isp_vic": {
+          "rectangles_px": [
+            [
+              1233,
+              1472,
+              2167,
+              1873
+            ]
+          ],
+          "note": "Combined ISP/VIC envelope; retained without inventing a per-engine split."
+        },
+        "multimedia_complex": {
+          "rectangles_px": [
+            [
+              1015,
+              193,
+              1119,
+              770
+            ]
+          ],
+          "note": "Labelled multimedia complex retained as a bundle; individual codec/display control areas are not separately identified."
+        },
+        "security_safety": {
+          "rectangles_px": [
+            [
+              72,
+              1358,
+              209,
+              1768
+            ]
+          ],
+          "note": "Identifiable security/safety/SRAM envelope; remaining adjacent logic stays in residual."
+        },
+        "dma": {
+          "rectangles_px": [
+            [
+              72,
+              1776,
+              377,
+              1875
+            ],
+            [
+              385,
+              1777,
+              921,
+              1875
+            ]
+          ],
+          "note": "Two labelled DMA regions."
+        },
+        "memory_phy": {
+          "rectangles_px": [
+            [
+              238,
+              43,
+              906,
+              141
+            ],
+            [
+              1329,
+              43,
+              2001,
+              141
+            ],
+            [
+              22,
+              381,
+              114,
+              1017
+            ],
+            [
+              2138,
+              372,
+              2235,
+              1013
+            ]
+          ],
+          "note": "Four labelled 64-bit LPDDR5 PHYs: two horizontal top strips and two vertical side strips."
+        },
+        "camera_phy": {
+          "rectangles_px": [
+            [
+              2174,
+              1510,
+              2210,
+              1949
+            ]
+          ],
+          "note": "Labelled CSI strip; unidentified controller remains in residual."
+        },
+        "pcie_phy": {
+          "rectangles_px": [
+            [
+              309,
+              1936,
+              758,
+              2012
+            ],
+            [
+              885,
+              1936,
+              1293,
+              2012
+            ],
+            [
+              1329,
+              1936,
+              1683,
+              2012
+            ]
+          ],
+          "note": "Approximate three labelled PCIe x8 PHY strips."
+        },
+        "ethernet_phy": {
+          "rectangles_px": [
+            [
+              181,
+              1933,
+              307,
+              2010
+            ]
+          ],
+          "note": "Labelled 10Gbps LAN PHY."
+        },
+        "usb_phy": {
+          "rectangles_px": [
+            [
+              1686,
+              1933,
+              1983,
+              2010
+            ]
+          ],
+          "note": "Labelled USB PHY strip."
+        },
+        "display_phy": {
+          "rectangles_px": [
+            [
+              1986,
+              1931,
+              2102,
+              2010
+            ]
+          ],
+          "note": "Labelled display I/O; retained. Display controller is not separately identified."
+        }
+      }
+    },
+    {
+      "source": "die_shot/Orin_soc_regions_annotated.png",
+      "sha256": "254917c985930acbd1a3f4a5c8bf738a2dc7b6981d66f271052de47b00ab169a",
+      "image_size_px": [
+        1128,
+        1022
+      ],
+      "die_bounds_px": [
+        5,
+        5,
+        1122,
+        1017
+      ],
+      "image_die_width_mm": 22.2,
+      "image_die_height_mm": 20.17,
+      "method": "Full user-outlined IP envelopes; rectangles approximately follow red stroke centers. CPU envelope split into cores/support and L3. GPU/PVA red-box overlap assigned to GPU. CSI PHY excluded from ISP envelope to prevent duplication. Peripheral coordinates registered from prior image crop to preserve their measured physical areas and lengths. No independent physical validation.",
+      "components": {
+        "memory_phy": {
+          "rectangles_px": [
+            [
+              117.25123373710184,
+              20.074478649453823,
+              452.0004486316734,
+              69.31777557100298
+            ],
+            [
+              663.9748766262899,
+              20.074478649453823,
+              1000.7285778375954,
+              69.31777557100298
+            ],
+            [
+              9.008972633467923,
+              189.91360476663357,
+              55.112157918349034,
+              509.4925521350546
+            ],
+            [
+              1069.3822341857335,
+              185.39126117179742,
+              1117.991027366532,
+              507.4826216484608
+            ]
+          ],
+          "note": "Four labelled 64-bit LPDDR5 PHYs: two horizontal top strips and two vertical side strips. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "camera_phy": {
+          "rectangles_px": [
+            [
+              1087.4226110363393,
+              757.2164846077458,
+              1105.4629878869448,
+              977.8063555114201
+            ]
+          ],
+          "note": "Labelled CSI strip; unidentified controller remains in residual. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "pcie_phy": {
+          "rectangles_px": [
+            [
+              152.83086585912966,
+              971.27408142999,
+              377.83445491251683,
+              1009.4627606752731
+            ],
+            [
+              441.4768954688201,
+              971.27408142999,
+              645.9344997756841,
+              1009.4627606752731
+            ],
+            [
+              663.9748766262899,
+              971.27408142999,
+              841.3719156572454,
+              1009.4627606752731
+            ]
+          ],
+          "note": "Approximate three labelled PCIe x8 PHY strips. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "ethernet_phy": {
+          "rectangles_px": [
+            [
+              88.68730372364288,
+              969.7666335650447,
+              151.82862270076268,
+              1008.4577954319761
+            ]
+          ],
+          "note": "Labelled 10Gbps LAN PHY. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "usb_phy": {
+          "rectangles_px": [
+            [
+              842.8752803947958,
+              969.7666335650447,
+              991.7083894122925,
+              1008.4577954319761
+            ]
+          ],
+          "note": "Labelled USB PHY strip. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "display_phy": {
+          "rectangles_px": [
+            [
+              993.2117541498429,
+              968.7616683217477,
+              1051.3418573351278,
+              1008.4577954319761
+            ]
+          ],
+          "note": "Labelled display I/O; retained. Display controller is not separately identified. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "system_slc": {
+          "rectangles_px": [
+            [
+              73,
+              92,
+              276,
+              250
+            ]
+          ],
+          "note": "Full SLC outer region including tags/control."
+        },
+        "cpu_cores_and_private_cache": {
+          "rectangles_px": [
+            [
+              73,
+              257,
+              467,
+              365
+            ],
+            [
+              73,
+              432,
+              467,
+              531
+            ]
+          ],
+          "note": "CPU envelope above/below L3 band; includes cluster support within these bands."
+        },
+        "cpu_shared_l3": {
+          "rectangles_px": [
+            [
+              73,
+              365,
+              467,
+              432
+            ]
+          ],
+          "note": "Full CPU middle cache band. Together with cores tiles complete CPU outer box."
+        },
+        "dla": {
+          "rectangles_px": [
+            [
+              63,
+              538,
+              460,
+              658
+            ]
+          ],
+          "note": "Full DLA outer region; removed only after reference calibration."
+        },
+        "gpu_region": {
+          "rectangles_px": [
+            [
+              276,
+              92,
+              1041,
+              239
+            ],
+            [
+              512,
+              239,
+              1041,
+              713
+            ]
+          ],
+          "note": "Full stepped GPU/media envelope. Legacy GPU compute-complex area is contained here, NOT added on top."
+        },
+        "pva_system": {
+          "rectangles_px": [
+            [
+              32,
+              713,
+              602,
+              937
+            ],
+            [
+              32,
+              679,
+              512,
+              713
+            ]
+          ],
+          "note": "Full PVA/system envelope including security, safety, SRAM, DMA and support logic. Red-box overlap assigned to GPU once. Not all this region is PVA circuitry; retained together as fixed system area."
+        },
+        "isp_vic": {
+          "rectangles_px": [
+            [
+              612,
+              736,
+              1103,
+              757.2164846077458
+            ],
+            [
+              612,
+              757.2164846077458,
+              1087.4226110363393,
+              937
+            ]
+          ],
+          "note": "Full ISP/VIC outer region, excluding separately measured overlapping CSI PHY."
+        }
+      }
+    },
+    {
+      "source": "die_shot/Orin_soc_regions_annotated.png",
+      "sha256": "254917c985930acbd1a3f4a5c8bf738a2dc7b6981d66f271052de47b00ab169a",
+      "image_size_px": [
+        1128,
+        1022
+      ],
+      "die_bounds_px": [
+        5,
+        5,
+        1122,
+        1017
+      ],
+      "image_die_width_mm": 22.2,
+      "image_die_height_mm": 20.17,
+      "method": "Full user-outlined IP envelopes; rectangles approximately follow red stroke centers. CPU envelope split into cores/support and L3. GPU/PVA red-box overlap assigned to GPU. CSI PHY excluded from ISP envelope to prevent duplication. Peripheral coordinates registered from prior image crop to preserve their measured physical areas and lengths. No independent physical validation. PVA supersedes the broad PVA/system box: dedicated envelope registered from the unobscured original image; surrounding system functions are residual.",
+      "components": {
+        "memory_phy": {
+          "rectangles_px": [
+            [
+              117.25123373710184,
+              20.074478649453823,
+              452.0004486316734,
+              69.31777557100298
+            ],
+            [
+              663.9748766262899,
+              20.074478649453823,
+              1000.7285778375954,
+              69.31777557100298
+            ],
+            [
+              9.008972633467923,
+              189.91360476663357,
+              55.112157918349034,
+              509.4925521350546
+            ],
+            [
+              1069.3822341857335,
+              185.39126117179742,
+              1117.991027366532,
+              507.4826216484608
+            ]
+          ],
+          "note": "Four labelled 64-bit LPDDR5 PHYs: two horizontal top strips and two vertical side strips. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "camera_phy": {
+          "rectangles_px": [
+            [
+              1087.4226110363393,
+              757.2164846077458,
+              1105.4629878869448,
+              977.8063555114201
+            ]
+          ],
+          "note": "Labelled CSI strip; unidentified controller remains in residual. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "pcie_phy": {
+          "rectangles_px": [
+            [
+              152.83086585912966,
+              971.27408142999,
+              377.83445491251683,
+              1009.4627606752731
+            ],
+            [
+              441.4768954688201,
+              971.27408142999,
+              645.9344997756841,
+              1009.4627606752731
+            ],
+            [
+              663.9748766262899,
+              971.27408142999,
+              841.3719156572454,
+              1009.4627606752731
+            ]
+          ],
+          "note": "Approximate three labelled PCIe x8 PHY strips. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "ethernet_phy": {
+          "rectangles_px": [
+            [
+              88.68730372364288,
+              969.7666335650447,
+              151.82862270076268,
+              1008.4577954319761
+            ]
+          ],
+          "note": "Labelled 10Gbps LAN PHY. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "usb_phy": {
+          "rectangles_px": [
+            [
+              842.8752803947958,
+              969.7666335650447,
+              991.7083894122925,
+              1008.4577954319761
+            ]
+          ],
+          "note": "Labelled USB PHY strip. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "display_phy": {
+          "rectangles_px": [
+            [
+              993.2117541498429,
+              968.7616683217477,
+              1051.3418573351278,
+              1008.4577954319761
+            ]
+          ],
+          "note": "Labelled display I/O; retained. Display controller is not separately identified. Coordinates registered from previous crop to latest image; physical area/length unchanged."
+        },
+        "system_slc": {
+          "rectangles_px": [
+            [
+              73,
+              92,
+              276,
+              250
+            ]
+          ],
+          "note": "Full SLC outer region including tags/control."
+        },
+        "cpu_cores_and_private_cache": {
+          "rectangles_px": [
+            [
+              73,
+              257,
+              467,
+              365
+            ],
+            [
+              73,
+              432,
+              467,
+              531
+            ]
+          ],
+          "note": "CPU envelope above/below L3 band; includes cluster support within these bands."
+        },
+        "cpu_shared_l3": {
+          "rectangles_px": [
+            [
+              73,
+              365,
+              467,
+              432
+            ]
+          ],
+          "note": "Full CPU middle cache band. Together with cores tiles complete CPU outer box."
+        },
+        "dla": {
+          "rectangles_px": [
+            [
+              63,
+              538,
+              460,
+              658
+            ]
+          ],
+          "note": "Full DLA outer region; removed only after reference calibration."
+        },
+        "gpu_region": {
+          "rectangles_px": [
+            [
+              276,
+              92,
+              1041,
+              239
+            ],
+            [
+              512,
+              239,
+              1041,
+              713
+            ]
+          ],
+          "note": "Full stepped GPU/media envelope. Legacy GPU compute-complex area is contained here, NOT added on top."
+        },
+        "isp_vic": {
+          "rectangles_px": [
+            [
+              612,
+              736,
+              1103,
+              757.2164846077458
+            ],
+            [
+              612,
+              757.2164846077458,
+              1087.4226110363393,
+              937
+            ]
+          ],
+          "note": "Full ISP/VIC outer region, excluding separately measured overlapping CSI PHY."
+        },
+        "pva": {
+          "rectangles_px": [
+            [
+              188.91161956034097,
+              688.3763654419066,
+              503.1148497083894,
+              886.3545183714002
+            ]
+          ],
+          "source_measurement": {
+            "source": "die_shot/Orin_die_annotated.png",
+            "sha256": "3d14cc3543132d90a1a86b2ac023218d10d0134afc58b14d7f4b069d5d73c474",
+            "die_bounds_px": [
+              14,
+              13,
+              2243,
+              2027
+            ],
+            "rectangles_px": [
+              [
+                381,
+                1373,
+                1008,
+                1767
+              ]
+            ]
+          },
+          "note": "Dedicated annotated PVA envelope, including VPU0/VPU1, VPU Memory 768KB and local logic. Excludes adjacent Security Engine, Safety Island, system SRAM, external R5 regions and separately labelled DMA. Those surrounding system regions enter residual. Manual boundary estimate, not layout-ground-truth precision."
+        }
+      }
+    }
+  ],
+  "vision_accelerator_component": "pva"
+}

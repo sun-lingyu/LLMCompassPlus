@@ -29,12 +29,14 @@
       "flashattn_prefill": 2e-06,
       "flashattn_decode": 1.5e-05,
       "flashattn_combine": 2e-06,
-      "silu": 2e-06
+      "silu": 2e-06,
+      "quant": 1.5e-6
     },
     "compute_latency_factor": {
       "layernorm": 1e-11,
       "rope": 1.7e-11,
-      "silu": 7e-12
+      "silu": 7e-12,
+      "quant": 0
     }
   },
   "io_module": {

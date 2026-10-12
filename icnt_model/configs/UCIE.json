@@ -7,7 +7,6 @@
     "ReduceScatter": 25.0,
     "AlltoAll": 35.0
   },
-  "bandwidth_efficiency": 0.9,
   "available_module_count": [
     1,
     2,

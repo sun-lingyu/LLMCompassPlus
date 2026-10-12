@@ -51,6 +51,7 @@ class LaunchLatency:
         flashattn_prefill,
         flashattn_decode,
         flashattn_combine,
+        quant=0.0,
     ):
         self.matmul = matmul
         self.layernorm = layernorm
@@ -59,6 +60,7 @@ class LaunchLatency:
         self.flashattn_prefill = flashattn_prefill
         self.flashattn_decode = flashattn_decode
         self.flashattn_combine = flashattn_combine
+        self.quant = quant
 
 
 class ComputeModule:
@@ -81,7 +83,9 @@ class ComputeModule:
         self.l2_latency_cycles = l2_latency_cycles
         self.launch_latency = launch_latency
         # Seconds per logical output element, calibrated for the base device.
-        self.compute_latency_factor = dict.fromkeys(("layernorm", "rope", "silu"), 0.0)
+        self.compute_latency_factor = dict.fromkeys(
+            ("layernorm", "rope", "silu", "quant"), 0.0
+        )
         if compute_latency_factor is not None:
             self.compute_latency_factor.update(compute_latency_factor)
         for name, factor in self.compute_latency_factor.items():

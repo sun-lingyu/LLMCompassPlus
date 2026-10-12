@@ -1,0 +1,328 @@
+{
+  "model": "micropod_mcm_v1",
+  "name": "micropod_8sm_demo",
+  "node": "5",
+  "currency": "USD",
+  "feasible": true,
+  "interconnect": {
+    "package_type": "standard",
+    "modules_per_port": 2,
+    "lanes_per_module": 16,
+    "rate_gt": 32,
+    "raw_bandwidth_gbps_per_port": 1024,
+    "raw_bandwidth_GBps_per_port": 128.0,
+    "phy_area_mm2_per_port": 1.76022,
+    "phy_length_mm_per_port": 1.143,
+    "target_bandwidth_gbps_per_port": 1024,
+    "physical_ports_per_die": 2,
+    "source_path": "/home/sly/LLM/LLMCompassPlus/icnt_model/configs/UCIE.json",
+    "source_sha256": "dcb8ce3cebb599336bc64edaa0460897d81c65b8a2e8ac9354543494b563a327",
+    "area_scope": "PHY only; controller/adapter/buffer excluded",
+    "bandwidth_scope": "raw single-direction per port; no efficiency factor"
+  },
+  "soc_area_result": {
+    "valid": true,
+    "constraints": {
+      "memory_phy_shoreline": {
+        "enforced": true,
+        "edge_count": 2,
+        "passed": true,
+        "required_length_mm": 11.551020408163266,
+        "available_length_mm": 30.5384060617062,
+        "margin_mm": 18.987385653542937,
+        "minimum_die_area_mm2": 33.35651811745107,
+        "reason": null
+      },
+      "io_phy_shoreline": {
+        "enforced": true,
+        "edge_count": 2,
+        "passed": true,
+        "required_length_mm": 22.564152191109002,
+        "available_length_mm": 30.5384060617062,
+        "margin_mm": 7.974253870597199,
+        "minimum_die_area_mm2": 127.2852410258823,
+        "reason": null,
+        "components_length_mm": {
+          "memory_phy": 11.551020408163266,
+          "d2d_phy": 2.286,
+          "usb_phy": 1.8945736434108527,
+          "pcie_phy": 4.252713178294574,
+          "hdmi_dp_phy": 2.57984496124031
+        },
+        "d2d_length_known": true
+      }
+    },
+    "model": "thor_soc_v2",
+    "config": {
+      "hardware": "Thor",
+      "physical_sm_count": 8,
+      "active_sm_count": 8,
+      "l2_size_mb": 16,
+      "cpu_policy": "balanced",
+      "cpu_policy_requested_cores": 9.799999999999999,
+      "cpu_core_count": 4,
+      "cpu_core_count_overridden": true,
+      "cpu_core_quantum": 2,
+      "cpu_cache_area_scale": 0.2857142857142857,
+      "memory_bus_bits": 128,
+      "integration": "package",
+      "phy_edge_count": 2,
+      "memory_phy_total_length_mm": 11.551020408163266,
+      "memory_phy_length_source": "reference_phy_strips_scaled_by_bus_width",
+      "include_display": true,
+      "include_dla": false,
+      "include_vision_accelerator": false,
+      "vision_accelerator_component": "dsp",
+      "d2d_physical_port_count": 2,
+      "d2d_area_per_port_mm2": 1.76022,
+      "d2d_phy_length_per_port_mm": 1.143,
+      "extra_hardware_area_mm2": 0.0,
+      "pcie_x8_count": 1,
+      "overhead_ratio": 0.27364716957638824
+    },
+    "area_breakdown_mm2": {
+      "components": {
+        "gpu_compute_complex": 76.01519669550409,
+        "cpu_cores_and_private_cache": 13.243329491264944,
+        "cpu_shared_l3": 6.5050828304743815,
+        "isp": 11.770542635658915,
+        "dsp": 0.0,
+        "imaging_processor": 5.067552602436323,
+        "video_codec": 6.368992248062015,
+        "display_subsystem": 18.39126720455624,
+        "display_phy": 2.421895269735801,
+        "memory_phy": 8.846828033538996,
+        "camera_phy": 1.7703527922797024,
+        "pcie_phy": 4.686663502610346,
+        "usb_phy": 2.087897484575225,
+        "ethernet_phy": 2.3889890840056953,
+        "system_components": 19.970816961559006,
+        "extra_hardware": 0.0,
+        "d2d_interfaces": 3.52044,
+        "memory_controller_explicit": 0.0
+      },
+      "modeled_subtotal": 183.05584683626168,
+      "unidentified_overhead": 50.09271436115185,
+      "total": 233.14856119741353
+    },
+    "gpu": {
+      "config": {
+        "sm_count": 8,
+        "l2_size_mb": 16,
+        "sm_l1_kb": 512,
+        "sm_reg_kb": 256
+      },
+      "area_breakdown_mm2": {
+        "total": 76.01519669550409,
+        "command_front": 28.46156033186773,
+        "l2_total": 12.91,
+        "sm_total": 24.88,
+        "extra_gpc_tpc": 9.763636363636364
+      }
+    },
+    "calibration": {
+      "reference_die_mm2": 416,
+      "reference_components_mm2": {
+        "gpu_compute_complex": 147.98156033186774,
+        "cpu_cores_and_private_cache": 46.351653219427305,
+        "cpu_shared_l3": 22.767789906660337,
+        "isp": 11.770542635658915,
+        "dsp": 12.214776143015346,
+        "imaging_processor": 5.067552602436323,
+        "video_codec": 6.368992248062015,
+        "display_subsystem": 18.39126720455624,
+        "display_phy": 2.421895269735801,
+        "memory_phy": 17.693656067077992,
+        "camera_phy": 1.7703527922797024,
+        "pcie_phy": 9.373327005220691,
+        "usb_phy": 2.087897484575225,
+        "ethernet_phy": 2.3889890840056953,
+        "system_components": 19.970816961559006
+      },
+      "reference_modeled_mm2": 326.6210689561384,
+      "reference_residual_mm2": 89.3789310438616,
+      "overhead_ratio": 0.27364716957638824
+    },
+    "warnings": [
+      "First-order area estimate; CPU sufficiency and physical layout are not validated.",
+      "Non-GPU rectangles are approximate manual measurements; residual includes unidentified system logic.",
+      "CPU core quantum and cache scaling are design assumptions, not verified physical cluster topology.",
+      "Memory PHY scales by width at the reference LPDDR technology; rate changes are not modeled.",
+      "Memory controller is not separately identified; it is represented in residual overhead.",
+      "D2D area counts PHY only; interconnect controller/adapter/buffer area is excluded by assumption.",
+      "Identified System Components is a fixed per-die bundle. Only other unidentified logic, fabric and physical whitespace remain proportional residual.",
+      "No extra utilization multiplier: measured boxes already contain local layout overhead.",
+      "Residual is calibrated with ALL reference modules, including display and video; display is retained by default; explicit display removal occurs only after calibration.",
+      "DSP is included in reference calibration but excluded from custom SoCs by default; identified System Components remains fixed.",
+      "Custom PCIe x8 area/length uses the mean annotated reference x8 strip; reference calibration retains all strips.",
+      "Edge-budget check includes memory, D2D PHY, USB, PCIe and HDMI/DP only; CSI/Ethernet remain in area but are outside this specified edge budget. Not a floorplan validation."
+    ]
+  },
+  "tiers": {
+    "S": {
+      "soc_count": 1,
+      "demand": 5000000,
+      "ring_links": [],
+      "physical_ports": 2,
+      "active_ports": 0,
+      "aggregate_resources": {
+        "physical_sm_count": 8,
+        "active_sm_count": 8,
+        "cpu_core_count": 4,
+        "l2_mb_sum": 16,
+        "memory_bus_bits_sum": 128
+      },
+      "package_type": "OS_single_die",
+      "package_area_mm2": 932.5942447896541,
+      "package_yield": 0.99,
+      "expected_package_attempts": 5050505.05050505,
+      "required_known_good_dies": 5050505.05050505,
+      "manufacturing_per_unit": 100.19837674664534,
+      "manufacturing_breakdown_per_unit": {
+        "raw_dies_and_bumps": 73.64608072478934,
+        "die_defect_loss": 20.887341030441263,
+        "raw_package": 4.66297122394827,
+        "package_defect_loss": 0.047100719433821214,
+        "wasted_known_good_dies": 0.9548830480326386
+      },
+      "manufacturing_total": 500991883.73322666,
+      "package_nre": 3097782.7343689622
+    },
+    "M": {
+      "soc_count": 2,
+      "demand": 5000000,
+      "ring_links": [
+        {
+          "source_die": 0,
+          "source_port": 1,
+          "destination_die": 1,
+          "destination_port": 0
+        },
+        {
+          "source_die": 1,
+          "source_port": 1,
+          "destination_die": 0,
+          "destination_port": 0
+        }
+      ],
+      "physical_ports": 4,
+      "active_ports": 4,
+      "aggregate_resources": {
+        "physical_sm_count": 16,
+        "active_sm_count": 16,
+        "cpu_core_count": 8,
+        "l2_mb_sum": 32,
+        "memory_bus_bits_sum": 256
+      },
+      "package_type": "OS_MCM",
+      "package_area_mm2": 1865.1884895793082,
+      "package_yield": 0.9801,
+      "expected_package_attempts": 5101520.253035405,
+      "required_known_good_dies": 10203040.50607081,
+      "manufacturing_per_unit": 211.93625997985333,
+      "manufacturing_breakdown_per_unit": {
+        "raw_dies_and_bumps": 147.29216144957869,
+        "die_defect_loss": 41.774682060882526,
+        "raw_package": 18.65188489579308,
+        "package_defect_loss": 0.3787088148416296,
+        "wasted_known_good_dies": 3.8388227587574395
+      },
+      "manufacturing_total": 1059681299.8992667,
+      "package_nre": 11491130.937475849
+    },
+    "L": {
+      "soc_count": 4,
+      "demand": 5000000,
+      "ring_links": [
+        {
+          "source_die": 0,
+          "source_port": 1,
+          "destination_die": 1,
+          "destination_port": 0
+        },
+        {
+          "source_die": 1,
+          "source_port": 1,
+          "destination_die": 2,
+          "destination_port": 0
+        },
+        {
+          "source_die": 2,
+          "source_port": 1,
+          "destination_die": 3,
+          "destination_port": 0
+        },
+        {
+          "source_die": 3,
+          "source_port": 1,
+          "destination_die": 0,
+          "destination_port": 0
+        }
+      ],
+      "physical_ports": 8,
+      "active_ports": 8,
+      "aggregate_resources": {
+        "physical_sm_count": 32,
+        "active_sm_count": 32,
+        "cpu_core_count": 16,
+        "l2_mb_sum": 64,
+        "memory_bus_bits_sum": 512
+      },
+      "package_type": "OS_MCM",
+      "package_area_mm2": 3730.3769791586165,
+      "package_yield": 0.96059601,
+      "expected_package_attempts": 5205101.778426084,
+      "required_known_good_dies": 20820407.113704335,
+      "manufacturing_per_unit": 432.4788490559196,
+      "manufacturing_breakdown_per_unit": {
+        "raw_dies_and_bumps": 294.58432289915737,
+        "die_defect_loss": 83.54936412176505,
+        "raw_package": 37.30376979158616,
+        "package_defect_loss": 1.5302139052503136,
+        "wasted_known_good_dies": 15.51117833816072
+      },
+      "manufacturing_total": 2162394245.279598,
+      "package_nre": 22682261.874951698
+    }
+  },
+  "die": {
+    "area_mm2": 233.14856119741353,
+    "yield": 0.7762893833764891,
+    "gross_dies_per_wafer": 234.38080571631977,
+    "known_good_die_cost": 93.36767894924354
+  },
+  "production": {
+    "whole_wafers": true,
+    "wafers": 198266,
+    "required_known_good_dies": 36073952.670280196,
+    "fabricated_dies": 46469744.826151855,
+    "unused_known_good_dies": 16.886476024985313,
+    "scrap_dies": 10395775.269395636
+  },
+  "family": {
+    "shipped_systems": 15000000,
+    "wafer_rounding_cost": 1576.6510718557984,
+    "manufacturing_total": 3723069005.5631638,
+    "nre_breakdown": {
+      "module_design_shared": 210610866.94833022,
+      "die_design_shared": 234766520.16899812,
+      "package_designs": 37271175.54679651
+    },
+    "nre_total": 482648562.66412485,
+    "total_cost": 4205717568.2272887,
+    "average_manufacturing_per_system": 248.20460037087759,
+    "average_total_per_system": 280.38117121515256
+  },
+  "assumptions": [
+    "One identical die design with two manufactured UCIe PHY ports in all products; no die harvesting.",
+    "Separate appropriately sized organic-substrate package design per demanded SKU; common die/module NRE once.",
+    "Upstream OS substrate multipliers model interconnection cost; no additional per-link charge.",
+    "PHY dimensions come from the supplied UCIe database; no controller area or bandwidth efficiency factor.",
+    "Extra hardware and PHY areas receive the SoC residual overhead factor once.",
+    "Expected-value production, shared wafer pool; surplus receives no credit. Integer wafers do not guarantee delivery.",
+    "Per-tier unit manufacturing uses fractional wafer costing; any family wafer-rounding cost is reported separately.",
+    "Resource sums are not performance or shared-memory claims; timing, routing and memory packaging are not validated.",
+    "External DRAM, PCB, power/cooling and software costs are excluded. No geometric process scaling.",
+    "Upstream area-based NRE includes the complete custom die; no separately calibrated UCIe licensing charge."
+  ]
+}

@@ -1,0 +1,449 @@
+{
+  "schema_version": 1,
+  "reference": {
+    "name": "Thor physical die",
+    "die_width_mm": 26,
+    "die_height_mm": 16,
+    "physical_sm_count": 22,
+    "active_sm_count": 20,
+    "l2_size_mb": 32,
+    "cpu_core_count": 14,
+    "memory_bus_bits": 256
+  },
+  "cpu": {
+    "default_core_quantum": 1,
+    "note": "Scaled CPU policies round to nearest core, ties upward, minimum one core. An explicit quantum changes the rounding granularity. Core/private-cache and shared L3 areas scale by rounded core count / reference core count; no independent cache-capacity rounding. This is a design assumption, not a physical cluster claim."
+  },
+  "memory": {
+    "channel_bits": 16,
+    "note": "Width-only PHY scaling at reference LPDDR technology; 16-bit design granularity. Controller area is unidentified and included in residual, not independently calibrated.",
+    "shoreline_note": "For package-level integration, total LPDDR PHY length is the sum of vertical strip heights converted with die height, scaled by target/reference bus width. Require length <= 2*sqrt(final SoC area). Explicit target length override is supported."
+  },
+  "measurement": {
+    "source": "die_shot/Thor_soc_annotated.png",
+    "sha256": "e1a14741f52cf1fcedf7150ac5be1abfbab4bec41230c0769228266584210e0a",
+    "image_size_px": [
+      673,
+      417
+    ],
+    "die_bounds_px": [
+      14,
+      10,
+      659,
+      402
+    ],
+    "method": "Manual approximate rectangular measurements of the user-provided annotated image. Coordinates are half-open [left, top, right, bottom], excluding outer text strips. Pixel areas converted using inherited 26x16 mm die dimensions. GPU parameters retained from Thor_die_mm.json; only non-GPU regions measured here. No independent accuracy validation. Latest revision separately counts system_components as fixed per-die area; previous residual classification is superseded.",
+    "components": {
+      "cpu_cores_and_private_cache": {
+        "rectangles_px": [
+          [
+            438,
+            26,
+            620,
+            116
+          ],
+          [
+            486,
+            208,
+            620,
+            296
+          ]
+        ],
+        "note": "14 physical CPU cores in two image groups; grouping does not assert cluster topology."
+      },
+      "cpu_shared_l3": {
+        "rectangles_px": [
+          [
+            445,
+            125,
+            632,
+            199
+          ]
+        ],
+        "note": "Shared CPU cache region; capacity not inferred from picture."
+      },
+      "isp": {
+        "rectangles_px": [
+          [
+            201,
+            222,
+            274,
+            320
+          ]
+        ],
+        "note": "Fixed on every base die."
+      },
+      "dsp": {
+        "rectangles_px": [
+          [
+            282,
+            267,
+            410,
+            325
+          ]
+        ],
+        "note": "User-labelled DSP region treated as optional vision accelerator; included in reference calibration, excluded from custom SoCs by default. Identification is a die-shot assumption, not independently verified hardware equivalence to Orin PVA."
+      },
+      "imaging_processor": {
+        "rectangles_px": [
+          [
+            24,
+            338,
+            80,
+            393
+          ]
+        ],
+        "note": "Fixed on every base die."
+      },
+      "video_codec": {
+        "rectangles_px": [
+          [
+            294,
+            138,
+            343,
+            217
+          ]
+        ],
+        "note": "Retained even though embedded spatially within the GPU envelope; excluded from legacy compute-complex model."
+      },
+      "display_subsystem": {
+        "rectangles_px": [
+          [
+            455,
+            306,
+            617,
+            375
+          ]
+        ],
+        "note": "Fixed on every base die by default; can be explicitly excluded with display PHY."
+      },
+      "display_phy": {
+        "rectangles_px": [
+          [
+            488,
+            376,
+            552,
+            399
+          ]
+        ],
+        "note": "Approximate labelled HDMI/DP strip; assumes dedicated display logic."
+      },
+      "memory_phy": {
+        "rectangles_px": [
+          [
+            16,
+            30,
+            35,
+            313
+          ],
+          [
+            637,
+            30,
+            656,
+            313
+          ]
+        ],
+        "note": "LPDDR PHY strips; controller not separately identified."
+      },
+      "camera_phy": {
+        "rectangles_px": [
+          [
+            15,
+            318,
+            24,
+            394
+          ],
+          [
+            26,
+            394,
+            82,
+            401
+          ]
+        ],
+        "note": "CSI strips; capture/control infrastructure outside strips remains in residual."
+      },
+      "pcie_phy": {
+        "rectangles_px": [
+          [
+            167,
+            372,
+            278,
+            399
+          ],
+          [
+            310,
+            372,
+            410,
+            399
+          ]
+        ],
+        "note": "Retained reference PCIe strips; controller/system logic remains in residual."
+      },
+      "usb_phy": {
+        "rectangles_px": [
+          [
+            96,
+            372,
+            119,
+            399
+          ],
+          [
+            140,
+            372,
+            164,
+            399
+          ]
+        ],
+        "note": "Retained reference USB strips."
+      },
+      "ethernet_phy": {
+        "rectangles_px": [
+          [
+            303,
+            14,
+            369,
+            36
+          ]
+        ],
+        "note": "Retained reference network block."
+      },
+      "system_components": {
+        "rectangles_px": [
+          [
+            84.17804154302671,
+            326.39546191247973,
+            392.3234421364985,
+            365.78606158833065
+          ]
+        ],
+        "source_measurement": {
+          "source": "die_shot/Thor_system_components_annotated.png",
+          "sha256": "cfe9906ac6345d8d5104a335d98ad51bd6943a3d580f0226409d936f620cb473",
+          "image_size_px": [
+            1055,
+            650
+          ],
+          "die_bounds_px": [
+            22,
+            16,
+            1033,
+            633
+          ],
+          "rectangles_px": [
+            [
+              132,
+              514,
+              615,
+              576
+            ]
+          ]
+        },
+        "note": "Fixed System Components envelope from latest user annotation, inside red stroke. Registered to existing crop without changing other modules. Includes system support as a bundle; internal functions are not separately measured."
+      }
+    }
+  },
+  "scope": [
+    "Identified System Components is a fixed per-die bundle. Only other unidentified logic, fabric and physical whitespace remain proportional residual.",
+    "No extra utilization multiplier: measured boxes already contain local layout overhead.",
+    "Residual is calibrated with ALL reference modules, including display and video; display is retained by default; explicit display removal occurs only after calibration.",
+    "New D2D/C2C interfaces require caller-specified PHY+controller+adapter+buffer area; existing PCIe is retained and not silently repurposed.",
+    "Only an aggregate two-edge square-die memory shoreline check is implemented for package integration; no detailed floorplan, frequency scaling, power, cost or CPU-performance model.",
+    "DSP is included in reference calibration but excluded from custom SoCs by default; identified System Components remains fixed."
+  ],
+  "defaults": {
+    "include_vision_accelerator": false
+  },
+  "vision_accelerator_component": "dsp",
+  "measurement_history": [
+    {
+      "source": "die_shot/Thor_soc_annotated.png",
+      "sha256": "e1a14741f52cf1fcedf7150ac5be1abfbab4bec41230c0769228266584210e0a",
+      "image_size_px": [
+        673,
+        417
+      ],
+      "die_bounds_px": [
+        14,
+        10,
+        659,
+        402
+      ],
+      "method": "Manual approximate rectangular measurements of the user-provided annotated image. Coordinates are half-open [left, top, right, bottom], excluding outer text strips. Pixel areas converted using inherited 26x16 mm die dimensions. GPU parameters retained from Thor_die_mm.json; only non-GPU regions measured here. No independent accuracy validation.",
+      "components": {
+        "cpu_cores_and_private_cache": {
+          "rectangles_px": [
+            [
+              438,
+              26,
+              620,
+              116
+            ],
+            [
+              486,
+              208,
+              620,
+              296
+            ]
+          ],
+          "note": "14 physical CPU cores in two image groups; grouping does not assert cluster topology."
+        },
+        "cpu_shared_l3": {
+          "rectangles_px": [
+            [
+              445,
+              125,
+              632,
+              199
+            ]
+          ],
+          "note": "Shared CPU cache region; capacity not inferred from picture."
+        },
+        "isp": {
+          "rectangles_px": [
+            [
+              201,
+              222,
+              274,
+              320
+            ]
+          ],
+          "note": "Fixed on every base die."
+        },
+        "dsp": {
+          "rectangles_px": [
+            [
+              282,
+              267,
+              410,
+              325
+            ]
+          ],
+          "note": "User-labelled DSP region treated as optional vision accelerator; included in reference calibration, excluded from custom SoCs by default. Identification is a die-shot assumption, not independently verified hardware equivalence to Orin PVA."
+        },
+        "imaging_processor": {
+          "rectangles_px": [
+            [
+              24,
+              338,
+              80,
+              393
+            ]
+          ],
+          "note": "Fixed on every base die."
+        },
+        "video_codec": {
+          "rectangles_px": [
+            [
+              294,
+              138,
+              343,
+              217
+            ]
+          ],
+          "note": "Retained even though embedded spatially within the GPU envelope; excluded from legacy compute-complex model."
+        },
+        "display_subsystem": {
+          "rectangles_px": [
+            [
+              455,
+              306,
+              617,
+              375
+            ]
+          ],
+          "note": "Fixed on every base die by default; can be explicitly excluded with display PHY."
+        },
+        "display_phy": {
+          "rectangles_px": [
+            [
+              488,
+              376,
+              552,
+              399
+            ]
+          ],
+          "note": "Approximate labelled HDMI/DP strip; assumes dedicated display logic."
+        },
+        "memory_phy": {
+          "rectangles_px": [
+            [
+              16,
+              30,
+              35,
+              313
+            ],
+            [
+              637,
+              30,
+              656,
+              313
+            ]
+          ],
+          "note": "LPDDR PHY strips; controller not separately identified."
+        },
+        "camera_phy": {
+          "rectangles_px": [
+            [
+              15,
+              318,
+              24,
+              394
+            ],
+            [
+              26,
+              394,
+              82,
+              401
+            ]
+          ],
+          "note": "CSI strips; capture/control infrastructure outside strips remains in residual."
+        },
+        "pcie_phy": {
+          "rectangles_px": [
+            [
+              167,
+              372,
+              278,
+              399
+            ],
+            [
+              310,
+              372,
+              410,
+              399
+            ]
+          ],
+          "note": "Retained reference PCIe strips; controller/system logic remains in residual."
+        },
+        "usb_phy": {
+          "rectangles_px": [
+            [
+              96,
+              372,
+              119,
+              399
+            ],
+            [
+              140,
+              372,
+              164,
+              399
+            ]
+          ],
+          "note": "Retained reference USB strips."
+        },
+        "ethernet_phy": {
+          "rectangles_px": [
+            [
+              303,
+              14,
+              369,
+              36
+            ]
+          ],
+          "note": "Retained reference network block."
+        }
+      }
+    }
+  ]
+}
