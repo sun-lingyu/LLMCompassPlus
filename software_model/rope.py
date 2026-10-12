@@ -14,20 +14,8 @@ class L2CacheQKNormRoPE(L2CacheElementwiseLike):
     ):
         super().__init__(l2_size, M, N, input_dtype, output_dtype)
 
-        if L2Cache_previous:
-            assert L2Cache_previous.output_tile_size == self.input_tile_size
-            for tile in L2Cache_previous.resident_tiles.keys():
-                if tile.access_type == L2AccessType.OUTPUT:
-                    self.resident_tiles[
-                        L2Cache.Tile(
-                            L2AccessType.ACTIVATION
-                            if tile.coord_tuple[1] < N
-                            else L2AccessType.OUTPUT,
-                            tile.coord_tuple,
-                        )
-                    ] = None
-                    self.occupied_size += L2Cache_previous.output_tile_size
-                assert tile.access_type != L2AccessType.OUTPUT_SCALE
+        self.inherit(L2Cache_previous, lambda tile: tile if tile.access_type == L2AccessType.OUTPUT else None)
+        self.alias_role(L2AccessType.ACTIVATION, L2AccessType.OUTPUT)
 
 
 class FusedQKNormRoPE(ElementwiseLike):

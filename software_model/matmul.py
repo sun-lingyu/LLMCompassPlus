@@ -25,8 +25,9 @@ class L2CacheMatmul(L2Cache):
         output_dtype: DataType,
         scale_dtype: DataType = data_type_dict["fp8"],  # NVFP4 use fp8 (ue4m3) scale
         L2Cache_previous: L2Cache = None,
+        write_policy: str = None,
     ):
-        super().__init__(l2_size)
+        super().__init__(l2_size, write_policy or "write_back")
         assert M > 0 and N > 0 and K > 0
         scale_block_size = weight_dtype.scale_block_size
 
@@ -51,20 +52,7 @@ class L2CacheMatmul(L2Cache):
         self.output_tile_size = output_dtype.word_size * self.TILE_LENGTH**2
         self.scale_tile_size = scale_dtype.word_size * self.TILE_LENGTH**2
 
-        # Convert resident output tiles to activation tiles
-        if L2Cache_previous:
-            assert L2Cache_previous.output_tile_size == self.activation_tile_size
-            for tile in L2Cache_previous.resident_tiles.keys():
-                if tile.access_type == L2AccessType.OUTPUT:
-                    self.resident_tiles[
-                        L2Cache.Tile(L2AccessType.ACTIVATION, tile.coord_tuple)
-                    ] = None
-                    self.occupied_size += L2Cache_previous.output_tile_size
-                if tile.access_type == L2AccessType.OUTPUT_SCALE:
-                    self.resident_tiles[
-                        L2Cache.Tile(L2AccessType.ACTIVATION_SCALE, tile.coord_tuple)
-                    ] = None
-                    self.occupied_size += L2Cache_previous.scale_tile_size
+        self.inherit(L2Cache_previous)
 
     def access(
         self,
@@ -120,20 +108,6 @@ class L2CacheMatmul(L2Cache):
             coord_tuple, scope_tuple, access_type, height, width, tile_size
         )
 
-    def evict_oldest_tile(self):
-        assert self.resident_tiles
-
-        oldest_tile = self.resident_tiles.popitem(last=False)[0]
-        tile_size = (
-            self.activation_tile_size
-            if oldest_tile.access_type == L2AccessType.ACTIVATION
-            else self.weight_tile_size
-            if oldest_tile.access_type == L2AccessType.WEIGHT
-            else self.output_tile_size
-            if oldest_tile.access_type == L2AccessType.OUTPUT
-            else self.scale_tile_size
-        )
-        self.occupied_size -= tile_size
 
 
 class Matmul(Operator):
@@ -269,7 +243,7 @@ class Matmul(Operator):
         return self.roofline_latency
 
     def compile_and_simulate(
-        self, pcb_module: Device, L2Cache_previous: L2Cache = None
+        self, pcb_module: Device, L2Cache_previous: L2Cache = None, *, drain_at_end: bool = False
     ):
         min_cycle_count = inf
         M = self.M
@@ -464,14 +438,18 @@ class Matmul(Operator):
                             L2Cache_previous=L2Cache_previous,
                         )
                         cycle_count = self.simulate(mapping, pcb_module, l2_status)
+                        if drain_at_end:
+                            cycle_count += self.get_io_cycle_count(l2_status.pending_writeback_bytes, pcb_module)
                         if cycle_count < min_cycle_count:
                             min_cycle_count = cycle_count
                             self.best_mapping = mapping
                             self.l2_status = l2_status
+        if drain_at_end:
+            min_cycle_count -= self.get_io_cycle_count(self.l2_status.pending_writeback_bytes, pcb_module)
         self.latency = min_cycle_count / pcb_module.compute_module.clock_freq
         self.mem_access_size = self.l2_status.total_mem_access_size
         self.best_mapping.display()
-        return self.latency
+        return self.finish_cache_accounting(pcb_module, drain_at_end)
 
     def simulate(
         self,
@@ -582,7 +560,6 @@ class Matmul(Operator):
             + pcb_module.io_module.latency_cycles
         )  # Very small value
         pending_epilogue_io_cycle = 0  # For Blackwell output write overlap
-        pending_epilogue_compute_cycle = 0  # For Blackwell fp4 conversion overlap
         wait_ready_cycle = 0
         for wave_id, l2_tiles in enumerate(waves):
             # Prologue
@@ -626,7 +603,6 @@ class Matmul(Operator):
                         0,
                         l2_tiles[iter].compute_cycle_count - input_io_cycle_count,
                     )
-                    pending_epilogue_compute_cycle -= wait_ready_cycle
                 # print(
                 #     f"l2_tiles[iter].compute_cycle_count {l2_tiles[iter].compute_cycle_count}, input_io_cycle_count {input_io_cycle_count}"
                 # )
@@ -635,9 +611,6 @@ class Matmul(Operator):
             total_cycle_count += max(
                 0, pending_epilogue_io_cycle
             )  # remaining output write cycles of previous wave
-            total_cycle_count += max(
-                0, pending_epilogue_compute_cycle
-            )  # remaining fp4 conversion cycles of previous wave
             if self.device_type == DeviceType.ORIN:
                 offset_for_epilogue = 0.01  # obtained by fitting real machine cycles
                 total_cycle_count += (
@@ -647,17 +620,7 @@ class Matmul(Operator):
                     * offset_for_epilogue
                     * self.activation_dtype.word_size
                 )  # L2 tile output may not be a rectangle
-            if self.device_type == DeviceType.THOR:
-                if self.output_dtype.name == "fp4":
-                    offset_for_f4_output = (
-                        0.0045  # obtained by fitting real machine cycles
-                    )
-                    pending_epilogue_compute_cycle = (
-                        l2_tiles[-1].l1_tile.M
-                        * l2_tiles[-1].l1_tile.N
-                        * len(l2_tiles[-1].cta_chunk)
-                        * offset_for_f4_output
-                    )  # L2 tile output may not be a rectangle
+
             output_io_cycle_count = max(l2_tiles[-1].get_output_io_cycle_count())
             pending_epilogue_io_cycle = output_io_cycle_count
             # print(f"pending_epilogue_io_cycle: {pending_epilogue_io_cycle}")
@@ -707,7 +670,7 @@ class Matmul(Operator):
                 M * K * self.activation_dtype.word_size
                 + K * N * self.weight_dtype.word_size
             )
-
+            # Already considered L2->L1 broadcast in 2-SM mode.
             self.l1_input_io_cycle_count = self.l1_tile.input_io_cycle_count * len(
                 self.cta_chunk
             )

@@ -34,15 +34,7 @@ class L2CacheFlashAttnCombine(L2Cache):
         self.output_tile_size = output_dtype.word_size * self.TILE_LENGTH**2
         self.scale_tile_size = scale_dtype.word_size * self.TILE_LENGTH**2
 
-        if L2Cache_previous:
-            assert L2Cache_previous.output_tile_size == self.activation_tile_size
-            for tile in L2Cache_previous.resident_tiles.keys():
-                if tile.access_type == L2AccessType.OUTPUT:
-                    self.resident_tiles[
-                        L2Cache.Tile(L2AccessType.ACTIVATION, tile.coord_tuple)
-                    ] = None
-                    self.occupied_size += L2Cache_previous.output_tile_size
-                assert tile.access_type != L2AccessType.OUTPUT_SCALE
+        self.inherit(L2Cache_previous)
 
     def access(
         self,
@@ -74,20 +66,6 @@ class L2CacheFlashAttnCombine(L2Cache):
             coord_tuple, scope_tuple, access_type, height, width, tile_size
         )
 
-    def evict_oldest_tile(self):
-        assert self.resident_tiles
-
-        oldest_tile = self.resident_tiles.popitem(last=False)[0]
-        tile_size = (
-            self.activation_tile_size
-            if oldest_tile.access_type == L2AccessType.ACTIVATION
-            else self.output_tile_size
-            if oldest_tile.access_type == L2AccessType.OUTPUT
-            else self.scale_tile_size
-            if oldest_tile.access_type == L2AccessType.OUTPUT_SCALE
-            else None
-        )
-        self.occupied_size -= tile_size
 
 
 class FlashAttnCombine(Operator):
@@ -134,7 +112,7 @@ class FlashAttnCombine(Operator):
         return self.roofline_latency
 
     def compile_and_simulate(
-        self, pcb_module: Device, L2Cache_previous: L2Cache = None
+        self, pcb_module: Device, L2Cache_previous: L2Cache = None, *, drain_at_end: bool = False
     ):  # memory bound operator
         self.l2_status = L2CacheFlashAttnCombine(
             pcb_module.compute_module.l2_size,
@@ -165,6 +143,7 @@ class FlashAttnCombine(Operator):
                 / pcb_module.compute_module.clock_freq
             )
         )
+        mem_access_cycle = max(mem_access_cycle, self.l2_status.l2_access_bytes / pcb_module.compute_module.l2_bandwidth_per_cycle)
         self.latency = mem_access_cycle / pcb_module.compute_module.clock_freq
         self.mem_access_size = mem_access_size
-        return self.latency
+        return self.finish_cache_accounting(pcb_module, drain_at_end)

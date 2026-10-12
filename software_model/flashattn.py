@@ -49,32 +49,25 @@ class L2CacheFlashAttn(L2Cache):
         self.output_tile_size = output_dtype.word_size * L2Cache.TILE_LENGTH**2
         self.scale_tile_size = scale_dtype.word_size * self.TILE_LENGTH**2
 
-        # Convert resident output tiles to qkv tiles
-        if L2Cache_previous:
-            assert L2Cache_previous.output_tile_size == self.qkv_tile_size
-            q_range = num_heads_q * head_dim
-            kv_range = num_heads_kv * head_dim
-            for tile in L2Cache_previous.resident_tiles.keys():
-                if tile.access_type == L2AccessType.OUTPUT:  # qkv_proj output
-                    coord_0, coord_1 = tile.coord_tuple[0], tile.coord_tuple[1]
-                    if coord_1 < q_range:
-                        self.resident_tiles[
-                            L2Cache.Tile(L2AccessType.Q, (coord_0, coord_1))
-                        ] = None
-                    elif is_prefill:
-                        # only consider KV residence for prefill
-                        # if decode, KV cache will be in DRAM
-                        if coord_1 < q_range + kv_range:
-                            coord_1 -= q_range
-                            self.resident_tiles[
-                                L2Cache.Tile(L2AccessType.K, (coord_0, coord_1))
-                            ] = None
-                        else:
-                            coord_1 -= q_range + kv_range
-                            self.resident_tiles[
-                                L2Cache.Tile(L2AccessType.V, (coord_0, coord_1))
-                            ] = None
-                    self.occupied_size += L2Cache_previous.output_tile_size
+        q_range = num_heads_q * head_dim
+        kv_range = num_heads_kv * head_dim
+        def view(tile):
+            if getattr(L2Cache_previous, "kv_appended", False) and tile.access_type in (L2AccessType.K, L2AccessType.V):
+                return tile
+            if tile.access_type != L2AccessType.OUTPUT:
+                return None
+            row, col = tile.coord_tuple
+            if col < q_range:
+                return self.Tile(L2AccessType.Q, (row, col))
+            if is_prefill:
+                if col < q_range + kv_range:
+                    return self.Tile(L2AccessType.K, (row, col - q_range))
+                return self.Tile(L2AccessType.V, (row, col - q_range - kv_range))
+            return None
+        self.inherit(L2Cache_previous, view)
+        if getattr(L2Cache_previous, "kv_appended", False):
+            for role in (L2AccessType.K, L2AccessType.V):
+                self._role_ids[role] = L2Cache_previous._role_ids[role]
 
     def access(
         self,
@@ -112,23 +105,16 @@ class L2CacheFlashAttn(L2Cache):
             else None
         )
 
+        # Masked tail rows/columns still occupy a partial cache tile.
+        # L2Cache operates on whole tiles; e.g. S=1025 has a final 1-row tail.
+        scope_tuple = tuple(
+            ceil(length / self.TILE_LENGTH) * self.TILE_LENGTH
+            for length in scope_tuple
+        )
         return self._access(
             coord_tuple, scope_tuple, access_type, height, width, tile_size
         )
 
-    def evict_oldest_tile(self):
-        assert self.resident_tiles
-
-        oldest_tile = self.resident_tiles.popitem(last=False)[0]
-        tile_size = (
-            self.qkv_tile_size
-            if oldest_tile.access_type
-            in (L2AccessType.Q, L2AccessType.K, L2AccessType.V)
-            else self.output_tile_size
-            if oldest_tile.access_type == L2AccessType.OUTPUT
-            else self.scale_tile_size
-        )
-        self.occupied_size -= tile_size
 
 
 class FlashAttn(Operator):
@@ -279,7 +265,7 @@ class FlashAttn(Operator):
         )
 
     def compile_and_simulate(
-        self, pcb_module: Device, L2Cache_previous: L2Cache = None
+        self, pcb_module: Device, L2Cache_previous: L2Cache = None, *, drain_at_end: bool = False
     ):
         min_cycle_count = inf
         seq_len_q = self.seq_len_q
@@ -319,6 +305,10 @@ class FlashAttn(Operator):
         gqa_group_size = num_heads_q // num_heads_kv
         assert num_heads_q % num_heads_kv == 0
         gqa_packing_size_list = [1, gqa_group_size]
+        # FA4 SM100/SM110 falls back to unpacked GQA when its 128-row
+        # query tile cannot be divided by the group size (e.g. Qwen3 14B: 5).
+        if self.device_type == DeviceType.THOR and cta_seq_len_q % gqa_group_size != 0:
+            gqa_packing_size_list = [1]
         swizzle_size_list = [1, 2, 4, num_heads_q]
 
         for cta_seq_len_kv in cta_seq_len_kv_list:
@@ -401,14 +391,18 @@ class FlashAttn(Operator):
                         L2Cache_previous=L2Cache_previous,
                     )
                     cycle_count = self.simulate(mapping, pcb_module, l2_status)
+                    if drain_at_end:
+                        cycle_count += self.get_io_cycle_count(l2_status.pending_writeback_bytes, pcb_module)
                     if cycle_count < min_cycle_count:
                         min_cycle_count = cycle_count
                         self.best_mapping = mapping
                         self.l2_status = l2_status
+        if drain_at_end:
+            min_cycle_count -= self.get_io_cycle_count(self.l2_status.pending_writeback_bytes, pcb_module)
         self.latency = min_cycle_count / pcb_module.compute_module.clock_freq
         self.mem_access_size = self.l2_status.total_mem_access_size
         self.best_mapping.display()
-        return self.latency
+        return self.finish_cache_accounting(pcb_module, drain_at_end)
 
     def simulate(
         self,

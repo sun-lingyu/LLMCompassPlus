@@ -31,15 +31,10 @@ class L2CacheLayerNorm(L2CacheElementwiseLike):
             }
         )
 
-        if L2Cache_previous:
-            assert L2Cache_previous.output_tile_size == self.input_tile_size
-            for tile in L2Cache_previous.resident_tiles.keys():
-                if tile.access_type == L2AccessType.OUTPUT:
-                    self.resident_tiles[
-                        L2Cache.Tile(L2AccessType.ACTIVATION, tile.coord_tuple)
-                    ] = None
-                    self.occupied_size += L2Cache_previous.output_tile_size
-                assert tile.access_type != L2AccessType.OUTPUT_SCALE
+        self.inherit(L2Cache_previous)
+        self._role_ids[L2AccessType.RESIDUAL_INPUT] = self.named_tensors.get("residual", self._role_ids[L2AccessType.RESIDUAL_INPUT])
+        self.named_tensors["residual"] = self._role_ids[L2AccessType.RESIDUAL_OUTPUT]
+
 
 
 class FusedLayerNorm(ElementwiseLike):  # Residual + LayerNorm/RMSNorm

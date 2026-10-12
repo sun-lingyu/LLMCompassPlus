@@ -42,10 +42,6 @@ class L2CacheElementwiseLike(L2Cache):
     def _tile_size(self, access_type):
         return self.regions[access_type][2]
 
-    def evict_oldest_tile(self):
-        assert self.resident_tiles
-        oldest_tile = self.resident_tiles.popitem(last=False)[0]
-        self.occupied_size -= self._tile_size(oldest_tile.access_type)
 
 
 class ElementwiseLike(Operator):
@@ -98,7 +94,7 @@ class ElementwiseLike(Operator):
         return self.roofline_latency
 
     def compile_and_simulate(
-        self, pcb_module: Device, L2Cache_previous: L2Cache = None
+        self, pcb_module: Device, L2Cache_previous: L2Cache = None, *, drain_at_end: bool = False
     ):
         self.l2_status = self._create_l2_cache(pcb_module, L2Cache_previous)
         self.mem_access_size = sum(
@@ -106,10 +102,11 @@ class ElementwiseLike(Operator):
             for access_type, coord, scope in self._iter_accesses()
         )
         self.memory_latency = (
-            self.get_io_cycle_count(self.mem_access_size, pcb_module)
+            max(self.get_io_cycle_count(self.mem_access_size, pcb_module),
+                self.l2_status.l2_access_bytes / pcb_module.compute_module.l2_bandwidth_per_cycle)
             / pcb_module.compute_module.clock_freq
         )
         factor = pcb_module.compute_module.compute_latency_factor[self.operator_name]
         self.compute_latency = self.output_numel * factor
         self.latency = max(self.memory_latency, self.compute_latency)
-        return self.latency
+        return self.finish_cache_accounting(pcb_module, drain_at_end)

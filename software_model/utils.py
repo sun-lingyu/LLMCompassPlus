@@ -47,86 +47,134 @@ class L2AccessType(Enum):
 
 
 class L2Cache:
+    """Physical tile LRU shared across operators; views alias immutable storage IDs."""
     TILE_LENGTH = 16
+    _ids = __import__("itertools").count()
+    WRITE_TYPES = (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE, L2AccessType.RESIDUAL_OUTPUT)
 
-    class Tile(NamedTuple):  # squre tile with side length 32
+    class Tile(NamedTuple):
         access_type: L2AccessType
         coord_tuple: tuple[int, int]
 
-    def __init__(self, l2_size: int):
+    def __init__(self, l2_size: int, write_policy="write_back"):
         assert l2_size > 0
+        if write_policy not in ("write_back", "write_through"):
+            raise ValueError(write_policy)
         self.l2_size = l2_size
-
-        self.resident_tiles = OrderedDict()  # LRU queue
+        self.write_policy = write_policy
+        self._storage = OrderedDict()  # storage key -> (size bytes, dirty)
+        self._aliases = {}             # operator-local Tile -> storage key
+        self._role_ids = {role: (next(self._ids), role.name) for role in L2AccessType}
+        self.named_tensors = {}
         self.occupied_size = 0
         self.output_tile_size = None
         self.total_mem_access_size = 0
+        self.read_bytes = self.writeback_bytes = self.write_through_bytes = 0
+        self.l2_access_bytes = 0
 
-    def access(
-        self,
-        access_type: L2AccessType,
-        coord_tuple: tuple[int, int],
-        scope_tuple: tuple[int, int],
-    ):
+    @property
+    def resident_tiles(self):
+        return OrderedDict((tile, None) for tile, key in self._aliases.items() if key in self._storage)
+
+    @property
+    def dirty_tiles(self):
+        return {key: size for key, (size, dirty) in self._storage.items() if dirty}
+
+    @property
+    def pending_writeback_bytes(self):
+        return sum(size for size, dirty in self._storage.values() if dirty)
+
+    def inherit(self, previous, mapper=None):
+        """Snapshot full physical cache for independent mapping candidates.
+        mapper aliases prior local tiles into the new operator without copying data.
+        """
+        if previous is None:
+            return
+        assert previous.l2_size == self.l2_size
+        self._storage = previous._storage.copy()
+        self.occupied_size = previous.occupied_size
+        self.named_tensors = previous.named_tensors.copy()
+        if mapper is None:
+            mapper = lambda tile: self.Tile(
+                L2AccessType.ACTIVATION if tile.access_type == L2AccessType.OUTPUT
+                else L2AccessType.ACTIVATION_SCALE, tile.coord_tuple
+            ) if tile.access_type in (L2AccessType.OUTPUT, L2AccessType.OUTPUT_SCALE) else None
+        for tile, key in previous._aliases.items():
+            mapped = mapper(tile)
+            if mapped is not None:
+                self._aliases[mapped] = key
+
+    def alias_role(self, target, source):
+        self._role_ids[target] = self._role_ids[source]
+        for tile, key in list(self._aliases.items()):
+            if tile.access_type == source:
+                self._aliases[self.Tile(target, tile.coord_tuple)] = key
+
+    def _key(self, tile):
+        key = self._aliases.get(tile)
+        if key is None:
+            key = (self._role_ids[tile.access_type], tile.coord_tuple)
+            self._aliases[tile] = key
+        return key
+
+    def access(self, access_type, coord_tuple, scope_tuple):
         raise NotImplementedError()
 
-    def _access(self, coord_tuple, scope_tuple, access_type, height, width, tile_size):
-        assert height and width and tile_size
-        assert (
-            coord_tuple[0] % L2Cache.TILE_LENGTH == 0
-            and coord_tuple[1] % L2Cache.TILE_LENGTH == 0
-        )
-        assert (
-            scope_tuple[0] % L2Cache.TILE_LENGTH == 0
-            and scope_tuple[1] % L2Cache.TILE_LENGTH == 0
-        )
-        assert (
-            coord_tuple[0] >= 0
-            and coord_tuple[0] + scope_tuple[0] <= height * L2Cache.TILE_LENGTH
-        ), (
-            f"coord_tuple[0]: {coord_tuple[0]}, scope_tuple[0]: {scope_tuple[0]}, height * L2Cache.TILE_LENGTH: {height * L2Cache.TILE_LENGTH}"
-        )
-        assert (
-            coord_tuple[1] >= 0
-            and coord_tuple[1] + scope_tuple[1] <= width * L2Cache.TILE_LENGTH
-        ), (
-            f"coord_tuple[1]: {coord_tuple[1]}, scope_tuple[1]: {scope_tuple[1]}, width * L2Cache.TILE_LENGTH: {width * L2Cache.TILE_LENGTH}"
-        )
-
-        mem_access_size = 0
-        for i in range(
-            coord_tuple[0], coord_tuple[0] + scope_tuple[0], L2Cache.TILE_LENGTH
-        ):
-            for j in range(
-                coord_tuple[1], coord_tuple[1] + scope_tuple[1], L2Cache.TILE_LENGTH
-            ):
-                tile = self.Tile(access_type, (i, j))
-                if tile in self.resident_tiles:  # HIT
-                    self.resident_tiles.move_to_end(tile)  # update LRU
-                else:
-                    while self.occupied_size + tile_size > self.l2_size:  # EVICT
-                        self.evict_oldest_tile()
-                    mem_access_size += (
-                        tile_size  # read activation & weight, or *write through* output
-                    )
+    def _access(self, coord_tuple, scope_tuple, access_type, height, width, tile_size, *, write=None):
+        assert height and width and 0 < tile_size <= self.l2_size
+        assert all(x % self.TILE_LENGTH == 0 for x in (*coord_tuple, *scope_tuple))
+        assert 0 <= coord_tuple[0] and coord_tuple[0] + scope_tuple[0] <= height * self.TILE_LENGTH
+        assert 0 <= coord_tuple[1] and coord_tuple[1] + scope_tuple[1] <= width * self.TILE_LENGTH
+        is_write = access_type in self.WRITE_TYPES if write is None else write
+        transferred = 0
+        for i in range(coord_tuple[0], coord_tuple[0] + scope_tuple[0], self.TILE_LENGTH):
+            for j in range(coord_tuple[1], coord_tuple[1] + scope_tuple[1], self.TILE_LENGTH):
+                key = self._key(self.Tile(access_type, (i, j)))
+                entry = self._storage.get(key)
+                if entry is None:
+                    while self.occupied_size + tile_size > self.l2_size:
+                        transferred += self.evict_oldest_tile()
                     self.occupied_size += tile_size
-                    self.resident_tiles[self.Tile(access_type, (i, j))] = None
-        self.total_mem_access_size += mem_access_size
-        return mem_access_size
+                    dirty = False
+                    if not is_write:
+                        transferred += tile_size
+                        self.read_bytes += tile_size
+                else:
+                    assert entry[0] == tile_size, "Aliased storage changed dtype/size"
+                    dirty = entry[1]
+                    self._storage.move_to_end(key)
+                if is_write:
+                    if self.write_policy == "write_back":
+                        dirty = True
+                    else:
+                        transferred += tile_size
+                        self.write_through_bytes += tile_size
+                        dirty = False
+                self._storage[key] = (tile_size, dirty)
+                self.l2_access_bytes += tile_size
+        self.total_mem_access_size += transferred
+        return transferred
 
     def evict_oldest_tile(self):
-        raise NotImplementedError()
+        _, (size, dirty) = self._storage.popitem(last=False)
+        self.occupied_size -= size
+        written = size if dirty else 0
+        self.writeback_bytes += written
+        return written
 
-    def drain(self):
-        mem_access_size = 0
-        while self.resident_tiles:
-            oldest_tile = self.resident_tiles.popitem(last=False)[0]
-            if oldest_tile.access_type in (
-                L2AccessType.OUTPUT,
-                L2AccessType.OUTPUT_SCALE,
-                L2AccessType.RESIDUAL_OUTPUT,
-            ):  # All possible output dtypes
-                mem_access_size += self.output_tile_size
-        self.occupied_size = 0
-        self.total_mem_access_size += mem_access_size
-        return mem_access_size
+    def drain(self, *, invalidate=False):
+        """Persist dirty tiles exactly once; do not change residency by default."""
+        written = self.pending_writeback_bytes
+        self._storage = OrderedDict((key, (size, False)) for key, (size, _) in self._storage.items())
+        self.writeback_bytes += written
+        self.total_mem_access_size += written
+        if invalidate:
+            self._storage.clear()
+            self.occupied_size = 0
+        return written
+
+    def metrics(self):
+        return dict(read_bytes=self.read_bytes, evicted_writeback_bytes=self.writeback_bytes,
+                    write_through_bytes=self.write_through_bytes,
+                    pending_dirty_bytes=self.pending_writeback_bytes,
+                    resident_bytes=self.occupied_size, dram_bytes=self.total_mem_access_size)

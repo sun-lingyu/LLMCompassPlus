@@ -48,20 +48,8 @@ class L2CacheSiLU(L2CacheElementwiseLike):
             }
         )
 
-        if L2Cache_previous:
-            assert L2Cache_previous.output_tile_size == self.input_tile_size
-            for tile in L2Cache_previous.resident_tiles.keys():
-                if tile.access_type == L2AccessType.OUTPUT:
-                    self.resident_tiles[
-                        L2Cache.Tile(L2AccessType.ACTIVATION, tile.coord_tuple)
-                    ] = None
-                    self.occupied_size += L2Cache_previous.output_tile_size
-                if tile.access_type == L2AccessType.OUTPUT_SCALE:
-                    assert self.input_scale_tiles
-                    self.resident_tiles[
-                        L2Cache.Tile(L2AccessType.ACTIVATION_SCALE, tile.coord_tuple)
-                    ] = None
-                    self.occupied_size += self.scale_tile_size
+        self.inherit(L2Cache_previous)
+
 
 
 class SiLU(ElementwiseLike):

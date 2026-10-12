@@ -1,3 +1,4 @@
+from software_model.kv_cache import KVCacheAppend
 import argparse
 import json
 import os
@@ -24,6 +25,7 @@ from software_model.flashattn import FlashAttn
 from software_model.flashattn_combine import FlashAttnCombine
 from software_model.layernorm import FusedLayerNorm
 from software_model.matmul import Matmul
+from software_model.quant import Quant
 from software_model.rope import FusedQKNormRoPE
 from software_model.silu import SiLU
 from software_model.utils import L2AccessType, L2Cache, Tensor, data_type_dict
@@ -40,8 +42,8 @@ file_dir = os.path.dirname(os.path.abspath(__file__))
 
 LAYER_COMPUTE_CACHE_PATH = os.path.join(file_dir, "layer_compute_cache.json")
 
-# Version 5: intra-block L2 residency restored; cold block entrance.
-LAYER_COMPUTE_CACHE_VERSION = 5
+# Version 6: explicit Thor NVFP4 quantization and FP16 intermediate tensors.
+LAYER_COMPUTE_CACHE_VERSION = 7
 
 LAYER_CACHE_META_KEYS = (
     "device",
@@ -58,13 +60,17 @@ LAYER_CACHE_META_KEYS = (
 LAYER_COMPUTE_OP_NAMES = (
     "qkv_proj",
     "rope",
+    "kv_append",
     "flash_attn",
+    "attn_quant",
     "o_proj",
     "post_attn_ln",
+    "ffn_quant",
     "gate_up_proj",
     "silu",
     "down_proj",
     "post_ffn_ln",
+    "next_quant",
     "qkv_proj_2",
 )
 
@@ -152,6 +158,8 @@ def update_layer_cache_record(flat_row: dict, path: str) -> None:
 
 
 def _launch_lat_ms_for_compute_op(op_name: str, pcb, is_prefill: bool) -> float:
+    if op_name in ("attn_quant", "ffn_quant", "next_quant", "kv_append"):
+        return pcb.compute_module.launch_latency.quant * 1000
     if op_name in (
         "qkv_proj",
         "o_proj",
@@ -359,17 +367,7 @@ def print_layer_summary_comp(
     layer_lat_ms = sum(lat_breakdown[op] for op in op_names)
 
     # Latency summary
-    summary_ops = [
-        ("qkv_proj", lat_breakdown["qkv_proj"]),  # Cold block entrance.
-        ("rope", lat_breakdown["rope"]),
-        ("flash_attn", lat_breakdown["flash_attn"]),
-        ("o_proj", lat_breakdown["o_proj"]),
-        ("post_attn_ln", lat_breakdown["post_attn_ln"]),
-        ("gate_up_proj", lat_breakdown["gate_up_proj"]),
-        ("silu", lat_breakdown["silu"]),
-        ("down_proj", lat_breakdown["down_proj"]),
-        ("post_ffn_ln", lat_breakdown["post_ffn_ln"]),
-    ]
+    summary_ops = [(name, lat_breakdown[name]) for name in op_names]
     print("  " + "=" * 57)
     print("  Operator latency summary:")
     print(f"  {'Operator':<20} {'Latency(ms)':>12} {'Share':>8}")
@@ -531,7 +529,7 @@ def run_matmul(M, K, N, act_dt, wt_dt, mid_dt, out_dt, device, pcb, l2_prev=None
     mm = Matmul(act_dt, wt_dt, mid_dt, out_dt, device=device)
     mm(Tensor([M, K], dtype=act_dt), Tensor([K, N], dtype=wt_dt))
     lat = (
-        mm.compile_and_simulate(pcb, L2Cache_previous=l2_prev)
+        mm.compile_and_simulate(pcb, L2Cache_previous=l2_prev, drain_at_end=False)
         + pcb.compute_module.launch_latency.matmul
     )
     return lat, mm
@@ -558,7 +556,7 @@ def run_layer(
     layer_cache_dict=None,
     cache_path=None,
 ):
-    """Simulate QKV -> RoPE -> FA -> O -> LN -> GateUp -> SiLU/Mul -> Down -> LN.
+    """Simulate a block, including three explicit quantizers for Thor NVFP4.
 
     The extra QKV probe estimates warm-cache QKV latency at a steady-state block
     entrance, for diagnostics only. The charged block starts cold, retains L2
@@ -598,6 +596,7 @@ def run_layer(
         data_type_dict["fp16"] if precision == "int4" else data_type_dict[precision]
     )
     thor_fp8 = device == "Thor" and precision == "fp8"
+    thor_fp4 = device == "Thor" and precision == "fp4"
     fp16 = data_type_dict["fp16"]
     fp32 = data_type_dict["fp32"]
     int32 = data_type_dict["int32"]
@@ -616,7 +615,7 @@ def run_layer(
     rope_out = get_rope_output_dtype(base_act, is_test=False) if thor_fp8 else qkv_out
     qkv_dt = rope_out
     attn_out_dt = get_fa_output_dtype(base_act, is_test=False)
-    # Attention output quantization is implicit and contributes no extra kernel.
+    # FP8 attention quantization remains implicit; FP4 is overridden below.
     # FP8 denotes E4M3 with static, rank-consistent scales in this flow.
     o_act = base_act if thor_fp8 else attn_out_dt
     o_out = get_matmul_output_dtype(o_act, "o_proj", is_test=False)
@@ -630,6 +629,13 @@ def run_layer(
     )
     dn_act = get_silu_output_dtype(base_act, is_test=False) if thor_fp8 else up_out
     dn_out = get_matmul_output_dtype(dn_act, "down_proj", is_test=False)
+
+    if thor_fp4:
+        # Match the deployed 12-kernel block. Quantization is explicit except
+        # for the fused SiLU/Mul/Quant stage; GEMM dequantization is epilogue work.
+        qkv_act = o_act = up_act = dn_act = base_act
+        qkv_out = rope_out = qkv_dt = attn_out_dt = fp16
+        o_out = up_out = dn_out = ln_out_dt = fp16
 
     comm_breakdown = _fill_comm_breakdown_for_layer(
         parallelism,
@@ -645,7 +651,7 @@ def run_layer(
         attn_out_dt,
         H,
         o_out,
-        up_act,
+        ln_out_dt if thor_fp4 else up_act,
         dn_out,
         ln_out_dt,
     )
@@ -660,7 +666,7 @@ def run_layer(
     launch_lat_breakdown_ms = {}
     mode = "prefill" if is_prefill else "decode"
     fa_precision = "fp16" if precision in ("int4", "int8", "fp16") else "fp8"
-    if thor_fp8:
+    if thor_fp8 or thor_fp4:
         fa_precision = "fp16"
     phase = mode
     cache_key = (
@@ -749,16 +755,18 @@ def run_layer(
         """Preserve output residency across a conversion whose cost is excluded."""
         converted = L2Cache(pcb.compute_module.l2_size)
         converted.output_tile_size = output_dtype.word_size * L2Cache.TILE_LENGTH**2
-        for tile in previous.resident_tiles:
+        converted.inherit(previous, lambda tile: None)
+        for tile in previous._aliases:
             if tile.access_type == L2AccessType.OUTPUT:
-                converted.resident_tiles[tile] = None
-                converted.occupied_size += converted.output_tile_size
+                coord = tile.coord_tuple
+                converted._access(coord, (16, 16), L2AccessType.OUTPUT,
+                                  coord[0] // 16 + 1, coord[1] // 16 + 1, converted.output_tile_size)
         return converted
 
     def record_memory_op(name, operator, previous):
         launch = _launch_lat_ms_for_compute_op(name, pcb, is_prefill) / 1000
-        latency = operator.compile_and_simulate(pcb, L2Cache_previous=previous) + launch
-        # Approximation: RoPE and SiLU use the calibrated LayerNorm power model.
+        latency = operator.compile_and_simulate(pcb, L2Cache_previous=previous, drain_at_end=False) + launch
+        # Approximation: RoPE, SiLU and Quant use the LayerNorm power model.
         record_op(
             name,
             latency,
@@ -778,7 +786,15 @@ def run_layer(
             "lat_ms": 0.0, "dram_access_byte": 0.0, "power_w": 0.0
         }
 
+    def record_quant(name, rows, width, previous):
+        quant = Quant(fp16, base_act)
+        quant(Tensor([rows, width], fp16))
+        return record_memory_op(name, quant, previous)
+
     if not use_cached_layer:
+        if not thor_fp4:
+            for name in ("attn_quant", "ffn_quant", "next_quant"):
+                record_skipped_op(name)
         # 1. QKV proj (L2 cold)
         print(
             f"  QKV_proj  [M={M}, K={K_shapes['qkv_proj']}, N={N_shapes['qkv_proj']}] (L2 cold)"
@@ -814,6 +830,12 @@ def run_layer(
         rope_rows = seq_len_q if parallelism == "CP" and degree > 1 else M
         rope(Tensor([rope_rows, (nq + 2 * nkv) * d], qkv_out), d, nq, nkv)
         l2_prev = record_memory_op("rope", rope, l2_prev)
+        if not is_prefill and seq_len_kv >= seq_len_q:
+            append = KVCacheAppend(seq_len_q, seq_len_kv-seq_len_q, nq*d, nkv*d, qkv_dt)
+            l2_prev = record_memory_op("kv_append", append, l2_prev)
+        else:
+            record_skipped_op("kv_append")
+
 
         # 2. FlashAttn
         print(
@@ -841,7 +863,7 @@ def run_layer(
                 else pcb.compute_module.launch_latency.flashattn_decode
             )
             lat_fa_combine_temp = (
-                fa.compile_and_simulate(pcb, L2Cache_previous=l2_prev) + launch_fa
+                fa.compile_and_simulate(pcb, L2Cache_previous=l2_prev, drain_at_end=False) + launch_fa
             )
             dram_bytes_this = fa.mem_access_size
             launch_s_this = launch_fa
@@ -850,7 +872,7 @@ def run_layer(
                 combine = FlashAttnCombine(fp32, attn_out_dt)
                 combine(Tensor([seq_len_q, nq * d, num_splits], fp32))
                 lat_fa_combine_temp += (
-                    combine.compile_and_simulate(pcb, L2Cache_previous=fa.l2_status)
+                    combine.compile_and_simulate(pcb, L2Cache_previous=fa.l2_status, drain_at_end=False)
                     + pcb.compute_module.launch_latency.flashattn_combine
                 )
                 dram_bytes_this += combine.mem_access_size
@@ -883,6 +905,9 @@ def run_layer(
         elif thor_fp8:
             l2_prev = implicit_quantized_cache(l2_prev, o_act)
 
+        if thor_fp4:
+            l2_prev = record_quant("attn_quant", M, K_shapes["o_proj"], l2_prev)
+
         # 3. O proj
         print(
             f"  O_proj  [M={M}, K={K_shapes['o_proj']}, N={N_shapes['o_proj']}]"
@@ -914,10 +939,10 @@ def run_layer(
         print(f"  PostAttn_LayerNorm  [M={M}, N={H}]")
         if parallelism == "TP" and degree > 1:
             l2_prev = None  # ReduceScatter before the residual/norm kernel.
-        ln = FusedLayerNorm(o_out, up_act, residual_dtype=o_out)
+        ln = FusedLayerNorm(o_out, ln_out_dt if thor_fp4 else up_act, residual_dtype=o_out)
         ln(Tensor([M_ln, H], o_out), Tensor([M_ln, H], o_out))
         lat = (
-            ln.compile_and_simulate(pcb, L2Cache_previous=l2_prev)
+            ln.compile_and_simulate(pcb, L2Cache_previous=l2_prev, drain_at_end=False)
             + pcb.compute_module.launch_latency.layernorm
         )
         l2_prev = ln.l2_status
@@ -933,6 +958,9 @@ def run_layer(
 
         if parallelism == "TP" and degree > 1:
             l2_prev = None  # AllGather of the normalized activation.
+
+        if thor_fp4:
+            l2_prev = record_quant("ffn_quant", M, H, l2_prev)
 
         # 5. Gate+Up proj
         print(
@@ -1009,7 +1037,7 @@ def run_layer(
         ln = FusedLayerNorm(dn_out, ln_out_dt, residual_dtype=dn_out)
         ln(Tensor([M_ln, H], dn_out), Tensor([M_ln, H], dn_out))
         lat = (
-            ln.compile_and_simulate(pcb, L2Cache_previous=l2_prev)
+            ln.compile_and_simulate(pcb, L2Cache_previous=l2_prev, drain_at_end=False)
             + pcb.compute_module.launch_latency.layernorm
         )
         l2_prev = ln.l2_status
@@ -1025,6 +1053,9 @@ def run_layer(
 
         if parallelism == "TP" and degree > 1:
             l2_prev = None  # Next block entrance AllGather.
+
+        if thor_fp4:
+            l2_prev = record_quant("next_quant", M, H, l2_prev)
 
         # 8. QKV proj (L2 warm, receives from post_ffn_ln)
         print(
@@ -1063,16 +1094,12 @@ def run_layer(
 
     print()
     print("  Layer summary:")
+    # Cold entrance; qkv_proj_2 is diagnostic only. Other precisions retain
+    # their existing operator sequence and store zero-valued quant entries.
     op_names = [
-        "qkv_proj",  # Cold entrance; qkv_proj_2 is diagnostic only.
-        "rope",
-        "flash_attn",
-        "o_proj",
-        "post_attn_ln",
-        "gate_up_proj",
-        "silu",
-        "down_proj",
-        "post_ffn_ln",
+        name for name in LAYER_COMPUTE_OP_NAMES
+        if name != "qkv_proj_2"
+        and (thor_fp4 or name not in ("attn_quant", "ffn_quant", "next_quant"))
     ]
     results = {}
     lat, power_avg = print_layer_summary_comp(
@@ -1287,7 +1314,11 @@ def main():
     print(f"  seq_len_q:   {seq_len_q}")
     print(f"  seq_len_kv:  {seq_len_kv}")
     print("-" * 57)
-    print("  Simulating (QKV->RoPE->FA->O->LN->GateUp->SiLU/Mul->Down->LN)...")
+    if args.device == "Thor" and args.precision == "fp4":
+        print("  Simulating 12 kernels (QKV->RoPE->FA->Quant->O->LN->Quant"
+              "->GateUp->SiLU/Mul/Quant->Down->LN->Quant)...")
+    else:
+        print("  Simulating (QKV->RoPE->FA->O->LN->GateUp->SiLU/Mul->Down->LN)...")
     if degree > 1:
         effective_comm_bandwidth = (
             args.comm_bandwidth * 2 if degree == 4 else args.comm_bandwidth
