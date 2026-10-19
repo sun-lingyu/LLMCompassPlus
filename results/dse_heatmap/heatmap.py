@@ -27,7 +27,7 @@ Usage
 
   python heatmap.py --area 200 --base_hw Thor \\
       --inference_config AD --precision fp4 \\
-      --mem_freq 8533 --mem_bitwidth 128 --latency_limit 100 --overlap
+      --mem_freq 8533 --mem_bitwidth 128 --latency_limit 100
 """
 
 import os
@@ -297,7 +297,6 @@ def main():
         f"{base_hw}_{inference_config}_{ctx['precision']}_"
         f"{ctx['area']}mm2_{ctx['mem_freq']}MHz_"
         f"{ctx['mem_bitwidth']}bit_{ctx['latency_limit']:.0f}ms"
-        + ("_overlap" if ctx.get("overlap") else "")
     ).replace("/", "_")
 
     lat_masked, _label_data, sm_arr, l2_arr = build_combined_heatmap_arrays(

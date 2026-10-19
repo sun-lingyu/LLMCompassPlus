@@ -98,3 +98,69 @@ For comparison, a copy of the expected results can be found in `ae\expected_resu
 ## User Guide
 
 A guide on "How to Run a LLMCompass Simulation" is shown [here](./docs/run.md).
+
+## Cross-operator L2 write-back (2026-10-09)
+
+The shared L2 model retains physical tile identity, LRU order and dirty state
+across Matmul, Quant, SiLU, residual/norm, in-place QK/RoPE, FlashAttention and
+decode KV append. Each mapping candidate gets a cache snapshot; evaluating it
+cannot mutate its predecessor. Evicted dirty tiles incur DRAM traffic at the
+access causing eviction. FP4 data and scale tiles retain their own byte sizes.
+
+Correlation/standalone callers can use `compile_and_simulate(...,
+drain_at_end=True)` to include final dirty output writes. The default operator
+accounting serializes this drain after execution. Elementwise-like operators
+instead take the maximum of compute time, the complete DRAM stream (including
+drain), and L2 service time; their raw drain cycles are not additive latency.
+Block calls in `simulate` use `drain_at_end=False`, preserving dirty data for
+successors. This does not suppress capacity-eviction writes. Operator attributes
+`execution_cycles`, `drain_cycles`, `drain_bytes` and `cache_metrics` expose the
+accounting. A drain cleans resident tiles without invalidating them by default.
+
+Block cache format is version 7; older cached layer results are not reused.
+The tile model remains fully associative and uses 16x16 allocation granularity.
+The standalone drain model is not a cycle-exact model of profiler pipelining.
+
+## Communication modes (2026-10-19)
+
+`python -m simulate.main` accepts `--comm_mode serial|ideal` (default `serial`):
+
+- `serial` supports TP only. Independent Ring AllGather and ReduceScatter
+  operators execute between compute operators and retain the full L2 cache
+  state, including LRU order and dirty tiles. AG expands the M dimension from
+  M/TP to M; RS shrinks it back. M/TP must be divisible by 16.
+- `ideal` supports TP and prefill CP. Communication takes zero time, and
+  reported latency and power cover compute only. TP retains the same AG/RS
+  layout and cache transitions as `serial`; CP retains its AllToAll cache
+  boundaries. Bandwidth and communication startup parameters are ignored.
+
+`--comm_bandwidth` is one physical link's one-way bandwidth in GB/s. TP=2 uses
+X and TP=4 uses aggregate 2X, with TP-1 dependent Ring rounds. Network efficiency
+defaults to 0.6 and `--comm_startup_us` defaults to 15 us per collective.
+Each round charges the maximum of network, L2 and DRAM service time. The API
+`run_layer(comm_bandwidth_gbps=...)` uses aggregate Gbit/s, including the TP=4
+factor of two; this differs from the CLI's physical-link unit.
+
+TP block totals charge two AG and two RS operators. The cold entrance AG
+initializes cache state but is excluded from latency; the charged boundary AG
+inherits the final layer norm's warm cache. This does not make the entire compute
+pass warm. Thor FP4 charges its entrance quantizer once. Diagnostic next-block
+QKV/quantization is excluded, and capacity-eviction writebacks are retained.
+TP with degree greater than one bypasses scalar layer caches because they do
+not store the L2 state needed across communication boundaries.
+
+For example, from the project root:
+
+```sh
+python -m simulate.main --device Thor --model Qwen3_14B --precision fp4 \
+  --phase prefill --is_causal --seq_len 1024 --parallelism TP \
+  --parallelism_degree 4 --comm_mode serial --comm_bandwidth 256 --icnt_type ucie_std
+
+python -m simulate.main --device Thor --model Qwen3_14B --precision fp4 \
+  --phase prefill --is_causal --seq_len 1024 --parallelism TP \
+  --parallelism_degree 4 --comm_mode ideal
+```
+
+DSE uses TP only in both modes and accepts the same `--comm_mode` option.
+The previous `--overlap` option has been removed; `ideal` means zero
+communication time, rather than the previous exposed-communication formula.

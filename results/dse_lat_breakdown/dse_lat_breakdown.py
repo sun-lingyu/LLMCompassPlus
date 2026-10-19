@@ -33,7 +33,6 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import Patch
 
 # ── Make the project root importable ────────────────────────────────────────
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -85,19 +84,12 @@ def plot_breakdown_bar(
     gpu_area: float,
     latency_limit: float,
     *,
-    total_lat_no_overlap_by_size: dict = None,
     out_path: str,
 ):
     """Draw a stacked bar chart of latency breakdown for the chosen config.
 
     breakdown_by_size: {"L": {"vit": ms, "prefill": ms, "decode": ms}, ...}
-    (this is the --overlap result set)
-
-    total_lat_no_overlap_by_size, if given: {"L": total_ms, ...} — the total
-    end-to-end latency *without* --overlap (fully serialized comm) for the
-    same hardware config.  Drawn as a hollow bar (dark-gray outline only,
-    no fill) overlaid on top of the same x position, so the extra height
-    above the stacked bar shows the latency exposed by disabling overlap.
+    Communication runs serially with computation in each inference stage.
     """
     plt.style.use("seaborn-v0_8-white")
 
@@ -142,31 +134,13 @@ def plot_breakdown_bar(
             )
         bottoms += vals
 
-    # Hollow, dark-gray-outline bars for the no-overlap total latency,
-    # overlaid at the same x position/width as the stacked bars above.
-    no_overlap_vals = None
-    if total_lat_no_overlap_by_size is not None:
-        no_overlap_vals = np.array([total_lat_no_overlap_by_size[s] for s in sizes])
-        ax.bar(
-            x,
-            no_overlap_vals,
-            bar_w,
-            facecolor="none",
-            edgecolor="#404040",
-            linewidth=1.3,
-            zorder=4,
-        )
-
     # Figure out the y-axis range now so label offsets (below) can be sized
     # proportionally and never collide, regardless of the latency scale.
     max_val = bottoms.max()
-    if no_overlap_vals is not None:
-        max_val = max(max_val, no_overlap_vals.max())
     y_top = max(180.0, max_val + 20)
     base_offset = y_top * 0.006  # small gap above a bar's own top edge
-    min_label_gap = y_top * 0.09  # min vertical gap between the two labels
 
-    # Annotate total latency (--overlap) above each bar
+    # Annotate total latency above each bar.
     for xi, total_ms in zip(x, bottoms):
         ax.text(
             xi,
@@ -178,28 +152,6 @@ def plot_breakdown_bar(
             color="black",
             zorder=6,
         )
-
-    # No-overlap total label: keep it clear of the filled-bar label directly
-    # below it when the two totals are close together.  Skip it entirely
-    # when the no-overlap total equals the --overlap total (e.g. a 1-chip
-    # config has no inter-chip comm to overlap in the first place), since
-    # the two labels would just be duplicates.
-    if no_overlap_vals is not None:
-        for xi, total_ms, filled_total in zip(x, no_overlap_vals, bottoms):
-            if abs(total_ms - filled_total) < 0.05:
-                continue
-            label_y = max(total_ms + base_offset, filled_total + min_label_gap)
-            ax.text(
-                xi,
-                label_y,
-                f"{total_ms:.1f}",
-                ha="center",
-                va="bottom",
-                fontsize=8,
-                color="#404040",
-                fontweight="bold",
-                zorder=6,
-            )
 
     # 10 FPS reference line
     ax.axhline(
@@ -247,9 +199,6 @@ def plot_breakdown_bar(
         spine.set_linewidth(0.9)
 
     handles, labels = ax.get_legend_handles_labels()
-    if no_overlap_vals is not None:
-        handles.append(Patch(facecolor="none", edgecolor="#404040", linewidth=1.3))
-        labels.append("Serialized total")
     leg = ax.legend(
         handles,
         labels,
@@ -314,12 +263,6 @@ def _parse_args() -> argparse.Namespace:
         type=float,
         default=100.0,
         help="End-to-end latency constraint in ms, for reference only (default: 100 ms).",
-    )
-    parser.add_argument(
-        "--overlap",
-        action="store_true",
-        help="Model ideal compute/comm overlap: exposed comm latency = "
-        "max(0, T_comm - T_comp). Default is no overlap (fully serialized).",
     )
     parser.add_argument(
         "--mem_freq",
@@ -399,12 +342,9 @@ def main():
 
     dse_cache = _load_dse_cache()
 
-    # Collect latency breakdown for each size, plus the total end-to-end
-    # latency *without* --overlap (fully serialized comm) for the same
-    # hardware config, for the hollow-outline overlay bars.
+    # Collect the serial compute/communication latency for each size.
     print("\n  Computing latency breakdown for L / M / S …")
     breakdown_by_size = {}
-    total_lat_no_overlap_by_size = {}
     for size in ("L", "M", "S"):
         result = compute_inference_latency(
             inference_config,
@@ -416,7 +356,6 @@ def main():
             args.mem_bitwidth,
             args.precision,
             dse_cache,
-            overlap=args.overlap,
         )
         breakdown = result["breakdown"]
         breakdown_by_size[size] = {
@@ -424,20 +363,6 @@ def main():
             "prefill": breakdown.get("llm_prefill_lat_ms", 0.0),
             "decode": breakdown.get("llm_decode_lat_ms", 0.0),
         }
-
-        no_overlap_result = compute_inference_latency(
-            inference_config,
-            size,
-            args.base_hw,
-            sm,
-            l2,
-            args.mem_freq,
-            args.mem_bitwidth,
-            args.precision,
-            dse_cache,
-            overlap=False,
-        )
-        total_lat_no_overlap_by_size[size] = no_overlap_result["total_lat_ms"]
 
     tag = (
         f"{args.base_hw}_{inference_config}_{args.precision}_"
@@ -454,7 +379,6 @@ def main():
         l2,
         gpu_area,
         latency_limit,
-        total_lat_no_overlap_by_size=total_lat_no_overlap_by_size,
         out_path=out_path,
     )
 

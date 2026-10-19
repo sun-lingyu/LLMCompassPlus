@@ -47,11 +47,11 @@ class LayerNormModelTests(unittest.TestCase):
                     self.assertIs(residual.dtype, dt["fp16"])
                     bytes_per_element = 6 + output_dtype.word_size
                     self.assertEqual(op.io_size, op.M * op.N * bytes_per_element)
-                    latency = op.compile_and_simulate(self.device)
+                    latency = op.compile_and_simulate(self.device, drain_at_end=True)
                     expected = ceil(op.M / 16) * ceil(op.N / 16) * 256 * bytes_per_element
                     self.assertEqual(op.mem_access_size, expected)
                     self.assertEqual(op.l2_status.occupied_size, expected)
-                    expected_cycles = ceil(expected / 25.6)
+                    expected_cycles = op.execution_cycles + op.drain_cycles
                     self.assertEqual(latency, expected_cycles / 1e9)
                     self.assertEqual(op.roofline_model(self.device), op.io_size / 32e9)
 
@@ -63,11 +63,12 @@ class LayerNormModelTests(unittest.TestCase):
         op = FusedLayerNorm(dt["fp16"], dt["fp8"], dt["fp16"])
         op(Tensor([1, 17], dt["fp16"]), Tensor([1, 17], dt["fp16"]))
         op.compile_and_simulate(self.device, previous)
-        self.assertEqual(op.mem_access_size, 16 * 32 * 5)
+        self.assertEqual(op.mem_access_size, 16 * 32 * 2)
+        self.assertEqual(op.l2_status.pending_writeback_bytes, 16*32*5)
         self.assertEqual(previous.occupied_size, 16 * 32 * 2)
         self.assertTrue(all(t.access_type == L2AccessType.OUTPUT for t in previous.resident_tiles))
         self.device.compute_module.l2_size = 512
-        op.compile_and_simulate(self.device)
+        op.compile_and_simulate(self.device, drain_at_end=True)
         self.assertEqual(op.mem_access_size, 16 * 32 * 7)
         self.assertLessEqual(op.l2_status.occupied_size, 512)
 

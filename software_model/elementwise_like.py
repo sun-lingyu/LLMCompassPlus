@@ -93,6 +93,42 @@ class ElementwiseLike(Operator):
         )
         return self.roofline_latency
 
+    def finish_cache_accounting(self, pcb_module, drain_at_end):
+        if not drain_at_end:
+            return super().finish_cache_accounting(pcb_module, False)
+
+        # Independent-op throughput: compute overlaps the complete DRAM stream.
+        # Keep execution_cycles before drain and drain_cycles as raw IO cost;
+        # they are not additive latency components for elementwise-like tests.
+        frequency = pcb_module.compute_module.clock_freq
+        self.execution_cycles = self.latency * frequency
+        self.cache_metrics = self.l2_status.metrics()
+        self.drain_bytes = self.l2_status.drain()
+        self.drain_cycles = self.get_io_cycle_count(self.drain_bytes, pcb_module)
+        self.latency = max(
+            self.compute_latency,
+            (self.get_io_cycle_count(self.mem_access_size, pcb_module)
+             + self.drain_cycles) / frequency,
+            self.l2_status.l2_access_bytes
+            / pcb_module.compute_module.l2_bandwidth_per_cycle / frequency,
+        )
+        self.mem_access_size = self.l2_status.total_mem_access_size
+        self.cache_metrics.update(
+            drain_bytes=self.drain_bytes,
+            drain_cycles=self.drain_cycles,
+            pending_dirty_after_drain=self.l2_status.pending_writeback_bytes,
+            total_dram_bytes=self.mem_access_size,
+        )
+        print(
+            f"Cache accounting (compute/DRAM overlap): "
+            f"execution_cycles={self.execution_cycles:.3f}, "
+            f"drain_cycles={self.drain_cycles}, "
+            f"total_cycles={self.latency * frequency:.3f}, "
+            f"drain_bytes={self.drain_bytes}, "
+            f"eviction_writeback_bytes={self.cache_metrics['evicted_writeback_bytes']}"
+        )
+        return self.latency
+
     def compile_and_simulate(
         self, pcb_module: Device, L2Cache_previous: L2Cache = None, *, drain_at_end: bool = False
     ):

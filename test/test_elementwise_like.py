@@ -35,6 +35,7 @@ class ElementwiseLikeTests(unittest.TestCase):
                     op, expected_numel = self.make_operator(name)
                     self.assertIsInstance(op, ElementwiseLike)
                     self.assertEqual(op.output_numel, expected_numel)
+                    device.compute_module.compute_latency_factor[name] = 0
                     baseline = op.compile_and_simulate(device)
                     roofline = op.roofline_model(device)
                     self.assertIsInstance(op.l2_status, L2CacheElementwiseLike)
@@ -81,7 +82,8 @@ class ElementwiseLikeTests(unittest.TestCase):
         op = SiLU(dt["fp4"], fused_mul=True)
         op(Tensor([16, 64], dt["fp4"]))
         op.compile_and_simulate(device, previous)
-        self.assertEqual(op.mem_access_size, 16 * 32 * 0.5 + 16 * 16)
+        self.assertEqual(op.mem_access_size, 0)  # inherited input hits; outputs remain dirty
+        self.assertEqual(op.l2_status.pending_writeback_bytes, previous_bytes + 16 * 32 * 0.5 + 16 * 16)
         self.assertEqual(list(previous.resident_tiles), previous_tiles)
         self.assertEqual(previous.occupied_size, previous_bytes)
         types = {tile.access_type for tile in op.l2_status.resident_tiles}
@@ -102,10 +104,10 @@ class ElementwiseLikeTests(unittest.TestCase):
                 (root / "hardware_model" / "configs" / (name + ".json")).read_text()
             )
             self.assertEqual(
-                config["compute_module"]["compute_latency_factor"],
-                {"layernorm": 0, "rope": 0, "silu": 0},
+                _create_device_from_config(config).compute_module.compute_latency_factor,
+                {"quant": 0.0, **config["compute_module"]["compute_latency_factor"]},
             )
-            expected = {"layernorm": 1e-9, "rope": 2e-9, "silu": 3e-9}
+            expected = {"layernorm": 1e-9, "rope": 2e-9, "silu": 3e-9, "quant": 0}
             config["compute_module"]["compute_latency_factor"] = expected.copy()
             device = _create_device_from_config(config)
             self.assertEqual(device.compute_module.compute_latency_factor, expected)
@@ -116,7 +118,7 @@ class ElementwiseLikeTests(unittest.TestCase):
                 _create_device_from_config(
                     config
                 ).compute_module.compute_latency_factor,
-                {"layernorm": 0, "rope": 0, "silu": 0},
+                {"layernorm": 0, "rope": 0, "silu": 0, "quant": 0},
             )
             for bad in (-1, float("nan"), float("inf")):
                 config["compute_module"]["compute_latency_factor"] = {"rope": bad}

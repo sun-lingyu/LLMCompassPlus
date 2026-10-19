@@ -43,19 +43,20 @@ class IntegrationTests(unittest.TestCase):
         result = op(Tensor([32, 64], dt["fp16"]))
         self.assertEqual(result.shape, [32, 32])
         self.assertEqual(op.io_size, 32 * (64 * 2 + 32))
-        op.compile_and_simulate(pcb)
+        op.compile_and_simulate(pcb, drain_at_end=True)
         self.assertEqual(op.mem_access_size, op.io_size)
         previous = L2CacheSiLU(pcb.compute_module.l2_size, 32, 64, dt["fp16"], dt["fp16"])
         previous.access(L2AccessType.OUTPUT, (0, 0), (32, 64))
         op.compile_and_simulate(pcb, previous)
-        self.assertEqual(op.mem_access_size, 32 * 32)
+        self.assertEqual(op.mem_access_size, 0)
+        self.assertEqual(op.l2_status.pending_writeback_bytes, 32*64*2 + 32*32)
         self.assertEqual(previous.occupied_size, 32 * 64 * 2)
         odd = SiLU(dt["fp16"], fused_mul=True)
         with self.assertRaises(AssertionError):
             odd(Tensor([1, 33], dt["fp16"]))
         small = SiLU(dt["fp16"], dt["fp8"], fused_mul=True)
         self.assertEqual(small(Tensor([1, 34], dt["fp16"])).shape, [1, 17])
-        small.compile_and_simulate(pcb)
+        small.compile_and_simulate(pcb, drain_at_end=True)
         self.assertEqual(small.mem_access_size, 16 * 48 * 2 + 16 * 32)
 
     def test_fp16_residual_traffic(self):
@@ -63,7 +64,7 @@ class IntegrationTests(unittest.TestCase):
         output, residual = op(Tensor([16, 32], dt["fp16"]), Tensor([16, 32], dt["fp16"]))
         self.assertIs(output.dtype, dt["fp8"])
         self.assertIs(residual.dtype, dt["fp16"])
-        op.compile_and_simulate(device_dict["Thor"])
+        op.compile_and_simulate(device_dict["Thor"], drain_at_end=True)
         self.assertEqual(op.mem_access_size, 16 * 32 * 7)
         self.assertEqual(op.io_size, op.mem_access_size)
         self.assertEqual(op.l2_status.residual_tile_size, 512)
@@ -75,7 +76,7 @@ class IntegrationTests(unittest.TestCase):
         op = FusedQKNormRoPE(dt["fp16"])
         op(Tensor([16, 96], dt["fp16"]), 16, 2, 2)
         op.compile_and_simulate(pcb, previous)
-        self.assertEqual(op.mem_access_size, 16 * 64 * 2)
+        self.assertEqual(op.mem_access_size, 0)
         self.assertIn(op.l2_status.Tile(L2AccessType.OUTPUT, (0, 80)), op.l2_status.resident_tiles)
 
     def test_cache_migration(self):
@@ -96,12 +97,21 @@ class IntegrationTests(unittest.TestCase):
             self.assertEqual(records[0]["cache_version"], sim.LAYER_COMPUTE_CACHE_VERSION)
             self.assertEqual(len(sim.load_layer_compute_cache(str(path))), 1)
 
-    def run_case(self, device, precision, parallelism="TP", degree=1, prefill=True, model="Qwen3_0_6B"):
+    def run_case(self, device, precision, parallelism="TP", degree=1, prefill=True, model="Qwen3_0_6B", comm_mode="serial"):
         seq = 128
         rows = seq if prefill else 64
         if parallelism == "CP":
             rows //= degree
         cache = {}
+        standalone_tp = parallelism == "TP" and degree > 1
+        if standalone_tp:
+            # A complete but stale scalar record must neither bypass the
+            # cache-state simulation nor be overwritten with TP results.
+            cache_key = (device, model, precision, "prefill" if prefill else "decode",
+                         64, seq, prefill and model != "InternVision", parallelism, degree)
+            stale_ops = {name: dict(lat_ms=0, dram_access_byte=0, power_w=0)
+                         for name in sim.LAYER_COMPUTE_OP_NAMES}
+            cache[cache_key] = stale_ops
         calls = []
         real_mm = sim.run_matmul
         def matmul(*args, **kwargs):
@@ -110,30 +120,61 @@ class IntegrationTests(unittest.TestCase):
         kwargs = dict(model_name=model, model_cfg=sim.test_model_dict[model], precision=precision,
                       pcb=device_dict[device], device=device, M=rows, seq_len_q=seq if prefill else 64,
                       seq_len_kv=seq, is_prefill=prefill, is_causal=prefill and model != "InternVision",
-                      parallelism=parallelism, degree=degree, comm_bandwidth_gbps=128 if degree > 1 else 0,
-                      seq_len=seq, layer_cache_dict=cache)
+                      parallelism=parallelism, degree=degree,
+                      comm_bandwidth_gbps=128 if degree > 1 and comm_mode == "serial" else 0,
+                      seq_len=seq, layer_cache_dict=cache, comm_mode=comm_mode)
         with contextlib.redirect_stdout(io.StringIO()), patch.object(sim, "run_matmul", side_effect=matmul), patch.object(sim, "_fill_comm_breakdown_for_layer", wraps=sim._fill_comm_breakdown_for_layer) as comm:
             result = sim.run_layer(**kwargs)
             comm_args = comm.call_args.args
         self.assertGreater(result["lat_comp"], 0)
-        ops = next(iter(cache.values()))
-        self.assertGreater(ops["rope"]["lat_ms"], 0)
-        self.assertEqual(ops["silu"]["lat_ms"] > 0, model != "InternVision")
-        self.assertAlmostEqual(result["lat_comp"], sum(v["lat_ms"] for k, v in ops.items() if k != "qkv_proj_2"))
+        self.assertEqual(result["comm_mode"], comm_mode)
+        if standalone_tp:
+            self.assertEqual(cache, {cache_key: stale_ops})
+            self.assertTrue(all(entry["lat_ms"] == 0 for entry in stale_ops.values()))
+            op_latencies = result["lat_breakdown_ms"]
+            self.assertAlmostEqual(result["lat_comp"], sum(op_latencies.values()))
+            communications = [entry for entry in result["execution_sequence"]
+                              if entry["kind"] == "communication"]
+            self.assertEqual(len(communications), 4)
+            self.assertEqual([entry["primitive"] for entry in result["comm_details"].values()].count("ag"), 2)
+            self.assertEqual([entry["primitive"] for entry in result["comm_details"].values()].count("rs"), 2)
+            self.assertAlmostEqual(sum(entry["lat_ms"] for entry in communications), result["lat_comm"])
+            self.assertAlmostEqual(result["execution_sequence"][-1]["end_ms"], result["lat_comp"] + result["lat_comm"])
+            self.assertEqual(result["comm_accounting"], "warm_boundary_ag" if comm_mode == "serial" else "ideal_zero_time")
+            if comm_mode == "serial":
+                self.assertGreater(result["lat_comm"], 0)
+        else:
+            ops = next(iter(cache.values()))
+            op_latencies = {name: entry["lat_ms"] for name, entry in ops.items()}
+            self.assertAlmostEqual(result["lat_comp"], sum(value for name, value in op_latencies.items() if name != "qkv_proj_2"))
+        self.assertGreater(op_latencies["rope"], 0)
+        self.assertEqual(op_latencies["silu"] > 0, model != "InternVision")
+        if degree > 1 and comm_mode == "ideal":
+            self.assertEqual(result["lat_comm"], 0)
+            self.assertEqual(result["power_results_comm"], {})
         if device == "Thor" and precision == "fp8":
             self.assertEqual(calls, [("fp8", "fp8", "fp32", "fp16")] * 5)
             # CP QKV/Attention output FP16; TP RS FP16 and AG FP8.
             self.assertEqual([comm_args[i].name for i in (5, 10, 12, 13, 14, 15)], ["fp16", "fp16", "fp16", "fp8", "fp16", "fp8"])
-        with contextlib.redirect_stdout(io.StringIO()), patch.object(sim, "run_matmul", side_effect=AssertionError("cache miss")):
-            cached = sim.run_layer(**kwargs)
-        self.assertAlmostEqual(cached["lat_comp"], result["lat_comp"])
-        self.assertAlmostEqual(cached["power_avg_comp"], result["power_avg_comp"])
+        if not standalone_tp:
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(sim, "run_matmul", side_effect=AssertionError("cache miss")):
+                cached = sim.run_layer(**kwargs)
+            self.assertAlmostEqual(cached["lat_comp"], result["lat_comp"])
+            self.assertAlmostEqual(cached["power_avg_comp"], result["power_avg_comp"])
         return result
 
     def test_thor_fp8_tp_cp_prefill_decode(self):
         for parallelism, degree, prefill in [("TP", 1, True), ("TP", 2, True), ("TP", 4, True), ("CP", 2, True), ("CP", 4, True), ("TP", 1, False), ("TP", 2, False)]:
             with self.subTest(parallelism=parallelism, degree=degree, prefill=prefill):
-                self.run_case("Thor", "fp8", parallelism, degree, prefill)
+                result = self.run_case("Thor", "fp8", parallelism, degree, prefill,
+                                       comm_mode="ideal" if parallelism == "CP" else "serial")
+                if parallelism == "TP" and degree > 1:
+                    ideal = self.run_case("Thor", "fp8", parallelism, degree, prefill, comm_mode="ideal")
+                    self.assertEqual(ideal["lat_breakdown_ms"], result["lat_breakdown_ms"])
+                    self.assertEqual(ideal["dram_access_breakdown_bytes"], result["dram_access_breakdown_bytes"])
+                    for name, actual in result["comm_details"].items():
+                        for field in ("tx_bytes", "rx_bytes", "l2_bytes", "dram_bytes"):
+                            self.assertEqual(ideal["comm_details"][name][field], actual[field])
 
     def test_other_precisions(self):
         for device, precision in [("Orin", "fp16"), ("Orin", "int8"), ("Orin", "int4"), ("Thor", "fp4")]:

@@ -115,7 +115,6 @@ def compute_single_soc_latency(
             mem_bitwidth,
             llm_precision,
             dse_cache,
-            overlap=False,  # irrelevant at degree=1: no inter-chip comm at all
         )
     finally:
         cfg["degree"] = original_degree

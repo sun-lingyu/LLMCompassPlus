@@ -22,6 +22,7 @@ from power_model.power_model import (
     load_power_data,
 )
 from software_model.flashattn import FlashAttn
+from software_model.comm import Comm
 from software_model.flashattn_combine import FlashAttnCombine
 from software_model.layernorm import FusedLayerNorm
 from software_model.matmul import Matmul
@@ -158,7 +159,7 @@ def update_layer_cache_record(flat_row: dict, path: str) -> None:
 
 
 def _launch_lat_ms_for_compute_op(op_name: str, pcb, is_prefill: bool) -> float:
-    if op_name in ("attn_quant", "ffn_quant", "next_quant", "kv_append"):
+    if op_name in ("entry_quant", "attn_quant", "ffn_quant", "next_quant", "kv_append"):
         return pcb.compute_module.launch_latency.quant * 1000
     if op_name in (
         "qkv_proj",
@@ -305,30 +306,21 @@ def _compute_comm_latency(
     latency_us: float,
     ccl_latency_us: dict[str, float],
     degree: int,
-    lat_breakdown_ms: dict[str, float],
-    overlap_config: dict[str, str],
-    overlap: bool,
     comm_bandwidth_efficiency: float = 0.9,
-) -> tuple[float, float, dict[str, float], dict[str, float]]:
-    """Per-collective comm latency (ms) using T_comm = L0 + N*L + M/B.
+) -> tuple[float, dict[str, float]]:
+    """Serialized CP communication latency (ms): T_comm = L0 + N*L + M/B.
 
     L0: primitive-specific one-time CCL initiation overhead (ccl_latency_us).
     N*L: N sequential inter-SoC hops, each of latency `latency_us`.
     M/B: bottleneck-link payload (comm_breakdown[name]) over effective bandwidth.
 
-    If `overlap` is True, models the ideal-overlap case where comm and the
-    adjacent Matmul (overlap_config[name]) progress concurrently without
-    affecting each other; the exposed latency is max(0, T_comm - T_comp).
-    Otherwise, comm is fully serialized on top of compute (exposed = T_comm).
-
-    Returns (total_comm_time_ms, total_exposed_ms, comm_time_breakdown_ms, exposed_breakdown_ms).
+    TP AG/RS use standalone Comm operators instead of this network-only model.
+    Returns (total_comm_time_ms, comm_time_breakdown_ms).
     """
     assert bandwidth_gbps > 0
     eff_bandwidth_gbps = bandwidth_gbps * comm_bandwidth_efficiency
     total_comm_time_ms = 0.0
-    total_exposed_ms = 0.0
     comm_time_breakdown_ms = {}
-    exposed_breakdown_ms = {}
 
     for name, tx_bytes in comm_breakdown.items():
         collective_type = _collective_type_of(name)
@@ -339,23 +331,9 @@ def _compute_comm_latency(
         T_comm_s = L0_s + N * L_s + M_over_B_s
         T_comm_ms = T_comm_s * 1000
 
-        if overlap:
-            overlap_op = overlap_config[name]
-            T_comp_ms = lat_breakdown_ms[overlap_op]
-            exposed_ms = max(0.0, T_comm_ms - T_comp_ms)
-        else:
-            exposed_ms = T_comm_ms
-
         comm_time_breakdown_ms[name] = T_comm_ms
-        exposed_breakdown_ms[name] = exposed_ms
         total_comm_time_ms += T_comm_ms
-        total_exposed_ms += exposed_ms
-    return (
-        total_comm_time_ms,
-        total_exposed_ms,
-        comm_time_breakdown_ms,
-        exposed_breakdown_ms,
-    )
+    return total_comm_time_ms, comm_time_breakdown_ms
 
 
 def print_layer_summary_comp(
@@ -397,15 +375,14 @@ def print_layer_summary_comp(
 
 
 def print_layer_summary_comm(
-    lat_breakdown,
     comm_breakdown,
     comm_bandwidth_gbps,
     device,
     degree,
     icnt_type,
-    overlap,
     ucie_spec_path=f"{file_dir}/../icnt_model/configs/UCIE.json",
     pcie_spec_path=f"{file_dir}/../icnt_model/configs/PCIE.json",
+    simulated_comm_time_ms=None,
 ):
     if icnt_type.startswith("ucie"):
         ucie_spec = load_json_data(ucie_spec_path)
@@ -427,41 +404,31 @@ def print_layer_summary_comm(
         print(f"  *{name:<35} {size_byte / 1024**2:>12.4f} {pct:>7.1f}%")
     print(f"  {'Total':<35} {total_comm_tx_bytes / 1024**2:>9.4f} MB")
 
-    overlap_config = {
-        "reducescatter_before_postattn_ln": "o_proj",
-        "allgather_after_postattn_ln": "gate_up_proj",
-        "reducescatter_before_postffn_ln": "down_proj",
-        "allgather_before_qkv": "qkv_proj",
-        "alltoall_before_fa": "qkv_proj",
-        "alltoall_after_fa": "o_proj",
-    }
-    total_comm_tx_time_ms, exposed_ms, comm_time_ms, comm_exposed_ms = (
-        _compute_comm_latency(
-            comm_breakdown,
-            comm_bandwidth_gbps,
-            comm_latency_us,
-            ccl_latency_us,
-            degree,
-            lat_breakdown,
-            overlap_config,
-            overlap,
+    if simulated_comm_time_ms is not None:
+        # Standalone operators already ran in sequence, including cache traffic.
+        # Do not apply the legacy network-only formula a second time.
+        assert set(simulated_comm_time_ms) == set(comm_breakdown)
+        comm_time_ms = dict(simulated_comm_time_ms)
+        total_comm_tx_time_ms = sum(comm_time_ms.values())
+    else:
+        total_comm_tx_time_ms, comm_time_ms = (
+            _compute_comm_latency(
+                comm_breakdown,
+                comm_bandwidth_gbps,
+                comm_latency_us,
+                ccl_latency_us,
+                degree,
+            )
         )
-    )
 
     print("  " + "=" * 57)
-    mode_str = "overlap" if overlap else "no-overlap"
-    print(f"  {icnt_type.upper()} Communication latency summary [{mode_str}]:")
-    print(
-        f"  {'Operator':<35} {'T_comm(ms)':>12} {'Exposed(ms)':>11} {'Exposed Share':>15}"
-    )
+    print(f"  {icnt_type.upper()} Communication latency summary [serialized]:")
+    print(f"  {'Operator':<35} {'T_comm(ms)':>12} {'Share':>8}")
     for name in comm_breakdown:
-        lat_ideal_ms = comm_time_ms[name]
-        lat_exposed_ms = comm_exposed_ms[name]
-        pct_exposed = lat_exposed_ms / exposed_ms * 100 if exposed_ms > 0 else 0
-        print(
-            f"  {name:<35} {lat_ideal_ms:>12.4f} {lat_exposed_ms:>11.4f} {pct_exposed:>14.1f}%"
-        )
-    print(f"  {'Total Exposed Comm Latency':<35} {exposed_ms:>9.4f} ms")
+        lat_ms = comm_time_ms[name]
+        pct = lat_ms / total_comm_tx_time_ms * 100 if total_comm_tx_time_ms > 0 else 0
+        print(f"  {name:<35} {lat_ms:>12.4f} {pct:>7.1f}%")
+    print(f"  {'Total Comm Latency':<35} {total_comm_tx_time_ms:>9.4f} ms")
 
     print("  " + "=" * 57)
     power_results = {}
@@ -511,7 +478,7 @@ def print_layer_summary_comm(
     else:
         assert False
 
-    return exposed_ms, power_results
+    return total_comm_tx_time_ms, power_results
 
 
 def run_matmul(M, K, N, act_dt, wt_dt, mid_dt, out_dt, device, pcb, l2_prev=None):
@@ -550,18 +517,55 @@ def run_layer(
     degree=1,
     comm_bandwidth_gbps=0.0,
     icnt_type="pcie",
-    overlap=False,
     spec_tokens=64,
     seq_len=512,
     layer_cache_dict=None,
     cache_path=None,
+    comm_T_startup=15e-6,
+    comm_bandwidth_efficiency=0.6,
+    comm_mode="serial",
 ):
     """Simulate a block, including three explicit quantizers for Thor NVFP4.
 
-    The extra QKV probe estimates warm-cache QKV latency at a steady-state block
-    entrance, for diagnostics only. The charged block starts cold, retains L2
-    between its operators, and includes only the first QKV. Returns latency/power metrics.
+    The compute pass starts cold and retains L2 between operators. Only its
+    first QKV is charged; the extra warm-cache QKV remains diagnostic.
+    For TP communication accounting, the cold entrance AG only initializes
+    cache state. The charged boundary AG instead inherits post_ffn_ln's cache,
+    so multiplying block latency by the layer count uses that warm AG once
+    per block. This does not change the compute pass's accounting convention.
+
+    serial supports TP and charges standalone Ring AG/RS. ideal supports
+    TP/CP and charges only compute latency. TP uses the same AG/RS shape and
+    cache transitions in both modes; ideal only removes communication time.
+    CP ideal retains its existing AllToAll layout/cache boundaries. Neither
+    mode simulates concurrent compute and communication.
+    comm_T_startup is seconds per collective; comm_bandwidth_efficiency applies
+    once to network bandwidth. Both timing parameters are ignored in ideal.
+    comm_bandwidth_gbps retains the caller's aggregate-bandwidth convention
+    (TP=4 already includes both links). Thor FP4 retains FP16 AG then quantization;
+    the charged boundary quantizer moves from next_quant to entry_quant.
     """
+    if comm_mode not in ("serial", "ideal"):
+        raise ValueError("comm_mode must be 'serial' or 'ideal'")
+    if parallelism not in ("TP", "CP"):
+        raise ValueError("parallelism must be 'TP' or 'CP'")
+    if comm_mode == "serial" and parallelism != "TP":
+        raise ValueError("serial communication supports TP only; use comm_mode='ideal' for CP")
+    if degree not in (1, 2, 4):
+        raise ValueError("degree must be 1, 2 or 4")
+    if parallelism == "CP" and not is_prefill:
+        raise ValueError("CP supports prefill only")
+    standalone_tp = parallelism == "TP" and degree > 1
+    if standalone_tp and comm_mode == "serial" and comm_bandwidth_gbps <= 0:
+        raise ValueError("serial TP requires a positive comm_bandwidth_gbps")
+    if standalone_tp:
+        if degree not in (2, 4) or M % (degree * L2Cache.TILE_LENGTH):
+            raise ValueError("Standalone TP AG/RS requires TP=2/4 and M/TP divisible by 16")
+        # Legacy records have scalar metrics but no cache state. Neither reuse
+        # them nor store these communication-dependent compute results in them.
+        layer_cache_dict = None
+        cache_path = None
+
     K_shapes, N_shapes = get_matmul_shapes(model_name)
     d, nq, nkv = get_fa_shape(model_name)
     H = model_cfg["hidden_size"]
@@ -664,6 +668,11 @@ def run_layer(
     power_breakdown_dram = {}
     dram_access_breakdown_bytes = {}
     launch_lat_breakdown_ms = {}
+    comm_time_breakdown_ms = {}
+    comm_details = {}
+    comm_diagnostics = {}
+    execution_sequence = []
+    recording_block = True
     mode = "prefill" if is_prefill else "decode"
     fa_precision = "fp16" if precision in ("int4", "int8", "fp16") else "fp8"
     if thor_fp8 or thor_fp4:
@@ -737,12 +746,15 @@ def run_layer(
         lat_breakdown[op_name] = lat_s * 1000
         dram_access_breakdown_bytes[op_name] = float(mem_access_bytes)
         launch_lat_breakdown_ms[op_name] = launch_latency_s * 1000
+        if standalone_tp and recording_block:
+            record_sequence(op_name, "compute", lat_s)
         r = power_fn()
         power_breakdown[op_name] = r["power_breakdown_watts"]["total"]
         power_breakdown_chip[op_name] = r["power_breakdown_watts"]["soc_power"]
         power_breakdown_dram[op_name] = r["power_breakdown_watts"]["memory_power"]
+        suffix = " [next-block diagnostic; excluded]" if standalone_tp and not recording_block else ""
         print(
-            f"    {op_name:<18} {lat_s * 1000:>8.4f} ms {power_breakdown[op_name]:>8.2f} W"
+            f"    {op_name:<18} {lat_s * 1000:>8.4f} ms {power_breakdown[op_name]:>8.2f} W{suffix}"
         )
         if layer_cache_dict is not None:
             layer_cache_row[op_name] = {
@@ -750,6 +762,61 @@ def run_layer(
                 "dram_access_byte": dram_access_breakdown_bytes[op_name],
                 "power_w": power_breakdown[op_name],
             }
+
+    def record_sequence(name, kind, latency_s):
+        start_ms = execution_sequence[-1]["end_ms"] if execution_sequence else 0.0
+        execution_sequence.append({
+            "name": name, "kind": kind, "lat_ms": latency_s * 1000,
+            "start_ms": start_ms, "end_ms": start_ms + latency_s * 1000,
+        })
+
+    def run_comm(name, primitive, dtype, previous, *, charge=True):
+        # run_layer receives aggregate Gbps; Comm accepts one physical link's
+        # B/s and applies the TP=4 aggregation itself.
+        link_bytes_per_second = comm_bandwidth_gbps * 1e9 / 8 / (
+            2 if degree == 4 else 1
+        )
+        ideal = comm_mode == "ideal"
+        # Comm's cache transition is independent of its timing inputs. Use a
+        # finite positive placeholder when timing is disabled; never expose
+        # this placeholder as a modeled link or serial latency.
+        comm = Comm(
+            primitive, dtype, degree, 1.0 if ideal else link_bytes_per_second,
+            T_startup=0.0 if ideal else comm_T_startup,
+            bandwidth_efficiency=1.0 if ideal else comm_bandwidth_efficiency,
+        )
+        comm(Tensor([M_ln if primitive == "ag" else M, H], dtype))
+        latency = comm.compile_and_simulate(
+            pcb, L2Cache_previous=previous, drain_at_end=False
+        )
+        if ideal:
+            latency = 0.0
+            for row in comm.round_stats:
+                for key in ("network_latency", "l2_latency", "dram_latency",
+                            "start_time", "latency", "end_time"):
+                    row[key] = 0.0
+        suffix = "" if charge else " [cold-entry initialization; excluded]"
+        if ideal:
+            suffix += " [ideal; cache transition only]"
+        print(f"    {name:<35} {latency * 1000:>8.4f} ms{suffix}")
+        details = {
+            "primitive": primitive, "dtype": dtype.name,
+            "lat_ms": latency * 1000,
+            "T_startup_s": comm.T_startup,
+            "bandwidth_efficiency": None if ideal else comm.bandwidth_efficiency,
+            "network_bandwidth_bytes_per_s": None if ideal else comm.network_bandwidth,
+            "tx_bytes": comm.tx_bytes, "rx_bytes": comm.rx_bytes,
+            "l2_bytes": comm.l2_access_size, "dram_bytes": comm.mem_access_size,
+            "rounds": comm.round_stats,
+        }
+        if charge:
+            record_sequence(name, "communication", latency)
+            comm_time_breakdown_ms[name] = latency * 1000
+            comm_breakdown[name] = comm.tx_bytes
+            comm_details[name] = details
+        else:
+            comm_diagnostics[name] = details
+        return comm.l2_status
 
     def implicit_quantized_cache(previous, output_dtype):
         """Preserve output residency across a conversion whose cost is excluded."""
@@ -795,9 +862,17 @@ def run_layer(
         if not thor_fp4:
             for name in ("attn_quant", "ffn_quant", "next_quant"):
                 record_skipped_op(name)
+        if standalone_tp:
+            print("  Standalone TP AG/RS: full L2 inheritance; scalar layer cache disabled")
+            l2_prev = run_comm(
+                "allgather_before_qkv_cold", "ag", ln_out_dt, l2_prev, charge=False
+            )
+            if thor_fp4:
+                l2_prev = record_quant("entry_quant", M, H, l2_prev)
         # 1. QKV proj (L2 cold)
+        qkv_cache_label = "after AG" if standalone_tp else "L2 cold"
         print(
-            f"  QKV_proj  [M={M}, K={K_shapes['qkv_proj']}, N={N_shapes['qkv_proj']}] (L2 cold)"
+            f"  QKV_proj  [M={M}, K={K_shapes['qkv_proj']}, N={N_shapes['qkv_proj']}] ({qkv_cache_label})"
         )
         lat, mm = run_matmul(
             M,
@@ -936,9 +1011,9 @@ def run_layer(
         )
 
         # 4. Post-attn LayerNorm
-        print(f"  PostAttn_LayerNorm  [M={M}, N={H}]")
-        if parallelism == "TP" and degree > 1:
-            l2_prev = None  # ReduceScatter before the residual/norm kernel.
+        if standalone_tp:
+            l2_prev = run_comm("reducescatter_before_postattn_ln", "rs", o_out, l2_prev)
+        print(f"  PostAttn_LayerNorm  [M={M_ln}, N={H}]")
         ln = FusedLayerNorm(o_out, ln_out_dt if thor_fp4 else up_act, residual_dtype=o_out)
         ln(Tensor([M_ln, H], o_out), Tensor([M_ln, H], o_out))
         lat = (
@@ -956,8 +1031,11 @@ def run_layer(
             launch_latency_s=pcb.compute_module.launch_latency.layernorm,
         )
 
-        if parallelism == "TP" and degree > 1:
-            l2_prev = None  # AllGather of the normalized activation.
+        if standalone_tp:
+            l2_prev = run_comm(
+                "allgather_after_postattn_ln", "ag",
+                ln_out_dt if thor_fp4 else up_act, l2_prev,
+            )
 
         if thor_fp4:
             l2_prev = record_quant("ffn_quant", M, H, l2_prev)
@@ -1031,9 +1109,9 @@ def run_layer(
         )
 
         # 7. Post-FFN LayerNorm
-        print(f"  PostFFN_LayerNorm  [M={M}, N={H}]")
-        if parallelism == "TP" and degree > 1:
-            l2_prev = None  # ReduceScatter before the residual/norm kernel.
+        if standalone_tp:
+            l2_prev = run_comm("reducescatter_before_postffn_ln", "rs", dn_out, l2_prev)
+        print(f"  PostFFN_LayerNorm  [M={M_ln}, N={H}]")
         ln = FusedLayerNorm(dn_out, ln_out_dt, residual_dtype=dn_out)
         ln(Tensor([M_ln, H], dn_out), Tensor([M_ln, H], dn_out))
         lat = (
@@ -1051,9 +1129,18 @@ def run_layer(
             launch_latency_s=pcb.compute_module.launch_latency.layernorm,
         )
 
-        if parallelism == "TP" and degree > 1:
-            l2_prev = None  # Next block entrance AllGather.
+        # Charge the next-boundary AG using the final LN's warm cache instead
+        # of the cold entrance AG. Each block still pays for exactly two AGs
+        # and two RSs; the recorded sequence ends at this charged boundary.
+        if standalone_tp:
+            print("  Boundary AG (warm post_ffn_ln cache; charged once per block)")
+            l2_prev = run_comm(
+                "allgather_before_qkv", "ag", ln_out_dt, l2_prev
+            )
 
+        # Subsequent Quant/QKV are diagnostic for standalone TP. The other
+        # paths still charge next_quant under their original convention.
+        recording_block = False
         if thor_fp4:
             l2_prev = record_quant("next_quant", M, H, l2_prev)
 
@@ -1094,14 +1181,19 @@ def run_layer(
 
     print()
     print("  Layer summary:")
-    # Cold entrance; qkv_proj_2 is diagnostic only. Other precisions retain
-    # their existing operator sequence and store zero-valued quant entries.
+    # Keep the compute accounting convention; qkv_proj_2 is diagnostic only.
+    # TP communication uses the warm boundary AG, not cold initialization.
+    # Other precisions store zero-valued quant entries.
+    if standalone_tp:
+        print("  Communication accounting: warm boundary AG; cold-entry AG excluded")
     op_names = [
         name for name in LAYER_COMPUTE_OP_NAMES
         if name != "qkv_proj_2"
         and (thor_fp4 or name not in ("attn_quant", "ffn_quant", "next_quant"))
     ]
-    results = {}
+    if standalone_tp and thor_fp4:
+        op_names = ["entry_quant"] + [name for name in op_names if name != "next_quant"]
+    results = {"comm_mode": comm_mode}
     lat, power_avg = print_layer_summary_comp(
         lat_breakdown,
         power_breakdown,
@@ -1128,17 +1220,31 @@ def run_layer(
             power_breakdown.get(op, 0.0) for op in op_names
         )
     if degree > 1:
-        lat_comm, power_results_comm = print_layer_summary_comm(
-            lat_breakdown,
-            comm_breakdown,
-            comm_bandwidth_gbps,
-            device,
-            degree,
-            icnt_type,
-            overlap,
-        )
+        if comm_mode == "ideal":
+            lat_comm, power_results_comm = 0.0, {}
+            print("  Ideal communication: 0 ms; latency and power report compute only")
+        else:
+            lat_comm, power_results_comm = print_layer_summary_comm(
+                comm_breakdown,
+                comm_bandwidth_gbps,
+                device,
+                degree,
+                icnt_type,
+                simulated_comm_time_ms=comm_time_breakdown_ms,
+            )
         results["lat_comm"] = lat_comm
         results["power_results_comm"] = power_results_comm
+    if standalone_tp:
+        results["execution_sequence"] = execution_sequence
+        results["comm_details"] = comm_details
+        results["comm_diagnostics"] = comm_diagnostics
+        results["comm_accounting"] = (
+            "warm_boundary_ag" if comm_mode == "serial" else "ideal_zero_time"
+        )
+        results["lat_breakdown_ms"] = {name: lat_breakdown[name] for name in op_names}
+        results["dram_access_breakdown_bytes"] = {
+            name: dram_access_breakdown_bytes[name] for name in op_names
+        }
     print("  " + "=" * 57)
     return results
 
@@ -1146,7 +1252,9 @@ def run_layer(
 def print_final_results(num_layers, results, icnt_type, has_comm_results):
     lat_comp = results["lat_comp"]
     power_avg_comp = results["power_avg_comp"]
-    if not has_comm_results:
+    if not has_comm_results or results.get("comm_mode") == "ideal":
+        if results.get("comm_mode") == "ideal":
+            print("  Communication: ideal (zero time); compute-only totals")
         lat_total = num_layers * lat_comp
         print(f"  Layer: {lat_comp:.4f} ms")
         print(f"  Total ({num_layers} layers): {lat_total:.4f} ms")
@@ -1227,10 +1335,14 @@ def main():
         help="Parallelism degree (1, 2 or 4)",
     )
     parser.add_argument(
+        "--comm_mode", choices=["serial", "ideal"], default="serial",
+        help="serial: TP Ring AG/RS; ideal: zero communication time for TP/CP",
+    )
+    parser.add_argument(
         "--comm_bandwidth",
         type=float,
         default=0.0,
-        help="Comm bandwidth (GB/s), >0 to add comm latency",
+        help="One physical link's bandwidth (GB/s); required for multi-rank serial, ignored in ideal",
     )
     parser.add_argument(
         "--icnt_type",
@@ -1240,10 +1352,12 @@ def main():
         help="ICNT type: pcie (PCIe), ucie_std (UCIE standard), ucie_adv (UCIE advanced)",
     )
     parser.add_argument(
-        "--overlap",
-        action="store_true",
-        help="Model ideal compute/comm overlap: exposed comm latency = "
-        "max(0, T_comm - T_comp). Default is no overlap (fully serialized).",
+        "--comm_startup_us", type=float, default=15.0,
+        help="Standalone TP AG/RS fixed overhead per collective (us; default 15)",
+    )
+    parser.add_argument(
+        "--comm_bandwidth_efficiency", type=float, default=0.6,
+        help="Standalone TP AG/RS network bandwidth efficiency (default 0.6)",
     )
     args = parser.parse_args()
 
@@ -1276,32 +1390,46 @@ def main():
         parser.error("Thor supports fp8/fp4 only")
 
     degree = args.parallelism_degree
-    if degree > 1:
-        assert args.comm_bandwidth > 0
-    else:
-        assert args.comm_bandwidth == 0
+    if args.comm_mode == "serial" and args.parallelism != "TP":
+        parser.error("serial supports TP only; CP requires --comm_mode ideal")
+    if args.comm_mode == "serial":
+        if degree > 1 and args.comm_bandwidth <= 0:
+            parser.error("multi-rank serial requires --comm_bandwidth > 0")
+        if degree == 1 and args.comm_bandwidth != 0:
+            parser.error("single-rank serial requires --comm_bandwidth 0")
 
     pcb = device_dict[args.device]
 
-    layer_cache_dict = load_layer_compute_cache(LAYER_COMPUTE_CACHE_PATH)
+    standalone_tp = args.parallelism == "TP" and degree > 1
+    layer_cache_dict = (
+        None if standalone_tp else load_layer_compute_cache(LAYER_COMPUTE_CACHE_PATH)
+    )
 
     seq_len_kv = args.seq_len
     M = seq_len_q = args.seq_len if is_prefill else args.spec_tokens
 
     if args.parallelism == "CP" and degree > 1:
         M = M // degree
+    if standalone_tp and M % (degree * L2Cache.TILE_LENGTH):
+        parser.error("Standalone TP AG/RS requires M/TP divisible by 16")
     print("=" * 57)
     print("  LLM Inference Latency Simulator")
     print("=" * 57)
     print(f"  device:      {args.device}")
     print(f"  model:       {args.model}")
     print(f"  precision:   {args.precision}")
+    print(f"  comm mode:   {args.comm_mode}")
     print(f"  para degree: {degree}")
     if degree > 1:
         print(f"  parallelism: {args.parallelism}")
-        print(f"  comm_bw:     {args.comm_bandwidth} GB/s")
-        print(f"  icnt_type:   {args.icnt_type}")
-        print(f"  overlap:     {args.overlap}")
+        if args.comm_mode == "ideal":
+            print("  communication time: 0 (bandwidth/startup ignored)")
+        else:
+            print(f"  comm_bw:     {args.comm_bandwidth} GB/s per physical link")
+            print(f"  icnt_type:   {args.icnt_type}")
+        if standalone_tp and args.comm_mode == "serial":
+            print(f"  comm startup: {args.comm_startup_us} us per collective")
+            print(f"  comm BW eff:  {args.comm_bandwidth_efficiency}")
     print(f"  phase:       {args.phase}")
     print(f"  causal:      {args.is_causal}")
     print(f"  seq_len:     {args.seq_len}")
@@ -1314,7 +1442,10 @@ def main():
     print(f"  seq_len_q:   {seq_len_q}")
     print(f"  seq_len_kv:  {seq_len_kv}")
     print("-" * 57)
-    if args.device == "Thor" and args.precision == "fp4":
+    if standalone_tp:
+        print("  Simulating AG->QKV->RoPE->FA->O->RS->LN->AG"
+              "->GateUp->SiLU/Mul->Down->RS->LN (including required quantizers)...")
+    elif args.device == "Thor" and args.precision == "fp4":
         print("  Simulating 12 kernels (QKV->RoPE->FA->Quant->O->LN->Quant"
               "->GateUp->SiLU/Mul/Quant->Down->LN->Quant)...")
     else:
@@ -1340,11 +1471,13 @@ def main():
         degree=degree,
         comm_bandwidth_gbps=effective_comm_bandwidth * 8,  # GB/s to Gbps
         icnt_type=args.icnt_type,
-        overlap=args.overlap,
         spec_tokens=args.spec_tokens,
         seq_len=args.seq_len,
         layer_cache_dict=layer_cache_dict,
         cache_path=LAYER_COMPUTE_CACHE_PATH,
+        comm_T_startup=args.comm_startup_us * 1e-6,
+        comm_bandwidth_efficiency=args.comm_bandwidth_efficiency,
+        comm_mode=args.comm_mode,
     )
     print_final_results(num_layers, results, args.icnt_type, degree > 1)
 

@@ -59,6 +59,15 @@ test_model_dict = {
         "hidden_act": "silu",
         "num_layers": 36,
     },
+    "Qwen3_14B": {
+        "head_dim": 128,
+        "num_attention_heads": 40,
+        "num_key_value_heads": 8,
+        "hidden_size": 5120,
+        "intermediate_size": 17408,
+        "hidden_act": "silu",
+        "num_layers": 40,
+    },
 }
 
 
